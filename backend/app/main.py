@@ -1,13 +1,23 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import init_db
 from app.routers import alerts, ingest, readings, stations, verdicts, work_orders
 from app.services import alert_service, station_service, work_order_service
 
+
 app = FastAPI(
     title="SkyGuard AI Backend",
     description="Backend API foundation for weather-station anomaly detection.",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(stations.router)
