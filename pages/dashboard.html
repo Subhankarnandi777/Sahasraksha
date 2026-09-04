@@ -102,38 +102,66 @@
 
         <!-- TOPBAR -->
 
-        <header class="topbar">
+        <div id="header-container"></div>
 
-            <div>
+    <div class="brand-section">
 
-                <h1>
-                    Dashboard
-                </h1>
+        <div class="brand-logo">
+            ◎
+        </div>
 
-                <p>
-                    Real-time weather station monitoring
-                </p>
-
+        <div>
+            <div class="brand-name">
+                SkyGuard AI
+                <span class="imd-badge">IMD</span>
             </div>
 
-            <div class="topbar-right">
-
-                <div class="system-status">
-
-                    <span class="pulse"></span>
-
-                    System Operational
-
-                </div>
-
-                <div class="user-circle">
-                    A
-                </div>
-
+            <div class="brand-subtitle">
+                Atmospheric Network
             </div>
+        </div>
 
-        </header>
+    </div>
 
+
+    <div class="live-badge">
+
+        <span class="live-dot"></span>
+
+        LIVE · INSAT-3DR
+
+    </div>
+
+</header>
+
+
+<nav class="main-navigation">
+
+    <a href="dashboard.html" class="active">
+        Overview
+    </a>
+
+    <a href="network.html">
+        Station Map
+    </a>
+
+    <a href="alerts.html">
+        Alerts
+    </a>
+
+    <a href="stations.html">
+        Stations
+    </a>
+
+    <a href="diagnostics.html">
+        Diagnostics
+    </a>
+
+    <a href="maintenance.html">
+        Maintenance
+    </a>
+
+</nav>
 
         <!-- ================= STATS ================= -->
 
@@ -231,6 +259,15 @@
             </div>
 
         </section>
+        <body>
+
+    <div id="header-container"></div>
+
+    <!-- Dashboard content -->
+
+    <script src="../js/header.js"></script>
+
+        </body>
 
 
         <!-- ================= SENSOR DATA ================= -->

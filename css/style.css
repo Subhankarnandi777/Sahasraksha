@@ -538,3 +538,345 @@ button {
 .mobile-nav {
     display: none;
 }
+/* =====================================================
+   SKYGUARD AI - COMMON HEADER
+   ===================================================== */
+
+.top-header {
+    width: 100%;
+    min-height: 82px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 14px 4%;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #e8eef3;
+
+    position: relative;
+    z-index: 50;
+}
+
+
+/* BRAND */
+
+.brand-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+
+.brand-logo {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: #e4f3fa;
+
+    color: #087ca4;
+
+    font-size: 27px;
+    font-weight: 700;
+}
+
+
+.brand-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #172033;
+}
+
+
+.imd-badge {
+    display: inline-block;
+
+    margin-left: 5px;
+
+    padding: 3px 7px;
+
+    border-radius: 5px;
+
+    background: #dff0f8;
+
+    color: #147795;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+
+.brand-subtitle {
+    margin-top: 3px;
+
+    color: #7b8790;
+
+    font-size: 11px;
+}
+
+
+/* LIVE */
+
+.live-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 10px 16px;
+
+    border-radius: 25px;
+
+    background: #effaf6;
+
+    color: #508c7e;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: #38bd98;
+}
+
+
+/* DESKTOP */
+
+@media (min-width: 801px) {
+
+    .top-header {
+        padding-left: 4%;
+        padding-right: 4%;
+    }
+
+}
+
+
+/* MOBILE */
+
+@media (max-width: 800px) {
+
+    .top-header {
+        min-height: 75px;
+
+        padding: 12px 18px;
+    }
+
+    .brand-logo {
+        width: 42px;
+        height: 42px;
+    }
+
+    .brand-name {
+        font-size: 17px;
+    }
+
+    .brand-subtitle {
+        font-size: 9px;
+    }
+
+    .live-badge {
+        padding: 8px 11px;
+        font-size: 9px;
+    }
+
+}
+/* =========================================
+   SKYGUARD AI - COMMON HEADER
+   ========================================= */
+
+.top-header {
+    width: 100%;
+    min-height: 82px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 14px 4%;
+
+    background: #ffffff;
+    border-bottom: 1px solid #e8eef3;
+
+    position: relative;
+    z-index: 50;
+}
+
+.brand-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: #e4f3fa;
+    color: #087ca4;
+
+    font-size: 27px;
+    font-weight: 700;
+}
+
+.brand-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #172033;
+}
+
+.imd-badge {
+    display: inline-block;
+
+    margin-left: 5px;
+    padding: 3px 7px;
+
+    border-radius: 5px;
+
+    background: #dff0f8;
+    color: #147795;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.brand-subtitle {
+    margin-top: 3px;
+
+    color: #7b8790;
+    font-size: 11px;
+}
+
+.live-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 10px 16px;
+
+    border-radius: 25px;
+
+    background: #effaf6;
+    color: #508c7e;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: #38bd98;
+}
+
+
+/* =========================================
+   COMMON NAVIGATION
+   ========================================= */
+
+.main-navigation {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 12px 4%;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #e8eef3;
+
+    overflow-x: auto;
+}
+
+.main-navigation a {
+    padding: 10px 16px;
+
+    border-radius: 20px;
+
+    color: #596673;
+
+    text-decoration: none;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    white-space: nowrap;
+
+    transition: 0.2s ease;
+}
+
+.main-navigation a:hover {
+    background: #edf7fb;
+    color: #087ca4;
+}
+
+.main-navigation a.active {
+    background: #087ca4;
+    color: #ffffff;
+}
+
+
+/* =========================================
+   MOBILE HEADER
+   ========================================= */
+
+@media (max-width: 800px) {
+
+    .top-header {
+        min-height: 75px;
+        padding: 12px 18px;
+    }
+
+    .brand-logo {
+        width: 42px;
+        height: 42px;
+    }
+
+    .brand-name {
+        font-size: 17px;
+    }
+
+    .brand-subtitle {
+        font-size: 9px;
+    }
+
+    .live-badge {
+        padding: 8px 11px;
+        font-size: 9px;
+    }
+
+    .main-navigation {
+        padding: 10px 15px;
+        gap: 4px;
+    }
+
+    .main-navigation a {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+}

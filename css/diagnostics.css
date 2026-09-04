@@ -1,0 +1,757 @@
+/* =========================================================
+   SKYGUARD AI - DIAGNOSTICS PAGE
+   Full Screen Responsive Design
+   ========================================================= */
+
+
+/* ---------- MAIN PAGE ---------- */
+
+.diagnostics-app {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0 0 100px 0;
+
+    background: #f7fbff;
+
+    box-sizing: border-box;
+}
+
+
+/* ---------- MAIN CONTENT ---------- */
+
+.diagnostics-content {
+    width: 92%;
+    max-width: 1500px;
+
+    margin: 0 auto;
+
+    padding: 30px 0;
+}
+
+
+/* ---------- PAGE HERO ---------- */
+
+.diagnostics-hero {
+    width: 100%;
+
+    padding: 32px;
+
+    margin-bottom: 25px;
+
+    border-radius: 28px;
+
+    background: linear-gradient(
+        135deg,
+        #eef8ff,
+        #f5f3ff
+    );
+
+    border: 1px solid #e2edf5;
+
+    box-sizing: border-box;
+}
+
+
+.diagnostics-label {
+    display: inline-flex;
+
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 14px;
+
+    border-radius: 20px;
+
+    background: #ffffff;
+
+    color: #157895;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    letter-spacing: 0.4px;
+}
+
+
+.diagnostics-label::before {
+    content: "";
+
+    width: 9px;
+    height: 9px;
+
+    border-radius: 50%;
+
+    background: #37bd98;
+}
+
+
+.diagnostics-hero h1 {
+    margin: 20px 0 8px;
+
+    color: #172033;
+
+    font-size: clamp(32px, 4vw, 52px);
+
+    font-weight: 700;
+
+    line-height: 1.1;
+}
+
+
+.diagnostics-hero p {
+    max-width: 800px;
+
+    margin: 0;
+
+    color: #697787;
+
+    font-size: 17px;
+
+    line-height: 1.6;
+}
+
+
+/* ---------- SYSTEM STATUS ---------- */
+
+.system-status {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-top: 25px;
+
+    padding: 18px 22px;
+
+    background: #ffffff;
+
+    border-radius: 18px;
+
+    border: 1px solid #e5edf3;
+}
+
+
+.status-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+
+    border-radius: 50%;
+
+    background: #35bd97;
+}
+
+
+.status-text strong {
+    display: block;
+
+    color: #1c2a38;
+
+    font-size: 15px;
+}
+
+
+.status-text span {
+    display: block;
+
+    margin-top: 3px;
+
+    color: #7a8792;
+
+    font-size: 12px;
+}
+
+
+.status-badge {
+    padding: 9px 15px;
+
+    border-radius: 18px;
+
+    background: #eaf8f3;
+
+    color: #23866e;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+/* ---------- SUMMARY CARDS ---------- */
+
+.diagnostics-summary {
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 20px;
+
+    margin-bottom: 25px;
+}
+
+
+.diagnostic-card {
+    padding: 25px;
+
+    background: #ffffff;
+
+    border: 1px solid #e5edf3;
+
+    border-radius: 22px;
+
+    box-shadow: 0 8px 25px rgba(40, 70, 90, 0.06);
+
+    box-sizing: border-box;
+}
+
+
+.diagnostic-card-header {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 15px;
+}
+
+
+.diagnostic-card-title {
+    color: #687783;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.6px;
+}
+
+
+.diagnostic-icon {
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: #edf8fc;
+
+    color: #087da5;
+
+    font-size: 18px;
+}
+
+
+.diagnostic-value {
+    color: #172033;
+
+    font-size: 34px;
+
+    font-weight: 700;
+
+    line-height: 1.1;
+}
+
+
+.diagnostic-description {
+    margin-top: 8px;
+
+    color: #7c8994;
+
+    font-size: 12px;
+}
+
+
+.diagnostic-progress {
+    width: 100%;
+
+    height: 7px;
+
+    margin-top: 18px;
+
+    overflow: hidden;
+
+    border-radius: 10px;
+
+    background: #edf2f5;
+}
+
+
+.diagnostic-progress span {
+    display: block;
+
+    height: 100%;
+
+    width: 92%;
+
+    border-radius: inherit;
+
+    background: #1591bd;
+}
+
+
+/* ---------- SECTION ---------- */
+
+.diagnostics-section {
+    width: 100%;
+
+    margin-bottom: 25px;
+
+    padding: 28px;
+
+    background: #ffffff;
+
+    border: 1px solid #e5edf3;
+
+    border-radius: 24px;
+
+    box-shadow: 0 8px 25px rgba(40, 70, 90, 0.05);
+
+    box-sizing: border-box;
+}
+
+
+.section-heading {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-bottom: 22px;
+}
+
+
+.section-heading h2 {
+    margin: 0;
+
+    color: #172033;
+
+    font-size: 22px;
+
+    font-weight: 700;
+}
+
+
+.section-heading p {
+    margin: 5px 0 0;
+
+    color: #7b8792;
+
+    font-size: 13px;
+}
+
+
+.section-badge {
+    padding: 8px 14px;
+
+    border-radius: 18px;
+
+    background: #eef8ff;
+
+    color: #087da5;
+
+    font-size: 11px;
+
+    font-weight: 700;
+}
+
+
+/* ---------- HEALTH GRID ---------- */
+
+.health-grid {
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 18px;
+}
+
+
+.health-item {
+    padding: 20px;
+
+    border-radius: 18px;
+
+    background: #f8fbfd;
+
+    border: 1px solid #edf1f4;
+}
+
+
+.health-item-top {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 14px;
+}
+
+
+.health-item-name {
+    color: #4d5d6b;
+
+    font-size: 14px;
+
+    font-weight: 700;
+}
+
+
+.health-state {
+    padding: 5px 9px;
+
+    border-radius: 12px;
+
+    font-size: 10px;
+
+    font-weight: 700;
+}
+
+
+.health-state.good {
+    background: #e7f8f1;
+
+    color: #23886e;
+}
+
+
+.health-state.warning {
+    background: #fff5dc;
+
+    color: #a87916;
+}
+
+
+.health-state.critical {
+    background: #ffe9e9;
+
+    color: #c63838;
+}
+
+
+.health-number {
+    color: #172033;
+
+    font-size: 28px;
+
+    font-weight: 700;
+}
+
+
+.health-bar {
+    width: 100%;
+
+    height: 6px;
+
+    margin-top: 12px;
+
+    overflow: hidden;
+
+    border-radius: 10px;
+
+    background: #e9eff3;
+}
+
+
+.health-bar span {
+    display: block;
+
+    height: 100%;
+
+    width: 90%;
+
+    border-radius: inherit;
+
+    background: #28a98a;
+}
+
+
+/* ---------- DIAGNOSTIC TABLE ---------- */
+
+.diagnostic-table-wrapper {
+    width: 100%;
+
+    overflow-x: auto;
+}
+
+
+.diagnostic-table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    min-width: 700px;
+}
+
+
+.diagnostic-table th {
+    padding: 15px;
+
+    text-align: left;
+
+    color: #71808c;
+
+    background: #f7fafc;
+
+    font-size: 11px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.5px;
+}
+
+
+.diagnostic-table td {
+    padding: 17px 15px;
+
+    color: #354454;
+
+    font-size: 13px;
+
+    border-bottom: 1px solid #edf1f4;
+}
+
+
+.diagnostic-table tr:last-child td {
+    border-bottom: none;
+}
+
+
+.station-id {
+    color: #087da5;
+
+    font-weight: 700;
+}
+
+
+.table-status {
+    display: inline-block;
+
+    padding: 6px 11px;
+
+    border-radius: 14px;
+
+    font-size: 10px;
+
+    font-weight: 700;
+}
+
+
+.table-status.normal {
+    background: #e8f8f2;
+
+    color: #27866e;
+}
+
+
+.table-status.monitor {
+    background: #fff4d9;
+
+    color: #a87818;
+}
+
+
+.table-status.service {
+    background: #ffe9e9;
+
+    color: #c33b3b;
+}
+
+
+/* ---------- ACTION BUTTONS ---------- */
+
+.diagnostic-actions {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    margin-top: 20px;
+}
+
+
+.diagnostic-btn {
+    padding: 11px 18px;
+
+    border: none;
+
+    border-radius: 14px;
+
+    background: #edf8fc;
+
+    color: #087da5;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+
+.diagnostic-btn:hover {
+    transform: translateY(-2px);
+
+    background: #dff2f9;
+}
+
+
+.diagnostic-btn.primary {
+    background: #087da5;
+
+    color: #ffffff;
+}
+
+
+.diagnostic-btn.primary:hover {
+    background: #076e91;
+}
+
+
+/* =========================================================
+   RESPONSIVE DESIGN
+   ========================================================= */
+
+
+/* ---------- TABLET ---------- */
+
+@media (max-width: 1100px) {
+
+    .diagnostics-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .health-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+
+/* ---------- MOBILE ---------- */
+
+@media (max-width: 700px) {
+
+    .diagnostics-app {
+        width: 100%;
+
+        padding-bottom: 90px;
+    }
+
+
+    .diagnostics-content {
+        width: 92%;
+
+        padding: 20px 0;
+    }
+
+
+    .diagnostics-hero {
+        padding: 22px;
+
+        border-radius: 22px;
+    }
+
+
+    .diagnostics-hero h1 {
+        font-size: 32px;
+    }
+
+
+    .diagnostics-hero p {
+        font-size: 14px;
+    }
+
+
+    .system-status {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+
+    .diagnostics-summary {
+        grid-template-columns: 1fr;
+
+        gap: 14px;
+    }
+
+
+    .diagnostics-section {
+        padding: 20px;
+
+        border-radius: 20px;
+    }
+
+
+    .health-grid {
+        grid-template-columns: 1fr;
+    }
+
+
+    .section-heading {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+
+    .diagnostic-card {
+        padding: 20px;
+    }
+
+
+    .diagnostic-value {
+        font-size: 30px;
+    }
+
+}
+
+
+/* ---------- SMALL MOBILE ---------- */
+
+@media (max-width: 450px) {
+
+    .diagnostics-content {
+        width: 94%;
+    }
+
+
+    .diagnostics-hero {
+        padding: 18px;
+    }
+
+
+    .diagnostics-hero h1 {
+        font-size: 28px;
+    }
+
+
+    .diagnostics-section {
+        padding: 17px;
+    }
+
+
+    .section-heading h2 {
+        font-size: 19px;
+    }
+
+}
