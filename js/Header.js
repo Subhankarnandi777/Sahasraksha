@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-    fetch("../components/header.html")
+    fetch("../Header.html")
         .then(response => response.text())
         .then(data => {
 
