@@ -2,340 +2,634 @@
 <html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta charset="UTF-8">
+    <title>Alerts Center - SkyGuard AI</title>
 
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/alerts.css">
 
-<title>SkyGuard AI - Alerts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link rel="stylesheet"
-      href="../css/style.css">
-
-<link rel="stylesheet"
-      href="../css/dashboard.css">
-
-<link rel="stylesheet"
-      href="../css/alerts.css">
-
-<link rel="stylesheet"
-      href="../css/responsive.css">
-
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
 </head>
 
-
 <body>
+    <body>
 
-<div class="app-layout">
+    <header class="top-header">
 
+        <div class="brand-section">
 
-<aside class="sidebar">
+            <div class="brand-logo">
+                ◎
+            </div>
 
-    <div class="sidebar-brand">
+            <div>
+                <div class="brand-name">
+                    SkyGuard AI
+                    <span class="imd-badge">IMD</span>
+                </div>
 
-        <div class="brand-icon small">
-            SG
+                <div class="brand-subtitle">
+                    Atmospheric Network
+                </div>
+            </div>
+
         </div>
 
-        <div>
-            <h2>SkyGuard</h2>
-            <span>AI Monitoring</span>
+        <div class="live-badge">
+            <span class="live-dot"></span>
+            LIVE · INSAT-3DR
         </div>
 
-    </div>
+    </header>
 
 
-    <nav class="sidebar-nav">
+    <nav class="main-navigation">
 
-        <p class="nav-title">
-            MAIN
-        </p>
-
-        <a href="dashboard.html"
-           class="nav-link">
-            ▣ Dashboard
+        <a href="dashboard.html">
+            Overview
         </a>
 
-        <a href="network.html"
-           class="nav-link">
-            ◉ Network
+        <a href="network.html">
+            Station Map
         </a>
 
-        <a href="stations.html"
-           class="nav-link">
-            ▦ Stations
+        <a href="alerts.html" class="active">
+            Alerts
         </a>
 
-
-        <p class="nav-title">
-            MONITORING
-        </p>
-
-        <a href="alerts.html"
-           class="nav-link active">
-            ⚠ Alerts
+        <a href="stations.html">
+            Stations
         </a>
 
-        <a href="diagnostics.html"
-           class="nav-link">
-            ⚙ Diagnostics
+        <a href="diagnostics.html">
+            Diagnostics
         </a>
 
-        <a href="maintenance.html"
-           class="nav-link">
-            🔧 Maintenance
+        <a href="maintenance.html">
+            Maintenance
         </a>
 
     </nav>
 
-</aside>
 
+    <!-- YOUR ALERTS PAGE CONTENT STARTS HERE -->
 
-
-<main class="main-content">
-
-
-<header class="topbar">
-
-    <div>
-
-        <h1>
-            AI Alerts
-        </h1>
-
-        <p>
-            Anomalies detected by SkyGuard AI
-        </p>
-
-    </div>
-
-</header>
-
-
-
-<div class="alert-summary">
-
-
-<div class="alert-summary-card high">
-
-    <span>
-        HIGH
-    </span>
-
-    <h2>
-        1
-    </h2>
-
-    <p>
-        Critical alerts
-    </p>
-
-</div>
-
-
-<div class="alert-summary-card medium">
-
-    <span>
-        MEDIUM
-    </span>
-
-    <h2>
-        1
-    </h2>
-
-    <p>
-        Warning alerts
-    </p>
-
-</div>
-
-
-<div class="alert-summary-card low">
-
-    <span>
-        LOW
-    </span>
-
-    <h2>
-        1
-    </h2>
-
-    <p>
-        Minor alerts
-    </p>
-
-</div>
-
-
-</div>
-
-
-
-<div class="card">
-
-
-<div class="card-header">
-
-    <div>
-
-        <h2>
-            Active Anomalies
-        </h2>
-
-        <p>
-            AI-generated anomaly detection results
-        </p>
-
-    </div>
-
-</div>
-
-
-
-<div class="alert-container">
-
-
-<div class="ai-alert high-alert">
-
-    <div class="alert-icon">
-        ⚠
-    </div>
-
-    <div class="alert-content">
-
-        <div class="alert-title">
-
-            <h3>
-                Temperature Anomaly
-            </h3>
-
-            <span class="severity high">
-                HIGH
-            </span>
-
-        </div>
-
-        <p>
-            Unusual temperature pattern detected
-            at Station ST-004.
-        </p>
-
-        <small>
-            Anomaly Score: 91% • 5 minutes ago
-        </small>
-
-    </div>
-
-    <button
-        class="btn btn-danger"
-        onclick="acknowledgeAlert(this)">
-
-        Acknowledge
-
-    </button>
-
-</div>
-
-
-
-<div class="ai-alert medium-alert">
-
-    <div class="alert-icon">
-        ⚠
-    </div>
-
-    <div class="alert-content">
-
-        <div class="alert-title">
-
-            <h3>
-                Sensor Communication Failure
-            </h3>
-
-            <span class="severity medium">
-                MEDIUM
-            </span>
-
-        </div>
-
-        <p>
-            Station ST-009 has stopped sending
-            pressure sensor readings.
-        </p>
-
-        <small>
-            Anomaly Score: 74% • 18 minutes ago
-        </small>
-
-    </div>
-
-    <button
-        class="btn btn-danger"
-        onclick="acknowledgeAlert(this)">
-
-        Acknowledge
-
-    </button>
-
-</div>
-
-
-
-<div class="ai-alert low-alert">
-
-    <div class="alert-icon">
-        ⚠
-    </div>
-
-    <div class="alert-content">
-
-        <div class="alert-title">
-
-            <h3>
-                Humidity Deviation
-            </h3>
-
-            <span class="severity low">
-                LOW
-            </span>
-
-        </div>
-
-        <p>
-            Humidity readings are slightly outside
-            expected range.
-        </p>
-
-        <small>
-            Anomaly Score: 62% • 31 minutes ago
-        </small>
-
-    </div>
-
-    <button
-        class="btn btn-success"
-        onclick="acknowledgeAlert(this)">
-
-        Acknowledge
-
-    </button>
-
-</div>
-
-
-</div>
-
-</div>
-
-
-</main>
-
-</div>
-
-
-<script src="../js/alerts.js"></script>
 
 </body>
+<div class="alerts-app">
 
+    <!-- HEADER -->
+    <header class="alerts-header">
+
+        <div class="alerts-brand">
+
+            <div class="alerts-logo">
+                ◎
+            </div>
+
+            <div>
+                <div class="brand-title">
+                    SkyGuard AI
+                    <span>IMD</span>
+                </div>
+
+                <div class="brand-subtitle">
+                    IMD Automated Diagnostics
+                </div>
+            </div>
+
+        </div>
+
+        <div class="live-status">
+            <span></span>
+            LIVE · INSAT-3DR
+        </div>
+
+    </header>
+
+
+    <!-- HERO -->
+    <section class="alerts-hero">
+
+        <div class="hero-top">
+
+            <span class="national-label">
+                ● NATIONAL FLEET TELEMETRY
+            </span>
+
+            <span class="sync-label">
+                <i></i>
+                INSAT-3DR Synced
+            </span>
+
+        </div>
+
+        <h1>Alerts Center</h1>
+
+        <p>
+            12 Active Anomalies Detected Across National
+            Network · IMD Automated Diagnostic Engine
+        </p>
+
+    </section>
+
+
+    <!-- ALERT SUMMARY -->
+    <section class="alert-summary">
+
+        <div class="summary-card critical-card">
+
+            <div class="summary-title">
+                <span class="red-dot"></span>
+                CRITICAL
+            </div>
+
+            <strong>3</strong>
+
+            <p>Service req.</p>
+
+        </div>
+
+
+        <div class="summary-card monitoring-card">
+
+            <div class="summary-title">
+                <span class="yellow-dot"></span>
+                MONITORING
+            </div>
+
+            <strong>8</strong>
+
+            <p>Early drift</p>
+
+        </div>
+
+
+        <div class="summary-card nodata-card">
+
+            <div class="summary-title">
+                <span class="gray-dot"></span>
+                NO DATA
+            </div>
+
+            <strong>1</strong>
+
+            <p>Silent pod</p>
+
+        </div>
+
+    </section>
+
+
+    <!-- FILTER -->
+    <div class="alert-filter">
+
+        <button class="filter active" data-filter="all">
+            All (12)
+        </button>
+
+        <button class="filter" data-filter="critical">
+            Critical (3)
+        </button>
+
+        <button class="filter" data-filter="monitoring">
+            Monitoring (8)
+        </button>
+
+        <button class="filter" data-filter="nodata">
+            No Data (1)
+        </button>
+
+    </div>
+
+
+    <!-- SERVICE REQUIRED -->
+    <section class="service-section">
+
+        <div class="section-heading">
+
+            <h2>
+                <span class="warning-icon">!</span>
+                Service Required
+            </h2>
+
+            <span class="priority">
+                Immediate Priority
+            </span>
+
+        </div>
+
+
+        <!-- ALERT CARD 1 -->
+        <article class="alert-card critical-alert"
+                 data-type="critical">
+
+            <div class="alert-card-header">
+
+                <div>
+
+                    <div class="station-name">
+
+                        <span class="station-id">
+                            AWS_DEL
+                        </span>
+
+                        <span class="separator">•</span>
+
+                        Delhi (Lodhi Road Met)
+
+                    </div>
+
+                    <div class="station-location">
+                        Northern Meteorological Circle #04
+                    </div>
+
+                </div>
+
+
+                <div class="health-score">
+                    42.1% HLT
+                </div>
+
+            </div>
+
+
+            <h3>
+                Pressure sensor diaphragm failure imminent
+            </h3>
+
+
+            <div class="confidence">
+
+                <span class="confidence-icon">
+                    ✓
+                </span>
+
+                94% Calibrated Confidence ·
+                Cross-validated with IGI Radar
+
+            </div>
+
+
+            <!-- DIAGNOSTICS -->
+            <div class="diagnostics-box">
+
+                <div class="diagnostics-heading">
+
+                    <span>
+                        DIAGNOSTICS BREAKDOWN
+                    </span>
+
+                    <strong>
+                        Out-of-Bounds
+                    </strong>
+
+                </div>
+
+
+                <div class="diagnostic-values">
+
+                    <div>
+                        <strong class="danger-number">
+                            6.2σ
+                        </strong>
+
+                        <span>
+                            Spatial dev.
+                        </span>
+                    </div>
+
+
+                    <div>
+                        <strong>
+                            14.1
+                        </strong>
+
+                        <span>
+                            Drift (hPa)
+                        </span>
+                    </div>
+
+
+                    <div>
+                        <strong class="danger-number">
+                            -51%
+                        </strong>
+
+                        <span>
+                            Heartbeat
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SENSOR IMAGE -->
+            <div class="sensor-image">
+
+                <div class="sensor-overlay">
+                    Baro Sensor Head A-3 · Diaphragm Micro-Stress
+                </div>
+
+            </div>
+
+
+            <button class="details-button"
+                    onclick="viewAlert('AWS_DEL')">
+
+                View Diagnostic Details →
+
+            </button>
+
+        </article>
+
+
+        <!-- ALERT CARD 2 -->
+        <article class="alert-card monitoring-alert"
+                 data-type="monitoring">
+
+            <div class="alert-card-header">
+
+                <div>
+
+                    <div class="station-name">
+
+                        <span class="station-id">
+                            AWS_HYD
+                        </span>
+
+                        <span class="separator">•</span>
+
+                        Hyderabad
+
+                    </div>
+
+                    <div class="station-location">
+                        Southern Meteorological Circle #07
+                    </div>
+
+                </div>
+
+
+                <div class="health-score monitor-health">
+                    61.0% HLT
+                </div>
+
+            </div>
+
+
+            <h3>
+                Aspirator fan stall detected
+            </h3>
+
+
+            <div class="confidence">
+
+                <span class="confidence-icon">
+                    ✓
+                </span>
+
+                88% Model Confidence ·
+                Temperature bias +3.7°C
+
+            </div>
+
+
+            <div class="diagnostics-box">
+
+                <div class="diagnostics-heading">
+
+                    <span>
+                        DIAGNOSTICS BREAKDOWN
+                    </span>
+
+                    <strong class="monitor-text">
+                        Early Drift
+                    </strong>
+
+                </div>
+
+
+                <div class="diagnostic-values">
+
+                    <div>
+                        <strong>
+                            3.7σ
+                        </strong>
+
+                        <span>
+                            Temperature
+                        </span>
+                    </div>
+
+
+                    <div>
+                        <strong>
+                            +3.7
+                        </strong>
+
+                        <span>
+                            Bias °C
+                        </span>
+                    </div>
+
+
+                    <div>
+                        <strong>
+                            -18%
+                        </strong>
+
+                        <span>
+                            Fan RPM
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <button class="details-button"
+                    onclick="viewAlert('AWS_HYD')">
+
+                View Diagnostic Details →
+
+            </button>
+
+        </article>
+
+
+        <!-- ALERT CARD 3 -->
+        <article class="alert-card monitoring-alert"
+                 data-type="monitoring">
+
+            <div class="alert-card-header">
+
+                <div>
+
+                    <div class="station-name">
+
+                        <span class="station-id">
+                            AWS_CHN
+                        </span>
+
+                        <span class="separator">•</span>
+
+                        Chennai Coast
+
+                    </div>
+
+                    <div class="station-location">
+                        Coastal Meteorological Circle #11
+                    </div>
+
+                </div>
+
+
+                <div class="health-score monitor-health">
+                    88.0% HLT
+                </div>
+
+            </div>
+
+
+            <h3>
+                Barometer port salt encrustation
+            </h3>
+
+
+            <div class="confidence">
+
+                <span class="confidence-icon">
+                    ✓
+                </span>
+
+                81% Model Confidence ·
+                Coastal exposure pattern detected
+
+            </div>
+
+
+            <button class="details-button"
+                    onclick="viewAlert('AWS_CHN')">
+
+                View Diagnostic Details →
+
+            </button>
+
+        </article>
+
+
+        <!-- NO DATA -->
+        <article class="alert-card nodata-alert"
+                 data-type="nodata">
+
+            <div class="alert-card-header">
+
+                <div>
+
+                    <div class="station-name">
+
+                        <span class="station-id">
+                            AWS_KOL
+                        </span>
+
+                        <span class="separator">•</span>
+
+                        Kolkata
+
+                    </div>
+
+                    <div class="station-location">
+                        Eastern Meteorological Circle #02
+                    </div>
+
+                </div>
+
+
+                <div class="health-score nodata-health">
+                    NO DATA
+                </div>
+
+            </div>
+
+
+            <h3>
+                Station telemetry unavailable
+            </h3>
+
+
+            <p class="no-data-text">
+                No heartbeat received from station
+                for the last 30 minutes.
+            </p>
+
+
+            <button class="details-button"
+                    onclick="viewAlert('AWS_KOL')">
+
+                Check Station →
+
+            </button>
+
+        </article>
+
+    </section>
+
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-navigation">
+
+        <a href="dashboard.html"
+           class="bottom-item">
+
+            <span>⌂</span>
+            <label>Home</label>
+
+        </a>
+
+
+        <a href="network.html"
+           class="bottom-item">
+
+            <span>◎</span>
+            <label>Map</label>
+
+        </a>
+
+
+        <a href="alerts.html"
+           class="bottom-item active alert-nav">
+
+            <b>12</b>
+
+            <span>♧</span>
+            <label>Alerts</label>
+
+        </a>
+
+
+        <a href="stations.html"
+           class="bottom-item">
+
+            <span>♒</span>
+            <label>Stations</label>
+
+        </a>
+
+    </nav>
+
+</div>
+
+
+<script src="../js/alerts.js"></script
 </html>

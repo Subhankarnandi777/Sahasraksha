@@ -2,390 +2,503 @@
 <html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta charset="UTF-8">
+    <title>Station Network - SkyGuard AI</title>
 
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/network.css">
 
-<title>SkyGuard AI - Network</title>
-
-<link rel="stylesheet"
-      href="../css/style.css">
-
-<link rel="stylesheet"
-      href="../css/dashboard.css">
-
-<link rel="stylesheet"
-      href="../css/responsive.css">
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+        
 </head>
+<body>
 
+    <div id="header-container"></div>
+
+    <!-- Network content -->
+
+    <script src="../js/header.js"></script>
+
+</body>
 
 <body>
 
-<div class="app-layout">
+<div class="network-app">
 
+    <!-- =========================
+         TOP HEADER
+    ========================== -->
 
-<aside class="sidebar">
+    <header class="network-header">
 
-    <div class="sidebar-brand">
+        <div class="network-brand">
 
-        <div class="brand-icon small">
-            SG
+            <div class="network-logo">
+                ◎
+            </div>
+
+            <div>
+                <div class="network-brand-name">
+                    SkyGuard AI
+                    <span>IMD</span>
+                </div>
+
+                <div class="network-subtitle">
+                    Station Network Telemetry
+                </div>
+            </div>
+
         </div>
+
+
+        <div class="network-live">
+            <span></span>
+            LIVE · INSAT-3DR
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         PAGE TITLE
+    ========================== -->
+
+    <section class="network-title">
 
         <div>
-            <h2>SkyGuard</h2>
-            <span>AI Monitoring</span>
+
+            <h1>Station Network</h1>
+
+            <p>
+                <span class="blue-dot"></span>
+                2,595 Stations Monitored
+            </p>
+
         </div>
+
+
+        <div class="title-buttons">
+
+            <button class="round-button">
+                🔍
+            </button>
+
+            <button class="round-button">
+                ☷
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         FILTER TABS
+    ========================== -->
+
+    <div class="network-tabs">
+
+        <button class="network-tab active">
+            HEALTH
+        </button>
+
+        <button class="network-tab">
+            TEMPERATURE
+        </button>
+
+        <button class="network-tab">
+            PRESSURE
+        </button>
+
+        <button class="network-tab">
+            REPORTING
+        </button>
 
     </div>
 
 
-    <nav class="sidebar-nav">
+    <!-- =========================
+         MAP SECTION
+    ========================== -->
 
-        <p class="nav-title">MAIN</p>
+    <section class="map-container">
+
+        <!-- LEGEND -->
+
+        <div class="map-legend">
+
+            <span>
+                <i class="healthy"></i>
+                Healthy
+            </span>
+
+            <span>
+                <i class="monitor"></i>
+                Monitor
+            </span>
+
+            <span>
+                <i class="critical"></i>
+                Critical
+            </span>
+
+        </div>
+
+
+        <!-- MAP CONTROLS -->
+
+        <div class="map-controls">
+
+            <button>◎</button>
+
+            <button>+</button>
+
+            <button>−</button>
+
+            <button>◇</button>
+
+        </div>
+
+
+        <!-- INDIA MAP -->
+
+        <div class="india-map">
+
+            <svg viewBox="0 0 400 650"
+                 xmlns="http://www.w3.org/2000/svg"
+                 class="india-svg">
+
+                <!-- Simplified India outline -->
+
+                <path
+                    d="
+                    M145 45
+                    L190 30
+                    L230 50
+                    L250 80
+                    L275 95
+                    L285 130
+                    L315 160
+                    L300 190
+                    L315 220
+                    L300 250
+                    L315 280
+                    L300 315
+                    L280 350
+                    L270 390
+                    L250 425
+                    L245 470
+                    L225 510
+                    L210 550
+                    L190 590
+                    L170 555
+                    L155 515
+                    L140 480
+                    L120 450
+                    L105 410
+                    L90 375
+                    L75 335
+                    L65 300
+                    L75 265
+                    L60 230
+                    L80 205
+                    L70 175
+                    L95 145
+                    L105 110
+                    L130 95
+                    L125 65
+                    Z
+                    "
+                    class="india-outline"
+                />
+
+            </svg>
+
+
+            <!-- STATE LABELS -->
+
+            <span class="state-label rajasthan">
+                RAJASTHAN
+            </span>
+
+            <span class="state-label madhya">
+                MADHYA PRADESH
+            </span>
+
+            <span class="state-label odisha">
+                ODISHA
+            </span>
+
+            <span class="state-label karnataka">
+                KARNATAKA
+            </span>
+
+
+            <!-- DELHI STATION -->
+
+            <button
+                class="station-marker critical-marker delhi-marker"
+                onclick="selectStation('AWS_DEL')">
+
+                <span class="marker-label">
+                    AWS_DEL
+                </span>
+
+                <span class="marker-circle"></span>
+
+            </button>
+
+
+            <!-- PUNE STATION -->
+
+            <button
+                class="station-marker monitor-marker pune-marker"
+                onclick="selectStation('AWS_PNQ')">
+
+                <span class="marker-label">
+                    AWS_PNQ
+                </span>
+
+                <span class="marker-circle"></span>
+
+            </button>
+
+
+            <!-- ODISHA STATION -->
+
+            <button
+                class="station-marker critical-marker odisha-marker"
+                onclick="selectStation('AWS_BBI')">
+
+                <span class="marker-circle"></span>
+
+            </button>
+
+
+            <!-- HEALTHY STATIONS -->
+
+            <span class="small-marker marker-1"></span>
+            <span class="small-marker marker-2"></span>
+            <span class="small-marker marker-3"></span>
+            <span class="small-marker marker-4"></span>
+            <span class="small-marker marker-5"></span>
+            <span class="small-marker marker-6"></span>
+
+
+            <!-- NO DATA -->
+
+            <div class="no-data">
+                NO<br>DATA
+            </div>
+
+        </div>
+
+
+        <!-- LIVE STREAM -->
+
+        <div class="live-stream">
+
+            <button class="play-button">
+                ▶
+            </button>
+
+            <div class="stream-info">
+
+                <strong>
+                    LIVE STREAM
+                </strong>
+
+                <div class="stream-line">
+                    <span></span>
+                </div>
+
+            </div>
+
+            <div class="stream-time">
+                15:00 IST
+            </div>
+
+            <button class="past-button">
+                PAST 6H
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         SELECTED STATION
+    ========================== -->
+
+    <section class="selected-station">
+
+        <div class="drag-handle"></div>
+
+        <div class="selected-header">
+
+            <div>
+
+                <h2>
+                    AWS_PNQ
+                    <span class="zone-badge">
+                        W-ZONE
+                    </span>
+                </h2>
+
+                <p>
+                    Pune, Maharashtra
+                    <span>
+                        (Western Met Grid)
+                    </span>
+                </p>
+
+            </div>
+
+            <div class="monitor-score">
+                🟡 MONITOR · 91.2%
+            </div>
+
+        </div>
+
+
+        <!-- SENSOR MINI CARDS -->
+
+        <div class="mini-sensors">
+
+            <div class="mini-sensor">
+
+                <div class="mini-title">
+                    🌡 TEMP
+                </div>
+
+                <strong>
+                    27.4°C
+                </strong>
+
+                <small class="normal-text">
+                    Normal
+                </small>
+
+            </div>
+
+
+            <div class="mini-sensor">
+
+                <div class="mini-title">
+                    ⚖ PRESSURE
+                </div>
+
+                <strong>
+                    1008.4
+                </strong>
+
+                <small class="warning-text">
+                    Heartbeat ↓ 51%
+                </small>
+
+            </div>
+
+
+            <div class="mini-sensor">
+
+                <div class="mini-title">
+                    💧 HUMIDITY
+                </div>
+
+                <strong>
+                    68%
+                </strong>
+
+                <small class="normal-text">
+                    Stable
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <!-- STATION DETAILS -->
+
+        <div class="station-details">
+
+            <span>
+                Last Seen: 2 min ago
+            </span>
+
+            <span>
+                Module: DTR210
+            </span>
+
+            <span>
+                ID: 4021
+            </span>
+
+        </div>
+
+
+        <a href="station.html?id=AWS_PNQ"
+           class="view-station">
+
+            View Station Details →
+            
+        </a>
+
+    </section>
+
+
+    <!-- =========================
+         BOTTOM NAVIGATION
+    ========================== -->
+
+    <nav class="bottom-navigation">
 
         <a href="dashboard.html"
-           class="nav-link">
+           class="bottom-item">
 
-            <span>▣</span>
-            Dashboard
+            <span>♨</span>
+            <label>Home</label>
 
         </a>
 
 
         <a href="network.html"
-           class="nav-link active">
+           class="bottom-item active">
 
             <span>◉</span>
-            Network
+            <label>Map</label>
+
+        </a>
+
+
+        <a href="alerts.html"
+           class="bottom-item alert-item">
+
+            <b>12</b>
+
+            <span>♧</span>
+            <label>Alerts</label>
 
         </a>
 
 
         <a href="stations.html"
-           class="nav-link">
+           class="bottom-item">
 
-            <span>▦</span>
-            Stations
-
-        </a>
-
-
-        <p class="nav-title">
-            MONITORING
-        </p>
-
-
-        <a href="alerts.html"
-           class="nav-link">
-
-            <span>⚠</span>
-            Alerts
-
-        </a>
-
-
-        <a href="diagnostics.html"
-           class="nav-link">
-
-            <span>⚙</span>
-            Diagnostics
-
-        </a>
-
-
-        <a href="maintenance.html"
-           class="nav-link">
-
-            <span>🔧</span>
-            Maintenance
+            <span>♒</span>
+            <label>Stations</label>
 
         </a>
 
     </nav>
-
-
-    <div class="sidebar-bottom">
-
-        <a href="../index.html"
-           class="logout">
-
-            ↪ Logout
-
-        </a>
-
-    </div>
-
-</aside>
-
-
-
-<main class="main-content">
-
-
-<header class="topbar">
-
-    <div>
-
-        <h1>
-            Network Monitoring
-        </h1>
-
-        <p>
-            Monitor communication between stations
-        </p>
-
-    </div>
-
-</header>
-
-
-
-<section class="stats-grid">
-
-
-<div class="stat-card">
-
-    <div class="stat-icon green">
-        ✓
-    </div>
-
-    <div>
-
-        <p>Connected</p>
-
-        <h2>
-            21
-        </h2>
-
-        <span class="positive">
-            Healthy
-        </span>
-
-    </div>
-
-</div>
-
-
-
-<div class="stat-card">
-
-    <div class="stat-icon red">
-        ×
-    </div>
-
-    <div>
-
-        <p>Disconnected</p>
-
-        <h2>
-            3
-        </h2>
-
-        <span class="negative">
-            Check stations
-        </span>
-
-    </div>
-
-</div>
-
-
-
-<div class="stat-card">
-
-    <div class="stat-icon blue">
-        ≋
-    </div>
-
-    <div>
-
-        <p>Average Signal</p>
-
-        <h2>
-            89%
-        </h2>
-
-        <span class="positive">
-            Excellent
-        </span>
-
-    </div>
-
-</div>
-
-
-
-<div class="stat-card">
-
-    <div class="stat-icon purple">
-        ↔
-    </div>
-
-    <div>
-
-        <p>Latency</p>
-
-        <h2>
-            42 ms
-        </h2>
-
-        <span class="stat-info">
-            Normal
-        </span>
-
-    </div>
-
-</div>
-
-
-</section>
-
-
-
-<div class="card">
-
-    <div class="card-header">
-
-        <div>
-
-            <h2>
-                Station Network Status
-            </h2>
-
-            <p>
-                Current communication status
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div style="overflow-x:auto">
-
-    <table>
-
-        <thead>
-
-            <tr>
-
-                <th>Station</th>
-
-                <th>Location</th>
-
-                <th>Status</th>
-
-                <th>Signal</th>
-
-                <th>Latency</th>
-
-                <th>Last Communication</th>
-
-            </tr>
-
-        </thead>
-
-
-        <tbody>
-
-            <tr>
-
-                <td>ST-001</td>
-
-                <td>Kolkata</td>
-
-                <td>
-                    <span class="status online">
-                        Online
-                    </span>
-                </td>
-
-                <td>94%</td>
-
-                <td>31 ms</td>
-
-                <td>10 sec ago</td>
-
-            </tr>
-
-
-            <tr>
-
-                <td>ST-002</td>
-
-                <td>Siliguri</td>
-
-                <td>
-                    <span class="status online">
-                        Online
-                    </span>
-                </td>
-
-                <td>87%</td>
-
-                <td>46 ms</td>
-
-                <td>15 sec ago</td>
-
-            </tr>
-
-
-            <tr>
-
-                <td>ST-003</td>
-
-                <td>Durgapur</td>
-
-                <td>
-                    <span class="status offline">
-                        Offline
-                    </span>
-                </td>
-
-                <td>0%</td>
-
-                <td>---</td>
-
-                <td>12 min ago</td>
-
-            </tr>
-
-
-            <tr>
-
-                <td>ST-004</td>
-
-                <td>Howrah</td>
-
-                <td>
-                    <span class="status online">
-                        Online
-                    </span>
-                </td>
-
-                <td>91%</td>
-
-                <td>38 ms</td>
-
-                <td>8 sec ago</td>
-
-            </tr>
-
-
-        </tbody>
-
-    </table>
-
-    </div>
-
-</div>
-
-
-</main>
 
 </div>
 
@@ -393,5 +506,4 @@
 <script src="../js/network.js"></script>
 
 </body>
-
 </html>

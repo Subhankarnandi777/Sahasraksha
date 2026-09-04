@@ -1,69 +1,251 @@
-console.log("Stations page loaded");
+/* =====================================================
+   SKYGUARD AI - STATIONS JAVASCRIPT
+   ===================================================== */
 
 
-// =================================
-// SEARCH STATIONS
-// =================================
+/* =====================================================
+   ELEMENTS
+   ===================================================== */
 
 const searchInput =
-    document.getElementById(
-        "stationSearch"
-    );
+    document.getElementById("stationSearch");
+
+const stationCards =
+    document.querySelectorAll(".station-card");
+
+const filterButtons =
+    document.querySelectorAll(".filter-btn");
+
+const stationCount =
+    document.getElementById("stationCount");
+
+const sortButton =
+    document.getElementById("sortButton");
 
 
-if (searchInput) {
+/* =====================================================
+   CURRENT FILTER
+   ===================================================== */
 
-    searchInput.addEventListener(
-        "keyup",
+let currentFilter = "all";
+
+
+/* =====================================================
+   FILTER STATIONS
+   ===================================================== */
+
+function filterStations() {
+
+    const searchText =
+        searchInput.value
+            .toLowerCase()
+            .trim();
+
+
+    let visibleStations = 0;
+
+
+    stationCards.forEach(function(card) {
+
+        const status =
+            card.getAttribute("data-status");
+
+        const searchData =
+            card.getAttribute("data-search");
+
+
+        const matchesSearch =
+            searchData.includes(searchText);
+
+
+        const matchesFilter =
+            currentFilter === "all" ||
+            status === currentFilter;
+
+
+        if (matchesSearch && matchesFilter) {
+
+            card.style.display = "block";
+
+            visibleStations++;
+
+        }
+
+        else {
+
+            card.style.display = "none";
+
+        }
+
+    });
+
+
+    stationCount.textContent =
+        visibleStations;
+
+}
+
+
+/* =====================================================
+   SEARCH
+   ===================================================== */
+
+searchInput.addEventListener(
+    "input",
+    filterStations
+);
+
+
+/* =====================================================
+   FILTER BUTTONS
+   ===================================================== */
+
+filterButtons.forEach(function(button) {
+
+    button.addEventListener(
+        "click",
         function() {
 
-            const searchValue =
-                this.value.toLowerCase();
+            /* Remove active */
 
-            const rows =
-                document.querySelectorAll(
-                    "#stationTable tbody tr"
+            filterButtons.forEach(function(btn) {
+
+                btn.classList.remove("active");
+
+            });
+
+
+            /* Add active */
+
+            button.classList.add("active");
+
+
+            /* Get selected filter */
+
+            currentFilter =
+                button.getAttribute(
+                    "data-filter"
                 );
 
 
-            rows.forEach(
-                function(row) {
+            filterStations();
 
-                    const text =
-                        row.innerText.toLowerCase();
+        }
+    );
+
+});
 
 
-                    if (
-                        text.includes(searchValue)
-                    ) {
+/* =====================================================
+   SORT
+   ===================================================== */
 
-                        row.style.display =
-                            "";
+let sortAscending = false;
 
-                    } else {
 
-                        row.style.display =
-                            "none";
+sortButton.addEventListener(
+    "click",
+    function() {
 
-                    }
+        sortAscending =
+            !sortAscending;
 
-                }
+
+        const stationList =
+            document.getElementById(
+                "stationList"
+            );
+
+
+        const cards =
+            Array.from(
+                stationList.querySelectorAll(
+                    ".station-card"
+                )
+            );
+
+
+        cards.sort(function(a, b) {
+
+            const healthA =
+                parseFloat(
+                    a.querySelector(
+                        ".health-number"
+                    ).textContent
+                );
+
+            const healthB =
+                parseFloat(
+                    b.querySelector(
+                        ".health-number"
+                    ).textContent
+                );
+
+
+            if (sortAscending) {
+
+                return healthA - healthB;
+
+            }
+
+            else {
+
+                return healthB - healthA;
+
+            }
+
+        });
+
+
+        cards.forEach(function(card) {
+
+            stationList.appendChild(card);
+
+        });
+
+    }
+);
+
+
+/* =====================================================
+   STATION CARD CLICK
+   ===================================================== */
+
+stationCards.forEach(function(card) {
+
+    card.addEventListener(
+        "click",
+        function(event) {
+
+            /*
+             Don't redirect when
+             user is selecting text.
+            */
+
+            const stationID =
+                card.querySelector(
+                    ".station-id"
+                ).textContent.trim();
+
+
+            console.log(
+                "Selected station:",
+                stationID
             );
 
         }
     );
 
-}
+});
 
 
-// =================================
-// VIEW STATION
-// =================================
+/* =====================================================
+   INITIAL LOAD
+   ===================================================== */
 
-function viewStation(stationId) {
+filterStations();
 
-    window.location.href =
-        "station.html?id=" +
-        stationId;
 
-}
+console.log(
+    "SkyGuard AI Stations page loaded."
+);

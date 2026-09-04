@@ -1,0 +1,1066 @@
+/* =========================================
+   SKYGUARD AI
+   NETWORK / MAP PAGE
+   ========================================= */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Inter", Arial, sans-serif;
+    background: #eaf5fb;
+    color: #142033;
+}
+
+
+/* =========================================
+   MAIN APP
+   ========================================= */
+
+.network-app {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    background: #f7fbff;
+    padding-bottom: 110px;
+}
+
+
+/* =========================================
+   HEADER
+   ========================================= */
+
+.network-header {
+    height: 92px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 16px 28px;
+
+    background: rgba(255,255,255,0.97);
+
+    border-bottom: 1px solid #e7eef4;
+}
+
+.network-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.network-logo {
+    width: 48px;
+    height: 48px;
+
+    border-radius: 15px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #e8f6fc;
+    color: #087ba4;
+
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.network-brand-name {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.network-brand-name span {
+    font-size: 10px;
+
+    color: #087aa2;
+
+    background: #dff1fa;
+
+    padding: 4px 7px;
+
+    border-radius: 5px;
+
+    margin-left: 5px;
+}
+
+.network-subtitle {
+    margin-top: 3px;
+
+    color: #7b8791;
+
+    font-size: 12px;
+}
+
+.network-live {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 11px 15px;
+
+    border-radius: 22px;
+
+    background: #edfaf5;
+
+    color: #418b78;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.network-live span {
+    width: 8px;
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: #35bd96;
+}
+
+
+/* =========================================
+   TITLE
+   ========================================= */
+
+.network-title {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 22px 25px 12px;
+}
+
+.network-title h1 {
+    font-size: 32px;
+    font-weight: 500;
+}
+
+.network-title p {
+    margin-top: 5px;
+
+    color: #677681;
+
+    font-size: 15px;
+}
+
+.blue-dot {
+    display: inline-block;
+
+    width: 8px;
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: #6db2d1;
+}
+
+.title-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.round-button {
+    width: 46px;
+    height: 46px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background: #f1f3ff;
+
+    font-size: 18px;
+
+    cursor: pointer;
+}
+
+
+/* =========================================
+   TABS
+   ========================================= */
+
+.network-tabs {
+    margin: 5px 22px 15px;
+
+    height: 53px;
+
+    padding: 5px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-around;
+
+    background: #edf0ff;
+
+    border-radius: 28px;
+}
+
+.network-tab {
+    height: 43px;
+
+    padding: 0 18px;
+
+    border: none;
+
+    background: transparent;
+
+    border-radius: 22px;
+
+    color: #52606c;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    letter-spacing: .4px;
+
+    cursor: pointer;
+}
+
+.network-tab.active {
+    background: white;
+
+    color: #176b8b;
+
+    box-shadow: 0 3px 10px rgba(50,80,100,.08);
+}
+
+
+/* =========================================
+   MAP
+   ========================================= */
+
+.map-container {
+    position: relative;
+
+    margin: 0 22px;
+
+    height: 650px;
+
+    overflow: hidden;
+
+    border-radius: 30px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #f1faff,
+            #e6f5fc
+        );
+
+    border: 1px solid #e0eef5;
+}
+
+
+/* =========================================
+   MAP LEGEND
+   ========================================= */
+
+.map-legend {
+    position: absolute;
+
+    top: 20px;
+    left: 18px;
+
+    z-index: 20;
+
+    display: flex;
+
+    gap: 15px;
+
+    padding: 12px 15px;
+
+    background: rgba(255,255,255,.94);
+
+    border-radius: 18px;
+
+    box-shadow: 0 5px 15px rgba(50,80,100,.08);
+
+    font-size: 12px;
+}
+
+.map-legend span {
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+}
+
+.map-legend i {
+    width: 10px;
+    height: 10px;
+
+    display: inline-block;
+
+    border-radius: 50%;
+}
+
+.healthy {
+    background: #23b68a;
+}
+
+.monitor {
+    background: #eda81e;
+}
+
+.critical {
+    background: #c72d36;
+}
+
+
+/* =========================================
+   MAP CONTROLS
+   ========================================= */
+
+.map-controls {
+    position: absolute;
+
+    right: 15px;
+    top: 20px;
+
+    z-index: 20;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 5px;
+}
+
+.map-controls button {
+    width: 48px;
+    height: 48px;
+
+    border: none;
+
+    background: white;
+
+    color: #163e5a;
+
+    font-size: 23px;
+
+    cursor: pointer;
+
+    box-shadow: 0 3px 10px rgba(40,80,100,.08);
+}
+
+.map-controls button:first-child {
+    border-radius: 50%;
+}
+
+.map-controls button:nth-child(2) {
+    border-radius: 22px 22px 0 0;
+}
+
+.map-controls button:nth-child(3) {
+    border-radius: 0 0 22px 22px;
+}
+
+.map-controls button:last-child {
+    border-radius: 50%;
+}
+
+
+/* =========================================
+   INDIA MAP
+   ========================================= */
+
+.india-map {
+    position: absolute;
+
+    left: 50%;
+    top: 50px;
+
+    width: 400px;
+    height: 520px;
+
+    transform: translateX(-50%);
+}
+
+.india-svg {
+    position: absolute;
+
+    width: 100%;
+    height: 100%;
+}
+
+.india-outline {
+    fill: rgba(255,255,255,.32);
+
+    stroke: #ffffff;
+
+    stroke-width: 5;
+}
+
+
+/* =========================================
+   STATE LABELS
+   ========================================= */
+
+.state-label {
+    position: absolute;
+
+    color: #9aaab3;
+
+    font-size: 9px;
+
+    letter-spacing: .5px;
+
+    pointer-events: none;
+}
+
+.rajasthan {
+    left: 80px;
+    top: 170px;
+}
+
+.madhya {
+    left: 145px;
+    top: 250px;
+}
+
+.odisha {
+    left: 225px;
+    top: 315px;
+}
+
+.karnataka {
+    left: 160px;
+    top: 410px;
+}
+
+
+/* =========================================
+   STATION MARKERS
+   ========================================= */
+
+.station-marker {
+    position: absolute;
+
+    border: none;
+
+    background: transparent;
+
+    cursor: pointer;
+
+    z-index: 10;
+}
+
+.marker-label {
+    display: block;
+
+    padding: 8px 10px;
+
+    border-radius: 6px;
+
+    background: white;
+
+    color: #26657c;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    box-shadow: 0 4px 12px rgba(40,70,90,.1);
+}
+
+.marker-circle {
+    display: block;
+
+    width: 19px;
+    height: 19px;
+
+    margin: -2px auto 0;
+
+    border-radius: 50%;
+
+    border: 4px solid white;
+
+    box-shadow:
+        0 0 0 7px rgba(205,220,230,.5);
+}
+
+.critical-marker .marker-circle {
+    background: #c62d35;
+
+    box-shadow:
+        0 0 0 8px rgba(210,65,75,.15);
+}
+
+.monitor-marker .marker-circle {
+    background: #eca51b;
+
+    box-shadow:
+        0 0 0 8px rgba(236,165,27,.15);
+}
+
+
+/* marker positions */
+
+.delhi-marker {
+    left: 150px;
+    top: 105px;
+}
+
+.pune-marker {
+    left: 130px;
+    top: 330px;
+}
+
+.odisha-marker {
+    left: 225px;
+    top: 325px;
+}
+
+
+/* =========================================
+   SMALL HEALTHY MARKERS
+   ========================================= */
+
+.small-marker {
+    position: absolute;
+
+    width: 15px;
+    height: 15px;
+
+    border-radius: 50%;
+
+    background: #28b88b;
+
+    border: 3px solid white;
+
+    box-shadow: 0 3px 10px rgba(20,130,100,.18);
+}
+
+.marker-1 {
+    left: 110px;
+    top: 180px;
+}
+
+.marker-2 {
+    left: 225px;
+    top: 160px;
+}
+
+.marker-3 {
+    left: 280px;
+    top: 260px;
+}
+
+.marker-4 {
+    left: 165px;
+    top: 400px;
+}
+
+.marker-5 {
+    left: 210px;
+    top: 440px;
+}
+
+.marker-6 {
+    left: 120px;
+    top: 350px;
+}
+
+
+/* =========================================
+   NO DATA
+   ========================================= */
+
+.no-data {
+    position: absolute;
+
+    right: 18px;
+    top: 220px;
+
+    padding: 13px 8px;
+
+    background: white;
+
+    border-radius: 8px;
+
+    color: #747d85;
+
+    font-size: 10px;
+
+    text-align: center;
+
+    box-shadow: 0 3px 10px rgba(50,80,100,.08);
+}
+
+
+/* =========================================
+   LIVE STREAM
+   ========================================= */
+
+.live-stream {
+    position: absolute;
+
+    left: 20px;
+    right: 20px;
+    bottom: 18px;
+
+    height: 70px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 13px;
+
+    padding: 10px 15px;
+
+    background: rgba(255,255,255,.96);
+
+    border-radius: 25px;
+
+    box-shadow: 0 6px 20px rgba(40,70,90,.12);
+
+    z-index: 30;
+}
+
+.play-button {
+    width: 40px;
+    height: 40px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background: #e8f6fc;
+
+    color: #117da3;
+
+    cursor: pointer;
+}
+
+.stream-info {
+    flex: 1;
+}
+
+.stream-info strong {
+    color: #126f8d;
+
+    font-size: 12px;
+}
+
+.stream-line {
+    margin-top: 8px;
+
+    height: 7px;
+
+    width: 100%;
+
+    max-width: 260px;
+
+    background: #dce5f5;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+}
+
+.stream-line span {
+    display: block;
+
+    width: 72%;
+
+    height: 100%;
+
+    background: #087da6;
+
+    border-radius: 10px;
+}
+
+.stream-time {
+    font-size: 12px;
+
+    font-weight: 600;
+}
+
+.past-button {
+    border: none;
+
+    padding: 11px 12px;
+
+    border-radius: 10px;
+
+    background: #f0f1f7;
+
+    color: #66717c;
+
+    font-size: 10px;
+
+    font-weight: 600;
+}
+
+
+/* =========================================
+   SELECTED STATION
+   ========================================= */
+
+.selected-station {
+    margin: 20px 22px 0;
+
+    padding: 25px 22px;
+
+    background: white;
+
+    border-radius: 30px;
+
+    box-shadow: 0 8px 25px rgba(40,70,90,.09);
+}
+
+.drag-handle {
+    width: 45px;
+    height: 5px;
+
+    margin: -8px auto 20px;
+
+    border-radius: 10px;
+
+    background: #dfe6f7;
+}
+
+.selected-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    align-items: flex-start;
+}
+
+.selected-header h2 {
+    font-size: 20px;
+}
+
+.selected-header p {
+    margin-top: 5px;
+
+    color: #77828d;
+
+    font-size: 12px;
+}
+
+.zone-badge {
+    padding: 4px 7px;
+
+    border-radius: 6px;
+
+    background: #e4f4fa;
+
+    color: #1580a4;
+
+    font-size: 10px;
+}
+
+.monitor-score {
+    padding: 10px;
+
+    border-radius: 20px;
+
+    background: #fff6dc;
+
+    color: #a36c0b;
+
+    font-size: 10px;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================
+   MINI SENSOR CARDS
+   ========================================= */
+
+.mini-sensors {
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 9px;
+
+    margin-top: 20px;
+}
+
+.mini-sensor {
+    padding: 15px 9px;
+
+    text-align: center;
+
+    background: #f3f3ff;
+
+    border-radius: 20px;
+}
+
+.mini-title {
+    color: #68747f;
+
+    font-size: 10px;
+
+    font-weight: 600;
+}
+
+.mini-sensor strong {
+    display: block;
+
+    margin-top: 9px;
+
+    font-size: 20px;
+}
+
+.mini-sensor small {
+    display: block;
+
+    margin-top: 7px;
+
+    font-size: 9px;
+
+    font-weight: 600;
+}
+
+.normal-text {
+    color: #299675;
+}
+
+.warning-text {
+    color: #c17a26;
+}
+
+
+/* =========================================
+   DETAILS
+   ========================================= */
+
+.station-details {
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 8px;
+
+    margin-top: 17px;
+
+    color: #7b858e;
+
+    font-size: 10px;
+}
+
+.view-station {
+    display: block;
+
+    margin-top: 18px;
+
+    text-align: center;
+
+    text-decoration: none;
+
+    color: #087ca3;
+
+    font-size: 13px;
+
+    font-weight: 600;
+}
+
+
+/* =========================================
+   BOTTOM NAVIGATION
+   ========================================= */
+
+.bottom-navigation {
+    position: fixed;
+
+    left: 50%;
+    bottom: 15px;
+
+    transform: translateX(-50%);
+
+    width: min(650px, calc(100% - 28px));
+
+    display: flex;
+
+    justify-content: space-around;
+
+    padding: 12px 8px;
+
+    background: rgba(255,255,255,.96);
+
+    backdrop-filter: blur(15px);
+
+    border-radius: 30px;
+
+    box-shadow:
+        0 8px 35px rgba(30,70,90,.18);
+
+    z-index: 100;
+}
+
+.bottom-item {
+    position: relative;
+
+    width: 25%;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 4px;
+
+    color: #59656f;
+
+    text-decoration: none;
+
+    font-size: 11px;
+}
+
+.bottom-item span {
+    font-size: 22px;
+}
+
+.bottom-item.active {
+    color: #087da5;
+
+    font-weight: 700;
+}
+
+.alert-item b {
+    position: absolute;
+
+    top: -4px;
+    right: 24px;
+
+    width: 20px;
+    height: 20px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: #c92932;
+
+    color: white;
+
+    font-size: 9px;
+}
+
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    .network-header {
+        padding: 14px 18px;
+    }
+
+    .network-brand-name {
+        font-size: 17px;
+    }
+
+    .network-logo {
+        width: 43px;
+        height: 43px;
+    }
+
+    .network-subtitle {
+        font-size: 10px;
+    }
+
+    .network-live {
+        padding: 9px 11px;
+        font-size: 9px;
+    }
+
+    .network-title {
+        padding: 20px 18px 12px;
+    }
+
+    .network-title h1 {
+        font-size: 29px;
+    }
+
+    .network-tabs {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+
+    .network-tab {
+        padding: 0 10px;
+        font-size: 10px;
+    }
+
+    .map-container {
+        margin: 0 15px;
+        height: 620px;
+    }
+
+    .map-legend {
+        left: 12px;
+
+        gap: 8px;
+
+        padding: 10px;
+
+        font-size: 10px;
+    }
+
+    .india-map {
+        transform: translateX(-50%) scale(.9);
+
+        transform-origin: top center;
+    }
+
+    .live-stream {
+        left: 12px;
+        right: 12px;
+    }
+
+    .stream-time {
+        font-size: 10px;
+    }
+
+    .past-button {
+        display: none;
+    }
+
+    .selected-station {
+        margin-left: 15px;
+        margin-right: 15px;
+
+        padding: 22px 15px;
+    }
+
+    .selected-header {
+        flex-direction: column;
+    }
+
+    .mini-sensor {
+        padding: 13px 5px;
+    }
+
+    .mini-sensor strong {
+        font-size: 17px;
+    }
+
+    .station-details {
+        flex-direction: column;
+    }
+}
