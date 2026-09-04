@@ -1,251 +1,117 @@
-/* =====================================================
-   SKYGUARD AI - STATIONS JAVASCRIPT
-   ===================================================== */
+console.log("Stations page loaded");
 
+const stationTableBody = document.querySelector("#stationTable tbody");
+const stationCountText = document.querySelector(".card-header p");
+const searchInput = document.getElementById("stationSearch");
 
-/* =====================================================
-   ELEMENTS
-   ===================================================== */
-
-const searchInput =
-    document.getElementById("stationSearch");
-
-const stationCards =
-    document.querySelectorAll(".station-card");
-
-const filterButtons =
-    document.querySelectorAll(".filter-btn");
-
-const stationCount =
-    document.getElementById("stationCount");
-
-const sortButton =
-    document.getElementById("sortButton");
-
-
-/* =====================================================
-   CURRENT FILTER
-   ===================================================== */
-
-let currentFilter = "all";
-
-
-/* =====================================================
-   FILTER STATIONS
-   ===================================================== */
-
-function filterStations() {
-
-    const searchText =
-        searchInput.value
-            .toLowerCase()
-            .trim();
-
-
-    let visibleStations = 0;
-
-
-    stationCards.forEach(function(card) {
-
-        const status =
-            card.getAttribute("data-status");
-
-        const searchData =
-            card.getAttribute("data-search");
-
-
-        const matchesSearch =
-            searchData.includes(searchText);
-
-
-        const matchesFilter =
-            currentFilter === "all" ||
-            status === currentFilter;
-
-
-        if (matchesSearch && matchesFilter) {
-
-            card.style.display = "block";
-
-            visibleStations++;
-
-        }
-
-        else {
-
-            card.style.display = "none";
-
-        }
-
-    });
-
-
-    stationCount.textContent =
-        visibleStations;
-
+function stationStatusBadge(status) {
+    return `<span class="status ${SahasrakshaAPI.statusClass(status)}">${status}</span>`;
 }
 
+function latestValues(timeseries) {
+    return timeseries && timeseries.length ? timeseries[timeseries.length - 1] : {};
+}
 
-/* =====================================================
-   SEARCH
-   ===================================================== */
+function withUnit(value, unit, digits) {
+    const formatted = SahasrakshaAPI.number(value, digits);
+    return formatted === "—" ? formatted : `${formatted}${unit}`;
+}
 
-searchInput.addEventListener(
-    "input",
-    filterStations
-);
-
-
-/* =====================================================
-   FILTER BUTTONS
-   ===================================================== */
-
-filterButtons.forEach(function(button) {
-
-    button.addEventListener(
-        "click",
-        function() {
-
-            /* Remove active */
-
-            filterButtons.forEach(function(btn) {
-
-                btn.classList.remove("active");
-
-            });
-
-
-            /* Add active */
-
-            button.classList.add("active");
-
-
-            /* Get selected filter */
-
-            currentFilter =
-                button.getAttribute(
-                    "data-filter"
-                );
-
-
-            filterStations();
-
-        }
-    );
-
-});
-
-
-/* =====================================================
-   SORT
-   ===================================================== */
-
-let sortAscending = false;
-
-
-sortButton.addEventListener(
-    "click",
-    function() {
-
-        sortAscending =
-            !sortAscending;
-
-
-        const stationList =
-            document.getElementById(
-                "stationList"
-            );
-
-
-        const cards =
-            Array.from(
-                stationList.querySelectorAll(
-                    ".station-card"
-                )
-            );
-
-
-        cards.sort(function(a, b) {
-
-            const healthA =
-                parseFloat(
-                    a.querySelector(
-                        ".health-number"
-                    ).textContent
-                );
-
-            const healthB =
-                parseFloat(
-                    b.querySelector(
-                        ".health-number"
-                    ).textContent
-                );
-
-
-            if (sortAscending) {
-
-                return healthA - healthB;
-
-            }
-
-            else {
-
-                return healthB - healthA;
-
-            }
-
-        });
-
-
-        cards.forEach(function(card) {
-
-            stationList.appendChild(card);
-
-        });
-
+function renderStationRows(stations, latestByStation) {
+    if (!stationTableBody) {
+        return;
     }
-);
 
+    if (!stations.length) {
+        stationTableBody.innerHTML = `
+            <tr>
+                <td colspan="7">No stations found.</td>
+            </tr>
+        `;
+        return;
+    }
 
-/* =====================================================
-   STATION CARD CLICK
-   ===================================================== */
+    stationTableBody.innerHTML = stations.map((station) => {
+        const latest = latestByStation[station.station_id] || {};
+        return `
+            <tr>
+                <td>${station.station_id}</td>
+                <td>${station.name}</td>
+                <td>${stationStatusBadge(station.status)}</td>
+                <td>${withUnit(latest.T, "°C", 1)}</td>
+                <td>${withUnit(latest.RH, "%", 0)}</td>
+                <td>${SahasrakshaAPI.percent(station.health, 0)}</td>
+                <td>
+                    <button class="btn btn-primary" data-station-id="${station.station_id}">
+                        View
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
 
-stationCards.forEach(function(card) {
+async function loadStations() {
+    if (stationTableBody) {
+        stationTableBody.innerHTML = `
+            <tr>
+                <td colspan="7">Loading stations...</td>
+            </tr>
+        `;
+    }
 
-    card.addEventListener(
-        "click",
-        function(event) {
-
-            /*
-             Don't redirect when
-             user is selecting text.
-            */
-
-            const stationID =
-                card.querySelector(
-                    ".station-id"
-                ).textContent.trim();
-
-
-            console.log(
-                "Selected station:",
-                stationID
-            );
-
+    try {
+        const stations = await SahasrakshaAPI.getStations();
+        if (stationCountText) {
+            stationCountText.textContent = `${stations.length} registered weather stations`;
         }
-    );
 
-});
+        const latestPairs = await Promise.all(
+            stations.map(async (station) => {
+                try {
+                    const timeseries = await SahasrakshaAPI.getStationTimeseries(station.station_id);
+                    return [station.station_id, latestValues(timeseries)];
+                } catch (error) {
+                    return [station.station_id, {}];
+                }
+            })
+        );
 
+        renderStationRows(stations, Object.fromEntries(latestPairs));
+    } catch (error) {
+        if (stationTableBody) {
+            stationTableBody.innerHTML = `
+                <tr>
+                    <td colspan="7">Unable to load stations from the API.</td>
+                </tr>
+            `;
+        }
+    }
+}
 
-/* =====================================================
-   INITIAL LOAD
-   ===================================================== */
+if (searchInput) {
+    searchInput.addEventListener("keyup", function() {
+        const searchValue = this.value.toLowerCase();
+        const rows = document.querySelectorAll("#stationTable tbody tr");
 
-filterStations();
+        rows.forEach(function(row) {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(searchValue) ? "" : "none";
+        });
+    });
+}
 
+if (stationTableBody) {
+    stationTableBody.addEventListener("click", function(event) {
+        const button = event.target.closest("[data-station-id]");
+        if (button) {
+            viewStation(button.dataset.stationId);
+        }
+    });
+}
 
-console.log(
-    "SkyGuard AI Stations page loaded."
-);
+function viewStation(stationId) {
+    window.location.href = "station.html?id=" + encodeURIComponent(stationId);
+}
+
+loadStations();

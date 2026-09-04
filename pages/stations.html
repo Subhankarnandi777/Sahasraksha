@@ -2,839 +2,348 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Stations - SkyGuard AI</title>
+<meta charset="UTF-8">
 
-    <!-- Common CSS -->
-    <link rel="stylesheet" href="../css/style.css">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-    <!-- Stations CSS -->
-    <link rel="stylesheet" href="../css/stations.css">
+<title>SkyGuard AI - Stations</title>
 
-    <!-- Google Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="../css/style.css">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+<link rel="stylesheet"
+      href="../css/dashboard.css">
+
+<link rel="stylesheet"
+      href="../css/responsive.css">
+
 </head>
+
 
 <body>
 
-    <div class="stations-app">
+<div class="app-layout">
 
-        <!-- =====================================
-             HEADER
-        ====================================== -->
 
-        <header class="top-header">
+<aside class="sidebar">
 
-            <div class="brand-section">
+    <div class="sidebar-brand">
 
-                <div class="brand-logo">
-                    ◎
-                </div>
+        <div class="brand-icon small">
+            SG
+        </div>
 
-                <div class="brand-text">
-
-                    <div class="brand-name">
-                        SkyGuard AI
-                        <span class="imd-badge">IMD</span>
-                    </div>
-
-                    <div class="brand-subtitle">
-                        Atmospheric Network
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <div class="live-badge">
-                <span class="live-dot"></span>
-                LIVE · INSAT-3DR
-            </div>
-
-        </header>
-
-
-        <!-- =====================================
-             STATION INTRODUCTION
-        ====================================== -->
-
-        <section class="station-intro">
-
-            <div class="intro-top">
-
-                <div class="network-title">
-                    <span class="blue-dot"></span>
-                    IMD NATIONAL NETWORK
-                </div>
-
-                <div class="sync-badge">
-                    INSAT-3DR Sync
-                </div>
-
-            </div>
-
-
-            <div class="intro-content">
-
-                <div>
-
-                    <h1>Stations</h1>
-
-                    <p>
-                        2,595 Stations Monitored across
-                        36 meteorological subdivisions
-                    </p>
-
-                </div>
-
-
-                <div class="satellite-icon">
-                    ◉
-                </div>
-
-            </div>
-
-
-            <!-- ACTIVE PROGRESS -->
-
-            <div class="active-row">
-
-                <div class="progress-bar">
-
-                    <div class="progress-active"></div>
-
-                    <div class="progress-monitor"></div>
-
-                    <div class="progress-critical"></div>
-
-                </div>
-
-                <span>98.2% Active</span>
-
-            </div>
-
-        </section>
-
-
-        <!-- =====================================
-             SEARCH
-        ====================================== -->
-
-        <section class="search-section">
-
-            <div class="search-box">
-
-                <span class="search-icon">⌕</span>
-
-                <input
-                    type="text"
-                    id="stationSearch"
-                    placeholder="Search station or city (e.g. Pune, Delhi, AWS)"
-                >
-
-            </div>
-
-        </section>
-
-
-        <!-- =====================================
-             FILTER BUTTONS
-        ====================================== -->
-
-        <section class="station-filters">
-
-            <button
-                class="filter-btn active"
-                data-filter="all">
-
-                All
-                <span>2,595</span>
-
-            </button>
-
-
-            <button
-                class="filter-btn"
-                data-filter="healthy">
-
-                <i class="green-small-dot"></i>
-
-                Healthy
-                <span>2,401</span>
-
-            </button>
-
-
-            <button
-                class="filter-btn"
-                data-filter="monitor">
-
-                <i class="purple-small-dot"></i>
-
-                Monitor
-                <span>143</span>
-
-            </button>
-
-        </section>
-
-
-        <!-- =====================================
-             STATION TOOLBAR
-        ====================================== -->
-
-        <section class="station-toolbar">
-
-            <div class="showing">
-
-                <span class="filter-symbol">
-                    ☷
-                </span>
-
-                Showing
-                <strong id="stationCount">7</strong>
-                telemetry pods
-
-            </div>
-
-
-            <button class="sort-button" id="sortButton">
-
-                Sort: Risk Priority
-
-                <span>⌄</span>
-
-            </button>
-
-        </section>
-
-
-        <!-- =====================================
-             STATION LIST
-        ====================================== -->
-
-        <main id="stationList">
-
-
-            <!-- STATION 1 -->
-
-            <article
-                class="station-card critical"
-                data-status="critical"
-                data-search="aws del delhi delhi central">
-
-                <div class="station-card-content">
-
-                    <div class="station-information">
-
-                        <div class="station-name">
-
-                            <span class="station-id">
-                                AWS_DEL
-                            </span>
-
-                            <span class="dot-separator">•</span>
-
-                            <span>
-                                Delhi Central
-                            </span>
-
-                        </div>
-
-
-                        <div class="station-details">
-
-                            <div>
-                                ◷
-                                Last seen: 4 min ago
-                            </div>
-
-                            <div class="urgent-text">
-                                0 days
-                                <br>
-                                (Urgent)
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="health-section">
-
-                        <div class="health-number">
-                            42.1%
-                        </div>
-
-                        <div class="service-badge">
-                            <span></span>
-                            SERVICE NOW
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="anomaly critical-anomaly">
-
-                    <span class="anomaly-icon">
-                        ⚠
-                    </span>
-
-                    <span>
-                        Anomaly: Pressure Diaphragm Failure (6.2σ)
-                    </span>
-
-                    <span class="arrow">
-                        ›
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            <!-- STATION 2 -->
-
-            <article
-                class="station-card critical"
-                data-status="critical"
-                data-search="aws hyd hyderabad">
-
-                <div class="station-card-content">
-
-                    <div class="station-information">
-
-                        <div class="station-name">
-
-                            <span class="station-id">
-                                AWS_HYD
-                            </span>
-
-                            <span class="dot-separator">•</span>
-
-                            <span>
-                                Hyderabad
-                            </span>
-
-                        </div>
-
-
-                        <div class="station-details">
-
-                            <div>
-                                ◷
-                                Last seen: 1 min ago
-                            </div>
-
-                            <div class="urgent-text">
-                                1 day to
-                                <br>
-                                service
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="health-section">
-
-                        <div class="health-number">
-                            61.0%
-                        </div>
-
-                        <div class="service-badge">
-                            <span></span>
-                            SERVICE NOW
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="anomaly critical-anomaly">
-
-                    <span class="anomaly-icon">
-                        ✳
-                    </span>
-
-                    <span>
-                        Anomaly: Aspirator fan stall (+3.7°C bias)
-                    </span>
-
-                    <span class="arrow">
-                        ›
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            <!-- STATION 3 -->
-
-            <article
-                class="station-card monitor"
-                data-status="monitor"
-                data-search="aws chn chennai chennai coast">
-
-                <div class="station-card-content">
-
-                    <div class="station-information">
-
-                        <div class="station-name">
-
-                            <span class="station-id">
-                                AWS_CHN
-                            </span>
-
-                            <span class="dot-separator">•</span>
-
-                            <span>
-                                Chennai Coast
-                            </span>
-
-                        </div>
-
-
-                        <div class="station-details">
-
-                            <div>
-                                ◷
-                                Last seen: 8 min ago
-                            </div>
-
-                            <div>
-                                48 days to
-                                <br>
-                                service
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="health-section">
-
-                        <div class="health-number monitor-number">
-                            88.0%
-                        </div>
-
-                        <div class="monitor-badge">
-                            <span></span>
-                            MONITOR
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="anomaly monitor-anomaly">
-
-                    <span class="anomaly-icon">
-                        ≋
-                    </span>
-
-                    <span>
-                        Anomaly: Barometer port salt encrustation
-                    </span>
-
-                    <span class="arrow">
-                        ›
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            <!-- STATION 4 -->
-
-            <article
-                class="station-card healthy"
-                data-status="healthy"
-                data-search="aws pnq pune pune maharashtra">
-
-                <div class="station-card-content">
-
-                    <div class="station-information">
-
-                        <div class="station-name">
-
-                            <span class="station-id">
-                                AWS_PNQ
-                            </span>
-
-                            <span class="dot-separator">•</span>
-
-                            <span>
-                                Pune
-                            </span>
-
-                        </div>
-
-
-                        <div class="station-details">
-
-                            <div>
-                                ◷
-                                Last seen: 2 min ago
-                            </div>
-
-                            <div class="healthy-text">
-                                88 days to
-                                <br>
-                                service
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="health-section">
-
-                        <div class="health-number healthy-number">
-                            91.2%
-                        </div>
-
-                        <div class="healthy-badge">
-                            <span></span>
-                            HEALTHY
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="anomaly healthy-anomaly">
-
-                    <span class="anomaly-icon">
-                        ✓
-                    </span>
-
-                    <span>
-                        Telemetry operating within normal range
-                    </span>
-
-                    <span class="arrow">
-                        ›
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            <!-- STATION 5 -->
-
-            <article
-                class="station-card healthy"
-                data-status="healthy"
-                data-search="aws kol kolkata west bengal">
-
-                <div class="station-card-content">
-
-                    <div class="station-information">
-
-                        <div class="station-name">
-
-                            <span class="station-id">
-                                AWS_KOL
-                            </span>
-
-                            <span class="dot-separator">•</span>
-
-                            <span>
-                                Kolkata
-                            </span>
-
-                        </div>
-
-
-                        <div class="station-details">
-
-                            <div>
-                                ◷
-                                Last seen: 3 min ago
-                            </div>
-
-                            <div class="healthy-text">
-                                74 days to
-                                <br>
-                                service
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="health-section">
-
-                        <div class="health-number healthy-number">
-                            94.5%
-                        </div>
-
-                        <div class="healthy-badge">
-                            <span></span>
-                            HEALTHY
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="anomaly healthy-anomaly">
-
-                    <span class="anomaly-icon">
-                        ✓
-                    </span>
-
-                    <span>
-                        All telemetry signals nominal
-                    </span>
-
-                    <span class="arrow">
-                        ›
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            <!-- STATION 6 -->
-
-            <article
-                class="station-card healthy"
-                data-status="healthy"
-                data-search="aws mum mumbai maharashtra">
-
-                <div class="station-card-content">
-
-                    <div class="station-information">
-
-                        <div class="station-name">
-
-                            <span class="station-id">
-                                AWS_MUM
-                            </span>
-
-                            <span class="dot-separator">•</span>
-
-                            <span>
-                                Mumbai
-                            </span>
-
-                        </div>
-
-
-                        <div class="station-details">
-
-                            <div>
-                                ◷
-                                Last seen: 2 min ago
-                            </div>
-
-                            <div class="healthy-text">
-                                62 days to
-                                <br>
-                                service
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="health-section">
-
-                        <div class="health-number healthy-number">
-                            96.2%
-                        </div>
-
-                        <div class="healthy-badge">
-                            <span></span>
-                            HEALTHY
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="anomaly healthy-anomaly">
-
-                    <span class="anomaly-icon">
-                        ✓
-                    </span>
-
-                    <span>
-                        Sensor synchronization normal
-                    </span>
-
-                    <span class="arrow">
-                        ›
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            <!-- STATION 7 -->
-
-            <article
-                class="station-card monitor"
-                data-status="monitor"
-                data-search="aws jpr jaipur rajasthan">
-
-                <div class="station-card-content">
-
-                    <div class="station-information">
-
-                        <div class="station-name">
-
-                            <span class="station-id">
-                                AWS_JPR
-                            </span>
-
-                            <span class="dot-separator">•</span>
-
-                            <span>
-                                Jaipur
-                            </span>
-
-                        </div>
-
-
-                        <div class="station-details">
-
-                            <div>
-                                ◷
-                                Last seen: 5 min ago
-                            </div>
-
-                            <div>
-                                31 days to
-                                <br>
-                                service
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="health-section">
-
-                        <div class="health-number monitor-number">
-                            79.4%
-                        </div>
-
-                        <div class="monitor-badge">
-                            <span></span>
-                            MONITOR
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="anomaly monitor-anomaly">
-
-                    <span class="anomaly-icon">
-                        !
-                    </span>
-
-                    <span>
-                        Anomaly: Humidity drift detected
-                    </span>
-
-                    <span class="arrow">
-                        ›
-                    </span>
-
-                </div>
-
-            </article>
-
-
-        </main>
-
-
-        <!-- =====================================
-             BOTTOM NAVIGATION
-        ====================================== -->
-
-        <nav class="bottom-navigation">
-
-            <a href="dashboard.html"
-                class="bottom-item">
-
-                <span class="nav-icon">⌂</span>
-
-                <label>Home</label>
-
-            </a>
-
-
-            <a href="network.html"
-                class="bottom-item">
-
-                <span class="nav-icon">◎</span>
-
-                <label>Map</label>
-
-            </a>
-
-
-            <a href="alerts.html"
-                class="bottom-item alert-navigation">
-
-                <span class="notification-number">
-                    12
-                </span>
-
-                <span class="nav-icon">♧</span>
-
-                <label>Alerts</label>
-
-            </a>
-
-
-            <a href="stations.html"
-                class="bottom-item active">
-
-                <span class="nav-icon">♒</span>
-
-                <label>Stations</label>
-
-            </a>
-
-        </nav>
+        <div>
+            <h2>SkyGuard</h2>
+            <span>AI Monitoring</span>
+        </div>
 
     </div>
 
 
-    <!-- JAVASCRIPT -->
-    <script src="../js/stations.js"></script>
+    <nav class="sidebar-nav">
+
+        <p class="nav-title">
+            MAIN
+        </p>
+
+        <a href="dashboard.html"
+           class="nav-link">
+            ▣ Dashboard
+        </a>
+
+        <a href="network.html"
+           class="nav-link">
+            ◉ Network
+        </a>
+
+        <a href="stations.html"
+           class="nav-link active">
+            ▦ Stations
+        </a>
+
+
+        <p class="nav-title">
+            MONITORING
+        </p>
+
+        <a href="alerts.html"
+           class="nav-link">
+            ⚠ Alerts
+        </a>
+
+        <a href="diagnostics.html"
+           class="nav-link">
+            ⚙ Diagnostics
+        </a>
+
+        <a href="maintenance.html"
+           class="nav-link">
+            🔧 Maintenance
+        </a>
+
+    </nav>
+
+
+    <div class="sidebar-bottom">
+
+        <a href="../index.html"
+           class="logout">
+            ↪ Logout
+        </a>
+
+    </div>
+
+</aside>
+
+
+
+<main class="main-content">
+
+
+<header class="topbar">
+
+    <div>
+
+        <h1>
+            Weather Stations
+        </h1>
+
+        <p>
+            Manage and monitor all registered stations
+        </p>
+
+    </div>
+
+</header>
+
+
+
+<div class="card">
+
+    <div class="card-header">
+
+        <div>
+
+            <h2>
+                Station List
+            </h2>
+
+            <p>
+                24 registered weather stations
+            </p>
+
+        </div>
+
+
+        <input
+            type="text"
+            id="stationSearch"
+            placeholder="Search station..."
+            style="
+                padding:10px;
+                border:1px solid #e2e8f0;
+                border-radius:7px;
+            "
+        >
+
+    </div>
+
+
+
+    <div style="overflow-x:auto">
+
+    <table id="stationTable">
+
+        <thead>
+
+            <tr>
+
+                <th>ID</th>
+
+                <th>Location</th>
+
+                <th>Status</th>
+
+                <th>Temperature</th>
+
+                <th>Humidity</th>
+
+                <th>Signal</th>
+
+                <th>Action</th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+
+            <tr>
+
+                <td>ST-001</td>
+
+                <td>Kolkata</td>
+
+                <td>
+                    <span class="status online">
+                        Online
+                    </span>
+                </td>
+
+                <td>28.4°C</td>
+
+                <td>67%</td>
+
+                <td>94%</td>
+
+                <td>
+                    <button
+                        class="btn btn-primary"
+                        onclick="viewStation('ST-001')">
+                        View
+                    </button>
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>ST-002</td>
+
+                <td>Siliguri</td>
+
+                <td>
+                    <span class="status online">
+                        Online
+                    </span>
+                </td>
+
+                <td>25.8°C</td>
+
+                <td>72%</td>
+
+                <td>87%</td>
+
+                <td>
+                    <button
+                        class="btn btn-primary"
+                        onclick="viewStation('ST-002')">
+                        View
+                    </button>
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>ST-003</td>
+
+                <td>Durgapur</td>
+
+                <td>
+                    <span class="status offline">
+                        Offline
+                    </span>
+                </td>
+
+                <td>---</td>
+
+                <td>---</td>
+
+                <td>0%</td>
+
+                <td>
+                    <button
+                        class="btn btn-primary"
+                        onclick="viewStation('ST-003')">
+                        View
+                    </button>
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>ST-004</td>
+
+                <td>Howrah</td>
+
+                <td>
+                    <span class="status online">
+                        Online
+                    </span>
+                </td>
+
+                <td>30.2°C</td>
+
+                <td>64%</td>
+
+                <td>91%</td>
+
+                <td>
+                    <button
+                        class="btn btn-primary"
+                        onclick="viewStation('ST-004')">
+                        View
+                    </button>
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>ST-005</td>
+
+                <td>Asansol</td>
+
+                <td>
+                    <span class="status warning">
+                        Warning
+                    </span>
+                </td>
+
+                <td>34.1°C</td>
+
+                <td>58%</td>
+
+                <td>73%</td>
+
+                <td>
+                    <button
+                        class="btn btn-primary"
+                        onclick="viewStation('ST-005')">
+                        View
+                    </button>
+                </td>
+
+            </tr>
+
+
+        </tbody>
+
+    </table>
+
+    </div>
+
+</div>
+
+
+</main>
+
+</div>
+
+
+<script src="../js/api.js"></script>
+<script src="../js/stations.js"></script>
 
 </body>
 

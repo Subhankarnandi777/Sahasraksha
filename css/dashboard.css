@@ -322,6 +322,46 @@
     font-size: 11px;
 }
 
+.api-state {
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+.api-error {
+    color: #dc2626;
+}
+
+.status {
+    display: inline-block;
+
+    padding: 5px 9px;
+
+    border-radius: 14px;
+
+    font-size: 11px;
+
+    font-weight: bold;
+}
+
+.status.online {
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+.status.warning {
+    background: #fef3c7;
+
+    color: #92400e;
+}
+
+.status.offline {
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
 
 /* =========================
    SECTION
