@@ -1,0 +1,90 @@
+.station-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 25px;
+}
+
+.station-header h2 {
+    margin-bottom: 6px;
+}
+
+.station-header p {
+    color: var(--muted);
+}
+
+.station-grid {
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 20px;
+
+    margin-top: 25px;
+}
+
+.health-row {
+    display: flex;
+
+    justify-content: space-between;
+
+    padding: 15px 0;
+
+    border-bottom: 1px solid var(--border);
+
+    font-size: 13px;
+}
+
+.health-good {
+    color: #16a34a;
+
+    font-weight: bold;
+}
+
+.health-warning {
+    color: #f59e0b;
+
+    font-weight: bold;
+}
+
+.ai-status {
+    display: flex;
+
+    align-items: center;
+
+    gap: 20px;
+
+    margin-top: 25px;
+}
+
+.ai-score {
+    width: 90px;
+    height: 90px;
+
+    border-radius: 50%;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    background: #dcfce7;
+
+    color: #16a34a;
+
+    font-size: 22px;
+
+    font-weight: bold;
+}
+
+.ai-status p {
+    color: var(--muted);
+
+    font-size: 12px;
+
+    margin-top: 5px;
+}

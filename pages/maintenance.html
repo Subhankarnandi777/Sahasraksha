@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>SkyGuard AI - Maintenance</title>
+
+<link rel="stylesheet"
+      href="../css/style.css">
+
+<link rel="stylesheet"
+      href="../css/dashboard.css">
+
+<link rel="stylesheet"
+      href="../css/responsive.css">
+
+</head>
+
+
+<body>
+
+<div class="app-layout">
+
+
+<aside class="sidebar">
+
+    <div class="sidebar-brand">
+
+        <div class="brand-icon small">
+            SG
+        </div>
+
+        <div>
+            <h2>SkyGuard</h2>
+            <span>AI Monitoring</span>
+        </div>
+
+    </div>
+
+
+    <nav class="sidebar-nav">
+
+        <p class="nav-title">
+            MAIN
+        </p>
+
+        <a href="dashboard.html"
+           class="nav-link">
+            ▣ Dashboard
+        </a>
+
+        <a href="network.html"
+           class="nav-link">
+            ◉ Network
+        </a>
+
+        <a href="stations.html"
+           class="nav-link">
+            ▦ Stations
+        </a>
+
+
+        <p class="nav-title">
+            MONITORING
+        </p>
+
+        <a href="alerts.html"
+           class="nav-link">
+            ⚠ Alerts
+        </a>
+
+        <a href="diagnostics.html"
+           class="nav-link">
+            ⚙ Diagnostics
+        </a>
+
+        <a href="maintenance.html"
+           class="nav-link active">
+            🔧 Maintenance
+        </a>
+
+    </nav>
+
+</aside>
+
+
+
+<main class="main-content">
+
+
+<header class="topbar">
+
+    <div>
+
+        <h1>
+            Maintenance
+        </h1>
+
+        <p>
+            Station maintenance schedules and records
+        </p>
+
+    </div>
+
+</header>
+
+
+
+<section class="stats-grid">
+
+
+<div class="stat-card">
+
+    <div class="stat-icon blue">
+        🔧
+    </div>
+
+    <div>
+
+        <p>Total Tasks</p>
+
+        <h2>
+            18
+        </h2>
+
+    </div>
+
+</div>
+
+
+<div class="stat-card">
+
+    <div class="stat-icon green">
+        ✓
+    </div>
+
+    <div>
+
+        <p>Completed</p>
+
+        <h2>
+            12
+        </h2>
+
+    </div>
+
+</div>
+
+
+<div class="stat-card">
+
+    <div class="stat-icon red">
+        ⚠
+    </div>
+
+    <div>
+
+        <p>Overdue</p>
+
+        <h2>
+            2
+        </h2>
+
+    </div>
+
+</div>
+
+
+<div class="stat-card">
+
+    <div class="stat-icon purple">
+        ◷
+    </div>
+
+    <div>
+
+        <p>Upcoming</p>
+
+        <h2>
+            4
+        </h2>
+
+    </div>
+
+</div>
+
+
+</section>
+
+
+
+<div class="card">
+
+<div class="card-header">
+
+    <div>
+
+        <h2>
+            Maintenance Schedule
+        </h2>
+
+        <p>
+            Upcoming station maintenance
+        </p>
+
+    </div>
+
+</div>
+
+
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Station</th>
+
+<th>Component</th>
+
+<th>Last Maintenance</th>
+
+<th>Next Maintenance</th>
+
+<th>Status</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+<tr>
+
+<td>
+ST-001
+</td>
+
+<td>
+Temperature Sensor
+</td>
+
+<td>
+12 Aug 2026
+</td>
+
+<td>
+12 Nov 2026
+</td>
+
+<td>
+
+<span class="status online">
+Good
+</span>
+
+</td>
+
+</tr>
+
+
+<tr>
+
+<td>
+ST-002
+</td>
+
+<td>
+Humidity Sensor
+</td>
+
+<td>
+05 Jul 2026
+</td>
+
+<td>
+05 Oct 2026
+</td>
+
+<td>
+
+<span class="status online">
+Scheduled
+</span>
+
+</td>
+
+</tr>
+
+
+<tr>
+
+<td>
+ST-003
+</td>
+
+<td>
+Network Module
+</td>
+
+<td>
+10 Mar 2026
+</td>
+
+<td>
+10 Jun 2026
+</td>
+
+<td>
+
+<span class="status offline">
+Overdue
+</span>
+
+</td>
+
+</tr>
+
+
+<tr>
+
+<td>
+ST-004
+</td>
+
+<td>
+Pressure Sensor
+</td>
+
+<td>
+20 Aug 2026
+</td>
+
+<td>
+20 Nov 2026
+</td>
+
+<td>
+
+<span class="status online">
+Good
+</span>
+
+</td>
+
+</tr>
+
+
+</tbody>
+
+</table>
+
+</div>
+
+
+</main>
+
+</div>
+
+
+<script src="../js/maintenance.js"></script>
+
+</body>
+
+</html>

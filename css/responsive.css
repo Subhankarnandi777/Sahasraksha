@@ -1,0 +1,276 @@
+/* =================================
+   TABLET
+================================= */
+
+@media (max-width: 1100px) {
+
+    .stats-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .sensor-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .dashboard-two-column {
+        grid-template-columns:
+            1fr;
+    }
+
+}
+
+
+/* =================================
+   MOBILE
+================================= */
+
+@media (max-width: 700px) {
+
+    .sidebar {
+        width: 70px;
+
+        padding: 15px 8px;
+    }
+
+
+    .sidebar-brand h2,
+    .sidebar-brand span,
+    .nav-title,
+    .nav-link:not(:first-child) {
+        font-size: 0;
+    }
+
+
+    .sidebar-brand {
+        justify-content: center;
+
+        padding-bottom: 20px;
+    }
+
+
+    .nav-link {
+        justify-content: center;
+
+        padding: 12px 5px;
+    }
+
+
+    .notification-badge {
+        display: none;
+    }
+
+
+    .main-content {
+        margin-left: 70px;
+
+        width: calc(100% - 70px);
+
+        padding: 20px 15px;
+    }
+
+
+    .topbar {
+        align-items: flex-start;
+
+        gap: 15px;
+    }
+
+
+    .topbar h1 {
+        font-size: 22px;
+    }
+
+
+    .system-status {
+        display: none;
+    }
+
+
+    .stats-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .sensor-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .dashboard-two-column {
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .station-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .alert-summary {
+        grid-template-columns:
+            1fr;
+    }
+
+
+    table {
+        min-width: 700px;
+    }
+
+
+    .card {
+        overflow-x: auto;
+    }
+
+}
+
+
+/* =================================
+   LOGIN MOBILE
+================================= */
+
+@media (max-width: 500px) {
+
+    .login-card {
+        width: 100%;
+
+        padding: 25px;
+    }
+
+}
+@media (max-width: 900px) {
+
+    .top-header {
+        padding: 12px 20px;
+    }
+
+    .ops-button {
+        display: none;
+    }
+
+    .main-nav {
+        display: none;
+    }
+
+    .brand h2 {
+        font-size: 17px;
+    }
+
+    .brand p {
+        font-size: 10px;
+    }
+
+    .live-status {
+        font-size: 10px;
+        padding: 8px 10px;
+    }
+
+    .dashboard {
+        padding: 15px;
+        padding-bottom: 90px;
+    }
+
+    .hero {
+        flex-direction: column;
+        padding: 22px;
+        border-radius: 22px;
+    }
+
+    .hero h1 {
+        font-size: 26px;
+    }
+
+    .health-card {
+        min-width: auto;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hour-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .mobile-nav {
+        position: fixed;
+        display: flex;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        background: rgba(255,255,255,0.97);
+        border-radius: 25px;
+        padding: 12px;
+        justify-content: space-around;
+        box-shadow: 0 5px 30px rgba(0,0,0,0.15);
+        z-index: 1000;
+    }
+
+    .mobile-nav a {
+        position: relative;
+        text-align: center;
+        font-size: 11px;
+        color: #596773;
+    }
+
+    .mobile-nav span {
+        display: block;
+        font-size: 22px;
+        margin-bottom: 3px;
+    }
+
+    .mobile-nav b {
+        position: absolute;
+        top: -4px;
+        right: 8px;
+        background: #d73e45;
+        color: white;
+        border-radius: 10px;
+        padding: 2px 5px;
+        font-size: 8px;
+    }
+}
+
+
+@media (max-width: 500px) {
+
+    .brand-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .live-status {
+        padding: 7px 9px;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+    }
+
+    .status-pill {
+        width: 100%;
+    }
+
+    .hour-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .section-heading {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sensor-banner {
+        min-height: 170px;
+        padding: 22px;
+    }
+
+    .sensor-banner h2 {
+        font-size: 21px;
+    }
+}

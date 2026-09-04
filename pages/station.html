@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>SkyGuard AI - Station Details</title>
+
+<link rel="stylesheet"
+      href="../css/style.css">
+
+<link rel="stylesheet"
+      href="../css/dashboard.css">
+
+<link rel="stylesheet"
+      href="../css/station.css">
+
+<link rel="stylesheet"
+      href="../css/responsive.css">
+
+</head>
+
+
+<body>
+
+<div class="app-layout">
+
+
+<aside class="sidebar">
+
+    <div class="sidebar-brand">
+
+        <div class="brand-icon small">
+            SG
+        </div>
+
+        <div>
+            <h2>SkyGuard</h2>
+            <span>AI Monitoring</span>
+        </div>
+
+    </div>
+
+
+    <nav class="sidebar-nav">
+
+        <p class="nav-title">
+            MAIN
+        </p>
+
+        <a href="dashboard.html"
+           class="nav-link">
+            ▣ Dashboard
+        </a>
+
+        <a href="network.html"
+           class="nav-link">
+            ◉ Network
+        </a>
+
+        <a href="stations.html"
+           class="nav-link active">
+            ▦ Stations
+        </a>
+
+
+        <p class="nav-title">
+            MONITORING
+        </p>
+
+        <a href="alerts.html"
+           class="nav-link">
+            ⚠ Alerts
+        </a>
+
+        <a href="diagnostics.html"
+           class="nav-link">
+            ⚙ Diagnostics
+        </a>
+
+        <a href="maintenance.html"
+           class="nav-link">
+            🔧 Maintenance
+        </a>
+
+    </nav>
+
+</aside>
+
+
+
+<main class="main-content">
+
+
+<header class="topbar">
+
+    <div>
+
+        <h1>
+            Station Details
+        </h1>
+
+        <p>
+            Detailed monitoring information
+        </p>
+
+    </div>
+
+    <a href="stations.html"
+       class="btn btn-primary">
+
+        ← Back to Stations
+
+    </a>
+
+</header>
+
+
+
+<section class="station-header card">
+
+    <div>
+
+        <h2 id="stationName">
+            ST-001
+        </h2>
+
+        <p id="stationLocation">
+            Kolkata, West Bengal
+        </p>
+
+    </div>
+
+    <span class="status online">
+        ● Online
+    </span>
+
+</section>
+
+
+
+<section class="sensor-grid">
+
+
+<div class="sensor-card">
+
+    <div class="sensor-top">
+        Temperature
+        <span>🌡</span>
+    </div>
+
+    <h2>
+        28.4°C
+    </h2>
+
+    <span class="positive">
+        Normal
+    </span>
+
+</div>
+
+
+
+<div class="sensor-card">
+
+    <div class="sensor-top">
+        Humidity
+        <span>💧</span>
+    </div>
+
+    <h2>
+        67%
+    </h2>
+
+    <span class="positive">
+        Normal
+    </span>
+
+</div>
+
+
+
+<div class="sensor-card">
+
+    <div class="sensor-top">
+        Pressure
+        <span>◌</span>
+    </div>
+
+    <h2>
+        1012 hPa
+    </h2>
+
+    <span class="positive">
+        Stable
+    </span>
+
+</div>
+
+
+
+<div class="sensor-card">
+
+    <div class="sensor-top">
+        Wind
+        <span>≋</span>
+    </div>
+
+    <h2>
+        12 km/h
+    </h2>
+
+    <span class="positive">
+        Normal
+    </span>
+
+</div>
+
+
+</section>
+
+
+
+<div class="station-grid">
+
+
+<div class="card">
+
+    <h2>
+        Sensor Health
+    </h2>
+
+
+    <div class="health-row">
+
+        <span>
+            Temperature Sensor
+        </span>
+
+        <span class="health-good">
+            ✓ Normal
+        </span>
+
+    </div>
+
+
+    <div class="health-row">
+
+        <span>
+            Humidity Sensor
+        </span>
+
+        <span class="health-good">
+            ✓ Normal
+        </span>
+
+    </div>
+
+
+    <div class="health-row">
+
+        <span>
+            Pressure Sensor
+        </span>
+
+        <span class="health-good">
+            ✓ Normal
+        </span>
+
+    </div>
+
+
+    <div class="health-row">
+
+        <span>
+            Wind Sensor
+        </span>
+
+        <span class="health-warning">
+            ⚠ Check
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<div class="card">
+
+    <h2>
+        AI Status
+    </h2>
+
+    <div class="ai-status">
+
+        <div class="ai-score">
+            12%
+        </div>
+
+        <div>
+
+            <h3>
+                Anomaly Probability
+            </h3>
+
+            <p>
+                Current sensor readings appear normal.
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+
+</main>
+
+</div>
+
+
+<script src="../js/station.js"></script>
+
+</body>
+
+</html>

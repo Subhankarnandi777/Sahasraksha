@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>SkyGuard AI - Dashboard</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+
+</head>
+
+<body>
+
+<div class="app-layout">
+
+
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar">
+
+        <div class="sidebar-brand">
+
+            <div class="brand-icon small">
+                SG
+            </div>
+
+            <div>
+                <h2>SkyGuard</h2>
+                <span>AI Monitoring</span>
+            </div>
+
+        </div>
+
+
+        <nav class="sidebar-nav">
+
+            <p class="nav-title">
+                MAIN
+            </p>
+
+            <a href="dashboard.html" class="nav-link active">
+                <span>▣</span>
+                Dashboard
+            </a>
+
+            <a href="network.html" class="nav-link">
+                <span>◉</span>
+                Network
+            </a>
+
+            <a href="stations.html" class="nav-link">
+                <span>▦</span>
+                Stations
+            </a>
+
+
+            <p class="nav-title">
+                MONITORING
+            </p>
+
+            <a href="alerts.html" class="nav-link">
+                <span>⚠</span>
+                Alerts
+                <span class="notification-badge">3</span>
+            </a>
+
+            <a href="diagnostics.html" class="nav-link">
+                <span>⚙</span>
+                Diagnostics
+            </a>
+
+            <a href="maintenance.html" class="nav-link">
+                <span>🔧</span>
+                Maintenance
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html" class="logout">
+                ↪ Logout
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main-content">
+
+
+        <!-- TOPBAR -->
+
+        <header class="topbar">
+
+            <div>
+
+                <h1>
+                    Dashboard
+                </h1>
+
+                <p>
+                    Real-time weather station monitoring
+                </p>
+
+            </div>
+
+            <div class="topbar-right">
+
+                <div class="system-status">
+
+                    <span class="pulse"></span>
+
+                    System Operational
+
+                </div>
+
+                <div class="user-circle">
+                    A
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- ================= STATS ================= -->
+
+        <section class="stats-grid">
+
+            <div class="stat-card">
+
+                <div class="stat-icon blue">
+                    ◉
+                </div>
+
+                <div>
+
+                    <p>Total Stations</p>
+
+                    <h2 id="totalStations">
+                        24
+                    </h2>
+
+                    <span class="stat-info">
+                        Registered stations
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon green">
+                    ✓
+                </div>
+
+                <div>
+
+                    <p>Online Stations</p>
+
+                    <h2 id="onlineStations">
+                        21
+                    </h2>
+
+                    <span class="positive">
+                        87.5% availability
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon red">
+                    ⚠
+                </div>
+
+                <div>
+
+                    <p>Active Alerts</p>
+
+                    <h2 id="activeAlerts">
+                        3
+                    </h2>
+
+                    <span class="negative">
+                        Requires attention
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon purple">
+                    ♥
+                </div>
+
+                <div>
+
+                    <p>System Health</p>
+
+                    <h2>
+                        92%
+                    </h2>
+
+                    <span class="positive">
+                        Good condition
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= SENSOR DATA ================= -->
+
+        <section class="section">
+
+            <div class="section-header">
+
+                <div>
+
+                    <h2>
+                        Live Sensor Data
+                    </h2>
+
+                    <p>
+                        Station ST-001 • Kolkata
+                    </p>
+
+                </div>
+
+                <span class="live-indicator">
+                    ● LIVE
+                </span>
+
+            </div>
+
+
+            <div class="sensor-grid">
+
+
+                <div class="sensor-card">
+
+                    <div class="sensor-top">
+
+                        <span>
+                            Temperature
+                        </span>
+
+                        <span class="sensor-symbol">
+                            🌡
+                        </span>
+
+                    </div>
+
+                    <h2 id="temperature">
+                        28.4°C
+                    </h2>
+
+                    <span class="positive">
+                        ↑ 1.2°C today
+                    </span>
+
+                </div>
+
+
+                <div class="sensor-card">
+
+                    <div class="sensor-top">
+
+                        <span>
+                            Humidity
+                        </span>
+
+                        <span>
+                            💧
+                        </span>
+
+                    </div>
+
+                    <h2 id="humidity">
+                        67%
+                    </h2>
+
+                    <span class="stat-info">
+                        Normal range
+                    </span>
+
+                </div>
+
+
+                <div class="sensor-card">
+
+                    <div class="sensor-top">
+
+                        <span>
+                            Pressure
+                        </span>
+
+                        <span>
+                            ◌
+                        </span>
+
+                    </div>
+
+                    <h2>
+                        1012 hPa
+                    </h2>
+
+                    <span class="stat-info">
+                        Stable
+                    </span>
+
+                </div>
+
+
+                <div class="sensor-card">
+
+                    <div class="sensor-top">
+
+                        <span>
+                            Wind Speed
+                        </span>
+
+                        <span>
+                            ≋
+                        </span>
+
+                    </div>
+
+                    <h2>
+                        12 km/h
+                    </h2>
+
+                    <span class="stat-info">
+                        NW direction
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= CHART + ALERT ================= -->
+
+        <section class="dashboard-two-column">
+
+
+            <div class="card chart-card">
+
+                <div class="card-header">
+
+                    <div>
+
+                        <h2>
+                            Temperature Trend
+                        </h2>
+
+                        <p>
+                            Last 24 hours
+                        </p>
+
+                    </div>
+
+                    <select id="chartPeriod">
+
+                        <option>
+                            24 Hours
+                        </option>
+
+                        <option>
+                            7 Days
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <canvas id="temperatureChart"></canvas>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    <div>
+
+                        <h2>
+                            Recent Alerts
+                        </h2>
+
+                        <p>
+                            AI detected anomalies
+                        </p>
+
+                    </div>
+
+                    <a href="alerts.html">
+                        View All
+                    </a>
+
+                </div>
+
+
+                <div class="alert-list">
+
+
+                    <div class="mini-alert high">
+
+                        <div>
+                            ⚠
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                Temperature anomaly
+                            </strong>
+
+                            <p>
+                                Station ST-004
+                            </p>
+
+                        </div>
+
+                        <span>
+                            HIGH
+                        </span>
+
+                    </div>
+
+
+                    <div class="mini-alert medium">
+
+                        <div>
+                            ⚠
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                Sensor communication
+                            </strong>
+
+                            <p>
+                                Station ST-009
+                            </p>
+
+                        </div>
+
+                        <span>
+                            MEDIUM
+                        </span>
+
+                    </div>
+
+
+                    <div class="mini-alert low">
+
+                        <div>
+                            ⚠
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                Humidity deviation
+                            </strong>
+
+                            <p>
+                                Station ST-012
+                            </p>
+
+                        </div>
+
+                        <span>
+                            LOW
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+    </main>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="../js/dashboard.js"></script>
+
+</body>
+
+</html>

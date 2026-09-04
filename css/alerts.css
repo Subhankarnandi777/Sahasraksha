@@ -1,0 +1,183 @@
+.alert-summary {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 18px;
+
+    margin-bottom: 25px;
+}
+
+.alert-summary-card {
+    background: white;
+
+    padding: 20px;
+
+    border-radius: 12px;
+
+    border: 1px solid var(--border);
+
+    border-left: 4px solid;
+}
+
+.alert-summary-card.high {
+    border-left-color: #dc2626;
+}
+
+.alert-summary-card.medium {
+    border-left-color: #f59e0b;
+}
+
+.alert-summary-card.low {
+    border-left-color: #2563eb;
+}
+
+.alert-summary-card span {
+    font-size: 11px;
+
+    font-weight: bold;
+}
+
+.alert-summary-card.high span {
+    color: #dc2626;
+}
+
+.alert-summary-card.medium span {
+    color: #f59e0b;
+}
+
+.alert-summary-card.low span {
+    color: #2563eb;
+}
+
+.alert-summary-card h2 {
+    font-size: 30px;
+
+    margin: 8px 0;
+}
+
+.alert-summary-card p {
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+
+.alert-container {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 15px;
+}
+
+
+.ai-alert {
+    display: flex;
+
+    align-items: center;
+
+    gap: 15px;
+
+    padding: 18px;
+
+    border-radius: 10px;
+
+    background: #f8fafc;
+
+    border-left: 4px solid;
+}
+
+
+.high-alert {
+    border-left-color: #dc2626;
+}
+
+.medium-alert {
+    border-left-color: #f59e0b;
+}
+
+.low-alert {
+    border-left-color: #2563eb;
+}
+
+
+.alert-icon {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    border-radius: 50%;
+
+    background: #fee2e2;
+
+    color: #dc2626;
+}
+
+
+.alert-content {
+    flex: 1;
+}
+
+
+.alert-title {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 5px;
+}
+
+.alert-title h3 {
+    font-size: 14px;
+}
+
+.alert-content p {
+    color: var(--muted);
+
+    font-size: 12px;
+
+    margin-bottom: 5px;
+}
+
+.alert-content small {
+    color: #94a3b8;
+
+    font-size: 10px;
+}
+
+
+.severity {
+    padding: 3px 7px;
+
+    border-radius: 10px;
+
+    font-size: 9px;
+
+    font-weight: bold;
+}
+
+.severity.high {
+    background: #fee2e2;
+
+    color: #dc2626;
+}
+
+.severity.medium {
+    background: #fef3c7;
+
+    color: #92400e;
+}
+
+.severity.low {
+    background: #dbeafe;
+
+    color: #1d4ed8;
+}

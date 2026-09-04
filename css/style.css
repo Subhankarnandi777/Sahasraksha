@@ -1,0 +1,540 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #eaf4fb;
+    color: #142033;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+button {
+    font-family: inherit;
+}
+
+.app {
+    min-height: 100vh;
+}
+
+
+/* ================= HEADER ================= */
+
+.top-header {
+    height: 82px;
+    background: rgba(255,255,255,0.95);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5%;
+    border-bottom: 1px solid #e5edf3;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.brand-icon {
+    width: 48px;
+    height: 48px;
+    background: #087ea4;
+    color: white;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 25px;
+}
+
+.brand h2 {
+    font-size: 20px;
+}
+
+.brand h2 span {
+    font-size: 11px;
+    background: #dcefff;
+    color: #167ba2;
+    padding: 4px 7px;
+    border-radius: 5px;
+}
+
+.brand p {
+    color: #7b8794;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.live-status {
+    background: #effcf8;
+    color: #32816c;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #37c99a;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.ops-button {
+    border: 1px solid #d9edf5;
+    background: white;
+    padding: 10px 18px;
+    border-radius: 20px;
+    color: #23799a;
+}
+
+
+/* ================= NAV ================= */
+
+.main-nav {
+    background: white;
+    display: flex;
+    gap: 30px;
+    padding: 0 5%;
+    height: 55px;
+    align-items: center;
+    border-bottom: 1px solid #e5edf3;
+}
+
+.main-nav a {
+    color: #697787;
+    font-size: 14px;
+    padding: 8px 14px;
+}
+
+.main-nav a.active {
+    background: #087ea4;
+    color: white;
+    border-radius: 20px;
+}
+
+.badge {
+    background: #ed4c59;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+}
+
+
+/* ================= DASHBOARD ================= */
+
+.dashboard {
+    padding: 28px 4%;
+    max-width: 1500px;
+    margin: auto;
+}
+
+.hero {
+    background: linear-gradient(120deg, #eef9ff, #dceefe);
+    border-radius: 25px;
+    padding: 35px;
+    display: flex;
+    justify-content: space-between;
+    gap: 30px;
+    margin-bottom: 25px;
+    border: 1px solid #d9edf8;
+}
+
+.operational {
+    display: inline-block;
+    background: white;
+    color: #378b78;
+    padding: 9px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.operational span {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    background: #35c59b;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.operational small {
+    color: #9aa8b4;
+}
+
+.hero h1 {
+    font-size: 32px;
+    margin: 18px 0 8px;
+}
+
+.hero p {
+    max-width: 700px;
+    color: #687888;
+    line-height: 1.6;
+}
+
+.health-card {
+    min-width: 290px;
+    background: white;
+    padding: 28px;
+    border-radius: 20px;
+    text-align: center;
+}
+
+.health-card p {
+    color: #39819d;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.health-card strong {
+    display: block;
+    font-size: 48px;
+    margin: 8px 0;
+}
+
+.health-card span {
+    background: #fff1cf;
+    color: #b47713;
+    padding: 5px 9px;
+    border-radius: 15px;
+    font-size: 12px;
+}
+
+.health-card small {
+    display: block;
+    margin-top: 10px;
+    color: #758493;
+}
+
+
+/* ================= STATUS ================= */
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+}
+
+.status-pill {
+    background: white;
+    padding: 11px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.status-pill.healthy {
+    color: #319c80;
+}
+
+.status-pill.monitoring {
+    color: #bf8a24;
+}
+
+.status-pill.critical {
+    color: #d8535b;
+}
+
+
+/* ================= GRID ================= */
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 25px;
+}
+
+.left-column,
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.card {
+    background: white;
+    border-radius: 24px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(48, 83, 104, 0.06);
+}
+
+
+/* ================= SENSOR BANNER ================= */
+
+.sensor-banner {
+    min-height: 180px;
+    border-radius: 25px;
+    padding: 35px;
+    color: white;
+    display: flex;
+    align-items: flex-end;
+
+    background:
+        linear-gradient(
+            rgba(12,35,53,0.55),
+            rgba(12,35,53,0.65)
+        ),
+        linear-gradient(135deg, #537789, #b7a078);
+}
+
+.sensor-banner small {
+    color: #9fe9ff;
+    font-weight: bold;
+}
+
+.sensor-banner h2 {
+    margin: 12px 0 5px;
+    font-size: 25px;
+}
+
+.sensor-banner p {
+    color: #e1edf1;
+}
+
+
+/* ================= SECTION HEADING ================= */
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.section-heading h2 {
+    font-size: 18px;
+}
+
+.section-heading p {
+    color: #8a97a4;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.section-heading > span {
+    background: #fff4f3;
+    padding: 8px 12px;
+    border-radius: 15px;
+    font-size: 11px;
+    color: #8b7070;
+}
+
+.section-heading b {
+    color: #dc5a5a;
+}
+
+
+/* ================= HOURS ================= */
+
+.hour-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.hour {
+    padding: 17px 8px;
+    text-align: center;
+    border-radius: 15px;
+    background: #f9fbfd;
+}
+
+.hour b {
+    font-size: 11px;
+}
+
+.hour strong {
+    display: block;
+    font-size: 23px;
+    margin: 15px 0;
+}
+
+.hour span {
+    display: block;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.hour small {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 8px;
+    font-weight: bold;
+}
+
+.hour.normal strong {
+    color: #27ae8c;
+}
+
+.hour.watch strong {
+    color: #e4aa35;
+}
+
+.hour.alert strong {
+    color: #dc5a61;
+}
+
+.hour.current {
+    background: #e9f8ff;
+}
+
+.hour.current strong {
+    color: #168bb5;
+}
+
+
+/* ================= ANOMALY ================= */
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.danger-label {
+    background: #ffe8e7;
+    color: #d95a5a;
+    padding: 6px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.anomaly-card h2 {
+    font-size: 20px;
+    margin: 20px 0 10px;
+}
+
+.anomaly-card p {
+    color: #7c8995;
+    line-height: 1.5;
+    font-size: 13px;
+}
+
+.anomaly-card a {
+    color: #167b9f;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.wave-bars {
+    height: 100px;
+    display: flex;
+    align-items: end;
+    gap: 8px;
+    padding: 20px 10px;
+}
+
+.wave-bars i {
+    flex: 1;
+    background: #54b8dd;
+    border-radius: 5px 5px 0 0;
+}
+
+.wave-bars i:nth-child(1) {
+    height: 35%;
+}
+
+.wave-bars i:nth-child(2) {
+    height: 55%;
+}
+
+.wave-bars i:nth-child(3) {
+    height: 85%;
+}
+
+.wave-bars i:nth-child(4) {
+    height: 50%;
+}
+
+.wave-bars i:nth-child(5) {
+    height: 30%;
+}
+
+.wave-bars i:nth-child(6) {
+    height: 20%;
+}
+
+.wave-bars i:nth-child(7) {
+    height: 12%;
+}
+
+
+/* ================= ALERT SUMMARY ================= */
+
+.urgent {
+    color: #d8535b;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: right;
+}
+
+.alert-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.critical-box,
+.monitor-box {
+    padding: 18px;
+    border-radius: 15px;
+}
+
+.critical-box {
+    background: #fff2f1;
+}
+
+.monitor-box {
+    background: #fffaf0;
+}
+
+.alert-summary strong {
+    display: block;
+    font-size: 28px;
+}
+
+.alert-summary span,
+.alert-summary small {
+    display: block;
+    margin-top: 5px;
+    font-size: 10px;
+}
+
+.critical-box strong {
+    color: #d84d55;
+}
+
+.monitor-box strong {
+    color: #b77d1e;
+}
+
+
+/* ================= CHART ================= */
+
+.chart-card canvas {
+    margin-top: 20px;
+    max-height: 280px;
+}
+
+
+/* ================= MOBILE NAV ================= */
+
+.mobile-nav {
+    display: none;
+}

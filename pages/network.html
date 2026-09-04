@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>SkyGuard AI - Network</title>
+
+<link rel="stylesheet"
+      href="../css/style.css">
+
+<link rel="stylesheet"
+      href="../css/dashboard.css">
+
+<link rel="stylesheet"
+      href="../css/responsive.css">
+
+</head>
+
+
+<body>
+
+<div class="app-layout">
+
+
+<aside class="sidebar">
+
+    <div class="sidebar-brand">
+
+        <div class="brand-icon small">
+            SG
+        </div>
+
+        <div>
+            <h2>SkyGuard</h2>
+            <span>AI Monitoring</span>
+        </div>
+
+    </div>
+
+
+    <nav class="sidebar-nav">
+
+        <p class="nav-title">MAIN</p>
+
+        <a href="dashboard.html"
+           class="nav-link">
+
+            <span>▣</span>
+            Dashboard
+
+        </a>
+
+
+        <a href="network.html"
+           class="nav-link active">
+
+            <span>◉</span>
+            Network
+
+        </a>
+
+
+        <a href="stations.html"
+           class="nav-link">
+
+            <span>▦</span>
+            Stations
+
+        </a>
+
+
+        <p class="nav-title">
+            MONITORING
+        </p>
+
+
+        <a href="alerts.html"
+           class="nav-link">
+
+            <span>⚠</span>
+            Alerts
+
+        </a>
+
+
+        <a href="diagnostics.html"
+           class="nav-link">
+
+            <span>⚙</span>
+            Diagnostics
+
+        </a>
+
+
+        <a href="maintenance.html"
+           class="nav-link">
+
+            <span>🔧</span>
+            Maintenance
+
+        </a>
+
+    </nav>
+
+
+    <div class="sidebar-bottom">
+
+        <a href="../index.html"
+           class="logout">
+
+            ↪ Logout
+
+        </a>
+
+    </div>
+
+</aside>
+
+
+
+<main class="main-content">
+
+
+<header class="topbar">
+
+    <div>
+
+        <h1>
+            Network Monitoring
+        </h1>
+
+        <p>
+            Monitor communication between stations
+        </p>
+
+    </div>
+
+</header>
+
+
+
+<section class="stats-grid">
+
+
+<div class="stat-card">
+
+    <div class="stat-icon green">
+        ✓
+    </div>
+
+    <div>
+
+        <p>Connected</p>
+
+        <h2>
+            21
+        </h2>
+
+        <span class="positive">
+            Healthy
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<div class="stat-card">
+
+    <div class="stat-icon red">
+        ×
+    </div>
+
+    <div>
+
+        <p>Disconnected</p>
+
+        <h2>
+            3
+        </h2>
+
+        <span class="negative">
+            Check stations
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<div class="stat-card">
+
+    <div class="stat-icon blue">
+        ≋
+    </div>
+
+    <div>
+
+        <p>Average Signal</p>
+
+        <h2>
+            89%
+        </h2>
+
+        <span class="positive">
+            Excellent
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<div class="stat-card">
+
+    <div class="stat-icon purple">
+        ↔
+    </div>
+
+    <div>
+
+        <p>Latency</p>
+
+        <h2>
+            42 ms
+        </h2>
+
+        <span class="stat-info">
+            Normal
+        </span>
+
+    </div>
+
+</div>
+
+
+</section>
+
+
+
+<div class="card">
+
+    <div class="card-header">
+
+        <div>
+
+            <h2>
+                Station Network Status
+            </h2>
+
+            <p>
+                Current communication status
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div style="overflow-x:auto">
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>Station</th>
+
+                <th>Location</th>
+
+                <th>Status</th>
+
+                <th>Signal</th>
+
+                <th>Latency</th>
+
+                <th>Last Communication</th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+            <tr>
+
+                <td>ST-001</td>
+
+                <td>Kolkata</td>
+
+                <td>
+                    <span class="status online">
+                        Online
+                    </span>
+                </td>
+
+                <td>94%</td>
+
+                <td>31 ms</td>
+
+                <td>10 sec ago</td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>ST-002</td>
+
+                <td>Siliguri</td>
+
+                <td>
+                    <span class="status online">
+                        Online
+                    </span>
+                </td>
+
+                <td>87%</td>
+
+                <td>46 ms</td>
+
+                <td>15 sec ago</td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>ST-003</td>
+
+                <td>Durgapur</td>
+
+                <td>
+                    <span class="status offline">
+                        Offline
+                    </span>
+                </td>
+
+                <td>0%</td>
+
+                <td>---</td>
+
+                <td>12 min ago</td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>ST-004</td>
+
+                <td>Howrah</td>
+
+                <td>
+                    <span class="status online">
+                        Online
+                    </span>
+                </td>
+
+                <td>91%</td>
+
+                <td>38 ms</td>
+
+                <td>8 sec ago</td>
+
+            </tr>
+
+
+        </tbody>
+
+    </table>
+
+    </div>
+
+</div>
+
+
+</main>
+
+</div>
+
+
+<script src="../js/network.js"></script>
+
+</body>
+
+</html>

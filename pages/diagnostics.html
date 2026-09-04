@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>SkyGuard AI - Diagnostics</title>
+
+<link rel="stylesheet"
+      href="../css/style.css">
+
+<link rel="stylesheet"
+      href="../css/dashboard.css">
+
+<link rel="stylesheet"
+      href="../css/responsive.css">
+
+</head>
+
+
+<body>
+
+<div class="app-layout">
+
+
+<aside class="sidebar">
+
+    <div class="sidebar-brand">
+
+        <div class="brand-icon small">
+            SG
+        </div>
+
+        <div>
+            <h2>SkyGuard</h2>
+            <span>AI Monitoring</span>
+        </div>
+
+    </div>
+
+
+    <nav class="sidebar-nav">
+
+        <p class="nav-title">MAIN</p>
+
+        <a href="dashboard.html"
+           class="nav-link">
+            ▣ Dashboard
+        </a>
+
+        <a href="network.html"
+           class="nav-link">
+            ◉ Network
+        </a>
+
+        <a href="stations.html"
+           class="nav-link">
+            ▦ Stations
+        </a>
+
+
+        <p class="nav-title">
+            MONITORING
+        </p>
+
+        <a href="alerts.html"
+           class="nav-link">
+            ⚠ Alerts
+        </a>
+
+        <a href="diagnostics.html"
+           class="nav-link active">
+            ⚙ Diagnostics
+        </a>
+
+        <a href="maintenance.html"
+           class="nav-link">
+            🔧 Maintenance
+        </a>
+
+    </nav>
+
+</aside>
+
+
+
+<main class="main-content">
+
+
+<header class="topbar">
+
+    <div>
+
+        <h1>
+            System Diagnostics
+        </h1>
+
+        <p>
+            Health monitoring and sensor diagnostics
+        </p>
+
+    </div>
+
+</header>
+
+
+
+<section class="stats-grid">
+
+
+<div class="stat-card">
+
+    <div class="stat-icon green">
+        ✓
+    </div>
+
+    <div>
+
+        <p>System Health</p>
+
+        <h2>
+            92%
+        </h2>
+
+        <span class="positive">
+            Good
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<div class="stat-card">
+
+    <div class="stat-icon blue">
+        ◉
+    </div>
+
+    <div>
+
+        <p>CPU Usage</p>
+
+        <h2>
+            34%
+        </h2>
+
+        <span class="stat-info">
+            Normal
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<div class="stat-card">
+
+    <div class="stat-icon purple">
+        ▣
+    </div>
+
+    <div>
+
+        <p>Memory</p>
+
+        <h2>
+            48%
+        </h2>
+
+        <span class="stat-info">
+            Stable
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<div class="stat-card">
+
+    <div class="stat-icon green">
+        ✓
+    </div>
+
+    <div>
+
+        <p>Data Quality</p>
+
+        <h2>
+            96%
+        </h2>
+
+        <span class="positive">
+            Excellent
+        </span>
+
+    </div>
+
+</div>
+
+
+</section>
+
+
+
+<div class="card">
+
+    <div class="card-header">
+
+        <div>
+
+            <h2>
+                Sensor Diagnostics
+            </h2>
+
+            <p>
+                Current status of connected sensors
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>Sensor</th>
+
+                <th>Status</th>
+
+                <th>Last Reading</th>
+
+                <th>Data Quality</th>
+
+                <th>Action</th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+
+            <tr>
+
+                <td>
+                    Temperature Sensor
+                </td>
+
+                <td>
+                    <span class="status online">
+                        Normal
+                    </span>
+                </td>
+
+                <td>
+                    28.4°C
+                </td>
+
+                <td>
+                    98%
+                </td>
+
+                <td>
+                    <button class="btn btn-success">
+                        Healthy
+                    </button>
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>
+                    Humidity Sensor
+                </td>
+
+                <td>
+                    <span class="status online">
+                        Normal
+                    </span>
+                </td>
+
+                <td>
+                    67%
+                </td>
+
+                <td>
+                    96%
+                </td>
+
+                <td>
+                    <button class="btn btn-success">
+                        Healthy
+                    </button>
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>
+                    Pressure Sensor
+                </td>
+
+                <td>
+                    <span class="status warning">
+                        Warning
+                    </span>
+                </td>
+
+                <td>
+                    1012 hPa
+                </td>
+
+                <td>
+                    82%
+                </td>
+
+                <td>
+                    <button class="btn btn-primary">
+                        Inspect
+                    </button>
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td>
+                    Wind Sensor
+                </td>
+
+                <td>
+                    <span class="status online">
+                        Normal
+                    </span>
+                </td>
+
+                <td>
+                    12 km/h
+                </td>
+
+                <td>
+                    94%
+                </td>
+
+                <td>
+                    <button class="btn btn-success">
+                        Healthy
+                    </button>
+                </td>
+
+            </tr>
+
+
+        </tbody>
+
+    </table>
+
+</div>
+
+
+</main>
+
+</div>
+
+
+<script src="../js/diagnostics.js"></script>
+
+</body>
+
+</html>

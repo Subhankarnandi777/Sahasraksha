@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SkyGuard AI - National Network</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/responsive.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- ================= HEADER ================= -->
+
+    <header class="top-header">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                ☁
+            </div>
+
+            <div>
+                <h2>SkyGuard AI <span>IMD</span></h2>
+                <p>Atmospheric Sentinel • India Network</p>
+            </div>
+
+        </div>
+
+        <div class="live-status">
+            <span class="live-dot"></span>
+            LIVE • INSAT-3DR
+        </div>
+
+        <button class="ops-button">
+            ⚙ OPS DESK
+        </button>
+
+    </header>
+
+
+    <!-- ================= NAVIGATION ================= -->
+
+    <nav class="main-nav">
+
+        <a href="index.html" class="active">
+            Overview
+        </a>
+
+        <a href="pages/network.html">
+            Station Map
+        </a>
+
+        <a href="pages/alerts.html">
+            Alerts
+            <span class="badge">12</span>
+        </a>
+
+        <a href="pages/stations.html">
+            Stations
+        </a>
+
+        <a href="pages/diagnostics.html">
+            Heartbeat
+        </a>
+
+        <a href="pages/diagnostics.html">
+            Diagnostics
+        </a>
+
+        <a href="pages/maintenance.html">
+            System Logs
+        </a>
+
+    </nav>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="dashboard">
+
+        <!-- HERO -->
+
+        <section class="hero">
+
+            <div class="hero-content">
+
+                <div class="operational">
+                    <span></span>
+                    SYSTEM FULLY OPERATIONAL
+                    <small>• CYCLE #44892</small>
+                </div>
+
+                <h1>
+                    SkyGuard AI National AWS Fleet
+                </h1>
+
+                <p>
+                    Autonomous sensor drift detection, tidal pressure
+                    harmonics, and live telemetry synchronization across
+                    India's automated meteorological grid.
+                </p>
+
+                <div class="hero-actions">
+
+                    <div class="status-pill healthy">
+                        ● 2,401 Healthy <small>(92.5%)</small>
+                    </div>
+
+                    <div class="status-pill monitoring">
+                        ● 143 Monitoring <small>(5.5%)</small>
+                    </div>
+
+                    <div class="status-pill critical">
+                        ● 51 Service Now <small>(2.0%)</small>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="health-card">
+
+                <p>COMPOSITE HEALTH INDEX</p>
+
+                <strong>92.4%</strong>
+
+                <span>~ -1.6% (10d)</span>
+
+                <small>
+                    2,595 Active Stations Online
+                </small>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= CONTENT GRID ================= -->
+
+        <div class="content-grid">
+
+            <div class="left-column">
+
+                <!-- SENSOR SYNCHRONY -->
+
+                <section class="sensor-banner">
+
+                    <div>
+
+                        <small>
+                            📡 NATIONWIDE AWS TELEMETRY GRID
+                        </small>
+
+                        <h2>
+                            Real-Time Sensor Synchrony: 99.4%
+                        </h2>
+
+                        <p>
+                            Sub-second clock distribution via GAGAN
+                            NavIC geostationary synchronization.
+                        </p>
+
+                    </div>
+
+                </section>
+
+
+                <!-- ANOMALY DETECTIONS -->
+
+                <section class="card telemetry">
+
+                    <div class="section-heading">
+
+                        <div>
+                            <h2>
+                                ◷ Hourly Telemetry Anomaly Detections
+                            </h2>
+
+                            <p>
+                                Incident cadence across Northern &
+                                Coastal belts
+                            </p>
+                        </div>
+
+                        <span>
+                            TOTAL FLAGGED:
+                            <b>12 INCIDENTS</b>
+                        </span>
+
+                    </div>
+
+
+                    <div class="hour-grid">
+
+                        <div class="hour normal">
+                            <b>10 AM</b>
+                            <strong>✓</strong>
+                            <span>0</span>
+                            <small>NOMINAL</small>
+                        </div>
+
+                        <div class="hour watch">
+                            <b>11 AM</b>
+                            <strong>⚠</strong>
+                            <span>1</span>
+                            <small>WATCH</small>
+                        </div>
+
+                        <div class="hour alert">
+                            <b>12 PM</b>
+                            <strong>!</strong>
+                            <span>3</span>
+                            <small>ALERT</small>
+                        </div>
+
+                        <div class="hour watch">
+                            <b>1 PM</b>
+                            <strong>⚠</strong>
+                            <span>2</span>
+                            <small>WATCH</small>
+                        </div>
+
+                        <div class="hour alert">
+                            <b>2 PM</b>
+                            <strong>!</strong>
+                            <span>4</span>
+                            <small>PEAK</small>
+                        </div>
+
+                        <div class="hour watch">
+                            <b>3 PM</b>
+                            <strong>⚠</strong>
+                            <span>2</span>
+                            <small>WATCH</small>
+                        </div>
+
+                        <div class="hour current">
+                            <b>4 PM</b>
+                            <strong>↻</strong>
+                            <span>0</span>
+                            <small>CURRENT</small>
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- CHART -->
+
+                <section class="card chart-card">
+
+                    <div class="section-heading">
+
+                        <div>
+
+                            <small>
+                                📊 LONGITUDINAL TELEMETRY TREND
+                            </small>
+
+                            <h2>
+                                10-Day Fleet Degradation & SLA Curve
+                            </h2>
+
+                        </div>
+
+                    </div>
+
+                    <canvas id="fleetChart"></canvas>
+
+                </section>
+
+            </div>
+
+
+            <!-- ================= RIGHT COLUMN ================= -->
+
+            <aside class="right-column">
+
+                <!-- ANOMALY -->
+
+                <section class="card anomaly-card">
+
+                    <div class="card-top">
+
+                        <span class="danger-label">
+                            ANOMALY SPOTTED
+                        </span>
+
+                        <small>
+                            S2 TIDAL WAVE
+                        </small>
+
+                    </div>
+
+                    <h2>
+                        -51% Loss in S2 Solar Tide Waveform
+                    </h2>
+
+                    <p>
+                        Diurnal atmospheric pressure wave decay
+                        isolated across AWS_DEL & AWS_PNQ.
+                    </p>
+
+                    <div class="wave-bars">
+
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+
+                    </div>
+
+                    <a href="pages/diagnostics.html">
+                        Analyze Waveform in Diagnostics →
+                    </a>
+
+                </section>
+
+
+                <!-- ALERTS -->
+
+                <section class="card action-card">
+
+                    <div class="card-top">
+
+                        <div>
+                            <small>IMD ACTION DESK</small>
+
+                            <h2>
+                                12 Actionable Alerts
+                            </h2>
+                        </div>
+
+                        <span class="urgent">
+                            ●<br>
+                            URGENT
+                        </span>
+
+                    </div>
+
+
+                    <div class="alert-summary">
+
+                        <div class="critical-box">
+                            <strong>3</strong>
+                            <span>CRITICAL PRIORITY</span>
+                            <small>Barometer diaphragm</small>
+                        </div>
+
+                        <div class="monitor-box">
+                            <strong>9</strong>
+                            <span>MONITOR BELT</span>
+                            <small>Humidity drift</small>
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+
+    <!-- ================= MOBILE NAV ================= -->
+
+    <div class="mobile-nav">
+
+        <a href="index.html">
+            <span>⌂</span>
+            Home
+        </a>
+
+        <a href="pages/network.html">
+            <span>◎</span>
+            Map
+        </a>
+
+        <a href="pages/alerts.html">
+            <span>♧</span>
+            Alerts
+            <b>12</b>
+        </a>
+
+        <a href="pages/stations.html">
+            <span>♒</span>
+            Stations
+        </a>
+
+    </div>
+
+</div>
+
+
+<script src="js/dashboard.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>SkyGuard AI - Alerts</title>
+
+<link rel="stylesheet"
+      href="../css/style.css">
+
+<link rel="stylesheet"
+      href="../css/dashboard.css">
+
+<link rel="stylesheet"
+      href="../css/alerts.css">
+
+<link rel="stylesheet"
+      href="../css/responsive.css">
+
+</head>
+
+
+<body>
+
+<div class="app-layout">
+
+
+<aside class="sidebar">
+
+    <div class="sidebar-brand">
+
+        <div class="brand-icon small">
+            SG
+        </div>
+
+        <div>
+            <h2>SkyGuard</h2>
+            <span>AI Monitoring</span>
+        </div>
+
+    </div>
+
+
+    <nav class="sidebar-nav">
+
+        <p class="nav-title">
+            MAIN
+        </p>
+
+        <a href="dashboard.html"
+           class="nav-link">
+            ▣ Dashboard
+        </a>
+
+        <a href="network.html"
+           class="nav-link">
+            ◉ Network
+        </a>
+
+        <a href="stations.html"
+           class="nav-link">
+            ▦ Stations
+        </a>
+
+
+        <p class="nav-title">
+            MONITORING
+        </p>
+
+        <a href="alerts.html"
+           class="nav-link active">
+            ⚠ Alerts
+        </a>
+
+        <a href="diagnostics.html"
+           class="nav-link">
+            ⚙ Diagnostics
+        </a>
+
+        <a href="maintenance.html"
+           class="nav-link">
+            🔧 Maintenance
+        </a>
+
+    </nav>
+
+</aside>
+
+
+
+<main class="main-content">
+
+
+<header class="topbar">
+
+    <div>
+
+        <h1>
+            AI Alerts
+        </h1>
+
+        <p>
+            Anomalies detected by SkyGuard AI
+        </p>
+
+    </div>
+
+</header>
+
+
+
+<div class="alert-summary">
+
+
+<div class="alert-summary-card high">
+
+    <span>
+        HIGH
+    </span>
+
+    <h2>
+        1
+    </h2>
+
+    <p>
+        Critical alerts
+    </p>
+
+</div>
+
+
+<div class="alert-summary-card medium">
+
+    <span>
+        MEDIUM
+    </span>
+
+    <h2>
+        1
+    </h2>
+
+    <p>
+        Warning alerts
+    </p>
+
+</div>
+
+
+<div class="alert-summary-card low">
+
+    <span>
+        LOW
+    </span>
+
+    <h2>
+        1
+    </h2>
+
+    <p>
+        Minor alerts
+    </p>
+
+</div>
+
+
+</div>
+
+
+
+<div class="card">
+
+
+<div class="card-header">
+
+    <div>
+
+        <h2>
+            Active Anomalies
+        </h2>
+
+        <p>
+            AI-generated anomaly detection results
+        </p>
+
+    </div>
+
+</div>
+
+
+
+<div class="alert-container">
+
+
+<div class="ai-alert high-alert">
+
+    <div class="alert-icon">
+        ⚠
+    </div>
+
+    <div class="alert-content">
+
+        <div class="alert-title">
+
+            <h3>
+                Temperature Anomaly
+            </h3>
+
+            <span class="severity high">
+                HIGH
+            </span>
+
+        </div>
+
+        <p>
+            Unusual temperature pattern detected
+            at Station ST-004.
+        </p>
+
+        <small>
+            Anomaly Score: 91% • 5 minutes ago
+        </small>
+
+    </div>
+
+    <button
+        class="btn btn-danger"
+        onclick="acknowledgeAlert(this)">
+
+        Acknowledge
+
+    </button>
+
+</div>
+
+
+
+<div class="ai-alert medium-alert">
+
+    <div class="alert-icon">
+        ⚠
+    </div>
+
+    <div class="alert-content">
+
+        <div class="alert-title">
+
+            <h3>
+                Sensor Communication Failure
+            </h3>
+
+            <span class="severity medium">
+                MEDIUM
+            </span>
+
+        </div>
+
+        <p>
+            Station ST-009 has stopped sending
+            pressure sensor readings.
+        </p>
+
+        <small>
+            Anomaly Score: 74% • 18 minutes ago
+        </small>
+
+    </div>
+
+    <button
+        class="btn btn-danger"
+        onclick="acknowledgeAlert(this)">
+
+        Acknowledge
+
+    </button>
+
+</div>
+
+
+
+<div class="ai-alert low-alert">
+
+    <div class="alert-icon">
+        ⚠
+    </div>
+
+    <div class="alert-content">
+
+        <div class="alert-title">
+
+            <h3>
+                Humidity Deviation
+            </h3>
+
+            <span class="severity low">
+                LOW
+            </span>
+
+        </div>
+
+        <p>
+            Humidity readings are slightly outside
+            expected range.
+        </p>
+
+        <small>
+            Anomaly Score: 62% • 31 minutes ago
+        </small>
+
+    </div>
+
+    <button
+        class="btn btn-success"
+        onclick="acknowledgeAlert(this)">
+
+        Acknowledge
+
+    </button>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+</main>
+
+</div>
+
+
+<script src="../js/alerts.js"></script>
+
+</body>
+
+</html>
