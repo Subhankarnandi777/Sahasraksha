@@ -122,7 +122,7 @@ class ContractEndpointTests(unittest.TestCase):
         timestamp = datetime.now(timezone.utc).isoformat()
         verdict_response = self.client.post(
             "/readings/verdict",
-            json=self._reading_payload(timestamp, 46.9),
+            json=self._reading_payload(timestamp, -50.0),
         )
         self.assertEqual(verdict_response.status_code, 200)
         self.assertEqual(verdict_response.json()["flag"], 1)

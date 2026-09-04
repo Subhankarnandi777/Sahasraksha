@@ -3,3 +3,4 @@ SQLAlchemy
 uvicorn[standard]
 psycopg2-binary
 python-dotenv
+numpy>=1.26
