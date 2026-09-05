@@ -11,6 +11,7 @@ from app.db.models import Alert as AlertModel
 from app.db.models import AnomalyVerdict as AnomalyVerdictModel
 from app.db.models import WeatherReading as WeatherReadingModel
 from app.schemas import Alert, AlertStatus, AnomalyReason, AnomalyVerdict, WeatherReading
+from app.services import station_service
 
 
 _REASON_VALUES = {reason.value for reason in AnomalyReason}
@@ -162,7 +163,18 @@ def save_verdict_and_create_alert(
             )
         )
         if existing_verdict is not None:
-            return _to_anomaly_verdict(existing_verdict)
+            existing_contract_verdict = _to_anomaly_verdict(existing_verdict)
+            station_service.update_station_from_verdict(
+                reading.station_id,
+                reading.timestamp,
+                existing_contract_verdict.flag,
+                existing_contract_verdict.reason,
+                existing_contract_verdict.severity,
+                existing_contract_verdict.degradation,
+                db,
+            )
+            db.commit()
+            return existing_contract_verdict
 
         db_reading = _get_or_create_reading(db, reading)
         db_verdict = AnomalyVerdictModel(
@@ -191,6 +203,15 @@ def save_verdict_and_create_alert(
                 )
             )
 
+        station_service.update_station_from_verdict(
+            reading.station_id,
+            reading.timestamp,
+            verdict.flag,
+            verdict.reason,
+            verdict.severity,
+            verdict.degradation,
+            db,
+        )
         db.commit()
         db.refresh(db_verdict)
         return _to_anomaly_verdict(db_verdict)
