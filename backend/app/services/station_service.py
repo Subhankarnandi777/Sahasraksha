@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import IS_SQLITE, SessionLocal
 from app.db.models import Alert, AnomalyVerdict, Station, WeatherReading, WorkOrder
-from app.schemas import StationOverview, StationStatus, StationSummary
+from app.schemas import AnomalyReason, StationOverview, StationStatus, StationSummary
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -50,6 +50,26 @@ def _contract_health(station: Station) -> float:
         return max(min(station.health_score, 1.0), 0.0)
 
     return max(1.0 - _contract_degradation(station.degradation), 0.0)
+
+
+def _severity(value: float | int | str | None) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+    return max(min(number, 1.0), 0.0)
+
+
+def _status_from_verdict(flag: int, reason: AnomalyReason, severity: float, degradation: float) -> StationStatus:
+    if flag == 0 and severity < 0.5 and degradation < 0.45:
+        return StationStatus.OK
+    if degradation >= 0.45 or severity >= 0.8:
+        return StationStatus.SERVICE_NOW
+    if reason == AnomalyReason.DEGRADING or degradation >= 0.2:
+        return StationStatus.SCHEDULE
+
+    return StationStatus.MONITOR
 
 
 def _to_station_summary(station: Station) -> StationSummary:
@@ -160,5 +180,41 @@ def update_last_seen(station_id: str, last_seen: datetime) -> None:
         if station is not None:
             station.last_seen = _as_db_datetime(last_seen)
             db.commit()
+
+
+def update_station_from_verdict(
+    station_id: str,
+    reading_timestamp: datetime,
+    flag: int,
+    reason: AnomalyReason,
+    severity: float,
+    degradation: float,
+    db: Session | None = None,
+) -> bool:
+    def apply_update(session: Session) -> bool:
+        station = _get_station_model(session, station_id)
+        if station is None:
+            return False
+
+        contract_degradation = _contract_degradation(degradation)
+        station.health_score = max(1.0 - contract_degradation, 0.0)
+        station.degradation = contract_degradation
+        station.status = _status_from_verdict(
+            flag,
+            reason,
+            _severity(severity),
+            contract_degradation,
+        ).value
+        station.last_seen = _as_db_datetime(reading_timestamp)
+        return True
+
+    if db is not None:
+        return apply_update(db)
+
+    with SessionLocal() as session:
+        updated = apply_update(session)
+        if updated:
+            session.commit()
+        return updated
 
 

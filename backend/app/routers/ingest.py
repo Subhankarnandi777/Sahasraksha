@@ -2,6 +2,7 @@
 
 from app.schemas import AnomalyVerdict, WeatherReading
 from app.services.anomaly_detector import AnomalyDetector, get_anomaly_detector
+from app.services import alert_service, station_service
 
 router = APIRouter(tags=["ingest"])
 
@@ -11,4 +12,8 @@ def ingest_reading(
     reading: WeatherReading,
     detector: AnomalyDetector = Depends(get_anomaly_detector),
 ) -> AnomalyVerdict:
-    return detector.evaluate(reading)
+    verdict = detector.evaluate(reading)
+    if not station_service.station_exists(reading.station_id):
+        return verdict
+
+    return alert_service.save_verdict_and_create_alert(reading, verdict)
