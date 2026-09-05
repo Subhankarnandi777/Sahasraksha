@@ -11,10 +11,15 @@ function stationStatusClass(status) {
   return "ok";
 }
 
+function markerClass(station) {
+  if (station.data_quality === "low_confidence") return "low-confidence";
+  return stationStatusClass(station.status);
+}
+
 function markerIcon(station) {
   return L.divIcon({
     className: "",
-    html: `<span class="osm-marker ${stationStatusClass(station.status)}"><span>${station.station_id}</span></span>`,
+    html: `<span class="osm-marker ${markerClass(station)}"><span>${station.station_id}</span></span>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9],
     popupAnchor: [0, -8]
@@ -37,6 +42,7 @@ export default function MapPanel({ stations, selectedId }) {
         <span><i className="schedule" />Schedule</span>
         <span><i className="monitor" />Monitor</span>
         <span><i className="service-now" />Service Now</span>
+        <span><i className="low-confidence" />Low Confidence</span>
       </div>
       <div className="india-map" aria-label="Station network map">
         <MapContainer
@@ -65,6 +71,7 @@ export default function MapPanel({ stations, selectedId }) {
                   <strong>{station.station_id}</strong>
                   <h3>{station.name}</h3>
                   <p>Status: {station.status}</p>
+                  {station.data_quality === "low_confidence" ? <p>Data quality: Low confidence</p> : null}
                   <p>Health: {percent(station.health, 1)}</p>
                   <p>Degradation: {percent(station.degradation, 1)}</p>
                   <p>Trend: {number(station.trend_per_day, 3)} / day</p>

@@ -82,6 +82,7 @@ class ContractEndpointTests(unittest.TestCase):
             "alert_rate_pct",
             "rate_vs_network",
             "last_seen",
+            "data_quality",
         }
         self.assertEqual(set(station.keys()), expected_fields)
         self.assertIn(station["status"], ["SERVICE NOW", "SCHEDULE", "MONITOR", "OK"])

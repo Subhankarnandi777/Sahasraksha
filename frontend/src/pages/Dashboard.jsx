@@ -36,8 +36,9 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
   const healthy = countStatus(stations, "OK");
   const monitoring = countStatus(stations, "MONITOR") + countStatus(stations, "SCHEDULE");
   const serviceNow = countStatus(stations, "SERVICE NOW");
-  const networkHealth = stations.length
-    ? stations.reduce((sum, station) => sum + Number(station.health || 0), 0) / stations.length
+  const scoredStations = stations.filter((station) => Number.isFinite(Number(station.health)));
+  const networkHealth = scoredStations.length
+    ? scoredStations.reduce((sum, station) => sum + Number(station.health), 0) / scoredStations.length
     : 0;
   const chartValues = timeseries.map((row) => row.T).filter((value) => value !== null);
   const hourlyAlerts = hourlyAlertCounts(openAlerts);

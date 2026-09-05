@@ -45,7 +45,10 @@ def _contract_degradation(value: float) -> float:
     return max(value, 0.0)
 
 
-def _contract_health(station: Station) -> float:
+def _contract_health(station: Station, data_quality: str = "good") -> float | None:
+    if data_quality == "low_confidence":
+        return None
+
     if station.health_score is not None:
         return max(min(station.health_score, 1.0), 0.0)
 
@@ -74,12 +77,13 @@ def _status_from_verdict(flag: int, reason: AnomalyReason, severity: float, degr
 
 def _to_station_summary(station: Station) -> StationSummary:
     degradation = _contract_degradation(station.degradation)
+    data_quality = _station_data_quality(station.station_id)
     return StationSummary(
         station_id=station.station_id,
         name=station.name or station.station_id,
         lat=station.lat if station.lat is not None else 0.0,
         lon=station.lon if station.lon is not None else 0.0,
-        health=_contract_health(station),
+        health=_contract_health(station, data_quality),
         status=_contract_status(station.status),
         degradation=degradation,
         trend_per_day=station.trend_per_day or 0.0,
@@ -88,7 +92,20 @@ def _to_station_summary(station: Station) -> StationSummary:
         alert_rate_pct=station.alert_rate_pct,
         rate_vs_network=station.rate_vs_network or 1.0,
         last_seen=_as_utc(station.last_seen),
+        data_quality=data_quality,
     )
+
+
+def _station_data_quality(station_id: str) -> str:
+    try:
+        from app.services.csv_replay_service import station_data_quality
+    except Exception:
+        return "good"
+
+    try:
+        return station_data_quality(station_id)
+    except Exception:
+        return "good"
 
 
 def _get_station_model(db: Session, station_id: str) -> Station | None:

@@ -632,6 +632,10 @@ p {
   background: #dc2626;
 }
 
+.map-legend .low-confidence {
+  background: #94a3b8;
+}
+
 .india-map {
   position: relative;
   min-height: 360px;
@@ -778,6 +782,12 @@ p {
 .osm-marker.service-now {
   background: #dc2626;
   box-shadow: 0 0 0 17px rgba(220, 38, 38, 0.16);
+}
+
+.osm-marker.low-confidence {
+  border-style: dashed;
+  background: #94a3b8;
+  box-shadow: 0 0 0 11px rgba(100, 116, 139, 0.14);
 }
 
 .osm-marker > span {
