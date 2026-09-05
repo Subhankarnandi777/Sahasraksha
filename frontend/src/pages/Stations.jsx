@@ -20,8 +20,13 @@ export default function Stations({ stations, openAlerts, loading, error }) {
         return `${station.station_id} ${station.name}`.toLowerCase().includes(normalizedQuery);
       })
       .sort((a, b) => {
-        if (sort === "health") return Number(b.health || 0) - Number(a.health || 0);
-        return Number(a.health || 0) - Number(b.health || 0);
+        const aHealth = Number.isFinite(Number(a.health)) ? Number(a.health) : null;
+        const bHealth = Number.isFinite(Number(b.health)) ? Number(b.health) : null;
+        if (aHealth === null && bHealth === null) return 0;
+        if (aHealth === null) return 1;
+        if (bHealth === null) return -1;
+        if (sort === "health") return bHealth - aHealth;
+        return aHealth - bHealth;
       });
   }, [filter, query, sort, stations]);
 

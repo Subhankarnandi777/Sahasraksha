@@ -16,7 +16,7 @@ class StationSummary(BaseModel):
     name: str = Field(..., min_length=1, examples=["Pune"])
     lat: float = Field(..., ge=-90.0, le=90.0, examples=[18.52])
     lon: float = Field(..., ge=-180.0, le=180.0, examples=[73.86])
-    health: float = Field(..., ge=0.0, le=1.0, examples=[0.912])
+    health: float | None = Field(None, ge=0.0, le=1.0, examples=[0.912])
     status: StationStatus = Field(..., examples=[StationStatus.MONITOR])
     degradation: float = Field(..., ge=0.0, le=1.0, examples=[0.088])
     trend_per_day: float = Field(..., examples=[0.00123])
@@ -25,6 +25,7 @@ class StationSummary(BaseModel):
     alert_rate_pct: float = Field(..., ge=0.0, examples=[2.35])
     rate_vs_network: float = Field(..., ge=0.0, examples=[1.8])
     last_seen: datetime
+    data_quality: str = Field("good", examples=["good"])
 
 
 class StationOverview(BaseModel):
