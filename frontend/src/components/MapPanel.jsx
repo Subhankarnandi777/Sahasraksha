@@ -16,10 +16,29 @@ function markerClass(station) {
   return stationStatusClass(station.status);
 }
 
-function markerIcon(station) {
+function markerLabel(station, mode) {
+  if (mode === "temperature") {
+    return station.latest_temperature === null || station.latest_temperature === undefined
+      ? "No Data"
+      : `${number(station.latest_temperature, 1)}°C`;
+  }
+  if (mode === "pressure") {
+    return station.latest_pressure === null || station.latest_pressure === undefined
+      ? "No Data"
+      : `${number(station.latest_pressure, 1)} hPa`;
+  }
+  if (mode === "reporting") {
+    if (station.data_quality === "low_confidence") return "Low Conf";
+    if (!station.last_seen) return "No Data";
+    return station.data_quality === "good" ? "Reporting" : station.data_quality;
+  }
+  return station.station_id;
+}
+
+function markerIcon(station, mode) {
   return L.divIcon({
     className: "",
-    html: `<span class="osm-marker ${markerClass(station)}"><span>${station.station_id}</span></span>`,
+    html: `<span class="osm-marker ${markerClass(station)}"><span>${markerLabel(station, mode)}</span></span>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9],
     popupAnchor: [0, -8]
@@ -32,7 +51,7 @@ function isMappable(station) {
   return Number.isFinite(lat) && Number.isFinite(lon);
 }
 
-export default function MapPanel({ stations, selectedId }) {
+export default function MapPanel({ stations, selectedId, mode = "health" }) {
   const mappableStations = stations.filter(isMappable);
 
   return (
@@ -63,7 +82,7 @@ export default function MapPanel({ stations, selectedId }) {
             <Marker
               key={station.station_id}
               position={[Number(station.lat), Number(station.lon)]}
-              icon={markerIcon(station)}
+              icon={markerIcon(station, mode)}
               zIndexOffset={selectedId === station.station_id ? 500 : 0}
             >
               <Popup>
@@ -73,6 +92,9 @@ export default function MapPanel({ stations, selectedId }) {
                   <p>Status: {station.status}</p>
                   {station.data_quality === "low_confidence" ? <p>Data quality: Low confidence</p> : null}
                   <p>Health: {percent(station.health, 1)}</p>
+                  <p>Temperature: {station.latest_temperature === null || station.latest_temperature === undefined ? "No Data" : `${number(station.latest_temperature, 1)}°C`}</p>
+                  <p>Pressure: {station.latest_pressure === null || station.latest_pressure === undefined ? "No Data" : `${number(station.latest_pressure, 1)} hPa`}</p>
+                  <p>Humidity: {station.latest_humidity === null || station.latest_humidity === undefined ? "No Data" : `${number(station.latest_humidity, 1)}%`}</p>
                   <p>Degradation: {percent(station.degradation, 1)}</p>
                   <p>Trend: {number(station.trend_per_day, 3)} / day</p>
                   <p>Threshold: {daysToThreshold(station.days_to_threshold)}</p>

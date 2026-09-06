@@ -26,6 +26,9 @@ class StationSummary(BaseModel):
     rate_vs_network: float = Field(..., ge=0.0, examples=[1.8])
     last_seen: datetime
     data_quality: str = Field("good", examples=["good"])
+    latest_temperature: float | None = Field(None, examples=[27.4])
+    latest_pressure: float | None = Field(None, examples=[987.7])
+    latest_humidity: float | None = Field(None, examples=[68.0])
 
 
 class StationOverview(BaseModel):
