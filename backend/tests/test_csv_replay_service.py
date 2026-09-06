@@ -35,6 +35,7 @@ class CsvReplayServiceTests(unittest.TestCase):
 
     def _write_coords(self) -> tuple[str, str]:
         good_id = self._station_id("GOOD")
+        missing_pressure_id = self._station_id("MISSING-P")
         low_id = "43296099999"
         with self.coords_path.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(
@@ -54,6 +55,16 @@ class CsvReplayServiceTests(unittest.TestCase):
             )
             writer.writerow(
                 {
+                    "station_id": missing_pressure_id,
+                    "lat": "26.91",
+                    "lon": "75.79",
+                    "name": "CSV Jaipur",
+                    "P_pct": "67.0",
+                    "data_quality": "good",
+                }
+            )
+            writer.writerow(
+                {
                     "station_id": low_id,
                     "lat": "12.95",
                     "lon": "77.633",
@@ -62,9 +73,9 @@ class CsvReplayServiceTests(unittest.TestCase):
                     "data_quality": "low_confidence",
                 }
             )
-        return good_id, low_id
+        return good_id, missing_pressure_id, low_id
 
-    def _write_observations(self, good_id: str, low_id: str) -> None:
+    def _write_observations(self, good_id: str, missing_pressure_id: str, low_id: str) -> None:
         with self.observations_path.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(
                 handle,
@@ -113,6 +124,20 @@ class CsvReplayServiceTests(unittest.TestCase):
             writer.writerow(
                 {
                     "timestamp": "2024-01-01 00:00:00",
+                    "station_id": missing_pressure_id,
+                    "lat": "26.91",
+                    "lon": "75.79",
+                    "alt_m": "431",
+                    "T": "19.2",
+                    "P": "",
+                    "RH": "54",
+                    "noaa_bad": "False",
+                    "source_missing": "True",
+                }
+            )
+            writer.writerow(
+                {
+                    "timestamp": "2024-01-01 00:00:00",
                     "station_id": low_id,
                     "lat": "12.95",
                     "lon": "77.633",
@@ -126,13 +151,13 @@ class CsvReplayServiceTests(unittest.TestCase):
             )
 
     def test_csv_station_import_upserts_station_ids_as_strings(self) -> None:
-        good_id, low_id = self._write_coords()
+        good_id, _, low_id = self._write_coords()
 
         summary = csv_replay_service.import_stations_from_csv(self.coords_path)
         second_summary = csv_replay_service.import_stations_from_csv(self.coords_path)
 
-        self.assertEqual(summary.stations_seen, 2)
-        self.assertEqual(summary.stations_created, 2)
+        self.assertEqual(summary.stations_seen, 3)
+        self.assertEqual(summary.stations_created, 3)
         self.assertEqual(second_summary.stations_created, 0)
         with SessionLocal() as db:
             good = db.get(Station, good_id)
@@ -144,19 +169,20 @@ class CsvReplayServiceTests(unittest.TestCase):
             self.assertEqual(low.health, "low_confidence")
 
     def test_replay_processes_csv_through_skyguard_and_updates_station_state(self) -> None:
-        good_id, low_id = self._write_coords()
-        self._write_observations(good_id, low_id)
+        good_id, missing_pressure_id, low_id = self._write_coords()
+        self._write_observations(good_id, missing_pressure_id, low_id)
 
         summary = csv_replay_service.replay_observations_from_csv(
             coords_path=self.coords_path,
             observations_path=self.observations_path,
         )
 
-        self.assertEqual(summary.stations_imported, 2)
-        self.assertEqual(summary.observations_processed, 2)
+        self.assertEqual(summary.stations_imported, 3)
+        self.assertEqual(summary.observations_processed, 3)
         self.assertEqual(summary.skipped_low_confidence, 1)
-        self.assertEqual(summary.persisted_verdicts, 1)
+        self.assertEqual(summary.persisted_verdicts, 2)
         self.assertIn(good_id, summary.meaningful_station_ids)
+        self.assertIn(missing_pressure_id, summary.meaningful_station_ids)
         self.assertNotIn(low_id, summary.meaningful_station_ids)
 
         response = self.client.get("/stations")
@@ -165,14 +191,24 @@ class CsvReplayServiceTests(unittest.TestCase):
         self.assertIn(good_id, stations)
         self.assertIn(low_id, stations)
         self.assertEqual(stations[good_id]["data_quality"], "good")
+        self.assertEqual(stations[missing_pressure_id]["data_quality"], "good")
         self.assertEqual(stations[low_id]["data_quality"], "low_confidence")
         self.assertEqual(stations[good_id]["last_seen"].replace("+00:00", "Z"), "2024-01-01T01:00:00Z")
         self.assertAlmostEqual(
             stations[good_id]["health"],
             1 - stations[good_id]["degradation"],
         )
+        self.assertEqual(stations[good_id]["latest_temperature"], 27.8)
+        self.assertEqual(stations[good_id]["latest_pressure"], 1008.1)
+        self.assertEqual(stations[good_id]["latest_humidity"], 67.0)
+        self.assertEqual(stations[missing_pressure_id]["latest_temperature"], 19.2)
+        self.assertIsNone(stations[missing_pressure_id]["latest_pressure"])
+        self.assertEqual(stations[missing_pressure_id]["latest_humidity"], 54.0)
         self.assertEqual(stations[low_id]["status"], "MONITOR")
         self.assertIsNone(stations[low_id]["health"])
+        self.assertIsNone(stations[low_id]["latest_temperature"])
+        self.assertIsNone(stations[low_id]["latest_pressure"])
+        self.assertIsNone(stations[low_id]["latest_humidity"])
 
         with SessionLocal() as db:
             refreshed = db.get(Station, good_id)

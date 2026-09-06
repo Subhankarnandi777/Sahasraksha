@@ -55,7 +55,7 @@ export default function SignUp() {
     <main className="screen auth-screen">
       <Header subtitle="Operator Enrollment" liveText="AUTH READY" />
       <section className="auth-card">
-        <span>Sahasraksha Access</span>
+        <span>SAHASRAKSHA Access</span>
         <h1>Create Account</h1>
         <p>Prepare an operator profile for the future authentication provider.</p>
         <form onSubmit={submit} noValidate>

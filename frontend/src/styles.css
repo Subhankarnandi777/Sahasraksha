@@ -625,7 +625,7 @@ p {
 }
 
 .map-legend .schedule {
-  background: #6366f1;
+  background: #f59e0b;
 }
 
 .map-legend .service-now {
@@ -770,8 +770,8 @@ p {
 }
 
 .osm-marker.schedule {
-  background: #6366f1;
-  box-shadow: 0 0 0 12px rgba(99, 102, 241, 0.13);
+  background: #f59e0b;
+  box-shadow: 0 0 0 12px rgba(245, 158, 11, 0.13);
 }
 
 .osm-marker.monitor {

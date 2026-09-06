@@ -51,9 +51,9 @@ export default function Login() {
     <main className="screen auth-screen">
       <Header subtitle="Secure Network Access" liveText="AUTH READY" />
       <section className="auth-card">
-        <span>SkyGuard AI</span>
+        <span>SAHASRAKSHA</span>
         <h1>Welcome Back</h1>
-        <p>Sign in to continue to the Sahasraksha station network.</p>
+        <p>Sign in to continue to the SAHASRAKSHA station network.</p>
         <form onSubmit={submit} noValidate>
           <label className="field">
             <small>Email</small>
@@ -79,7 +79,7 @@ export default function Login() {
             {submitting ? "Logging in..." : "Login"}
           </button>
         </form>
-        <p className="auth-switch">New to Sahasraksha? <a href="/signup">Sign Up</a></p>
+        <p className="auth-switch">New to SAHASRAKSHA? <a href="/signup">Sign Up</a></p>
       </section>
     </main>
   );

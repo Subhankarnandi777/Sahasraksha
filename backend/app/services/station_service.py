@@ -75,9 +75,20 @@ def _status_from_verdict(flag: int, reason: AnomalyReason, severity: float, degr
     return StationStatus.MONITOR
 
 
-def _to_station_summary(station: Station) -> StationSummary:
+def _to_station_summary(
+    station: Station,
+    latest_reading: WeatherReading | None = None,
+) -> StationSummary:
     degradation = _contract_degradation(station.degradation)
     data_quality = _station_data_quality(station.station_id)
+    latest_temperature = None
+    latest_pressure = None
+    latest_humidity = None
+    if data_quality != "low_confidence" and latest_reading is not None:
+        latest_temperature = latest_reading.temperature_c
+        latest_pressure = latest_reading.pressure_hpa
+        latest_humidity = latest_reading.humidity_pct
+
     return StationSummary(
         station_id=station.station_id,
         name=station.name or station.station_id,
@@ -93,6 +104,9 @@ def _to_station_summary(station: Station) -> StationSummary:
         rate_vs_network=station.rate_vs_network or 1.0,
         last_seen=_as_utc(station.last_seen),
         data_quality=data_quality,
+        latest_temperature=latest_temperature,
+        latest_pressure=latest_pressure,
+        latest_humidity=latest_humidity,
     )
 
 
@@ -112,10 +126,46 @@ def _get_station_model(db: Session, station_id: str) -> Station | None:
     return db.get(Station, station_id)
 
 
+def _latest_readings_by_station(
+    db: Session,
+    station_ids: list[str],
+) -> dict[str, WeatherReading]:
+    if not station_ids:
+        return {}
+
+    ranked_readings = (
+        select(
+            WeatherReading.id.label("reading_id"),
+            func.row_number()
+            .over(
+                partition_by=WeatherReading.station_id,
+                order_by=(WeatherReading.recorded_at.desc(), WeatherReading.id.desc()),
+            )
+            .label("rank"),
+        )
+        .where(WeatherReading.station_id.in_(station_ids))
+        .subquery()
+    )
+
+    readings = db.scalars(
+        select(WeatherReading)
+        .join(ranked_readings, WeatherReading.id == ranked_readings.c.reading_id)
+        .where(ranked_readings.c.rank == 1)
+    ).all()
+    return {reading.station_id: reading for reading in readings}
+
+
 def list_stations() -> list[StationSummary]:
     with SessionLocal() as db:
         stations = db.scalars(select(Station).order_by(Station.station_id)).all()
-        return [_to_station_summary(station) for station in stations]
+        latest_readings = _latest_readings_by_station(
+            db,
+            [station.station_id for station in stations],
+        )
+        return [
+            _to_station_summary(station, latest_readings.get(station.station_id))
+            for station in stations
+        ]
 
 
 def get_station(station_id: str) -> StationSummary | None:
@@ -124,7 +174,8 @@ def get_station(station_id: str) -> StationSummary | None:
         if station is None:
             return None
 
-        return _to_station_summary(station)
+        latest_readings = _latest_readings_by_station(db, [station_id])
+        return _to_station_summary(station, latest_readings.get(station_id))
 
 
 def get_station_overview(station_id: str) -> StationOverview | None:
@@ -175,7 +226,10 @@ def get_station_overview(station_id: str) -> StationOverview | None:
         )
 
         return StationOverview(
-            station=_to_station_summary(station),
+            station=_to_station_summary(
+                station,
+                _latest_readings_by_station(db, [station_id]).get(station_id),
+            ),
             reading_count=reading_count or 0,
             verdict_count=verdict_count or 0,
             flagged_verdict_count=flagged_verdict_count or 0,

@@ -51,7 +51,7 @@ function RedirectToLogin() {
   return (
     <main className="screen auth-screen">
       <section className="auth-card">
-        <span>Sahasraksha Access</span>
+        <span>SAHASRAKSHA Access</span>
         <h1>Login Required</h1>
         <p>Redirecting to secure access.</p>
       </section>
@@ -76,7 +76,7 @@ export default function App() {
       <div className="phone-shell">
         <main className="screen auth-screen">
           <section className="auth-card">
-            <span>SkyGuard AI</span>
+            <span>SAHASRAKSHA</span>
             <h1>Loading Session</h1>
             <p>Checking secure access.</p>
           </section>

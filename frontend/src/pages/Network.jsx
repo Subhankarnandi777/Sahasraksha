@@ -38,7 +38,7 @@ export default function Network({ stations, selectedStation, selectedStationId, 
           { value: "reporting", label: "Reporting" }
         ]}
       />
-      <MapPanel stations={mapStations} selectedId={selectedStationId} onSelect={selectStation} />
+      <MapPanel stations={mapStations} selectedId={selectedStationId} mode={mode} onSelect={selectStation} />
       <section className="live-stream">
         <button type="button">▶</button>
         <div><span>Live Stream</span><i /></div>
