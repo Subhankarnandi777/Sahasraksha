@@ -80,7 +80,7 @@ def _to_station_summary(
     latest_reading: WeatherReading | None = None,
 ) -> StationSummary:
     degradation = _contract_degradation(station.degradation)
-    data_quality = _station_data_quality(station.station_id)
+    data_quality = station.data_quality or "good"
     latest_temperature = None
     latest_pressure = None
     latest_humidity = None
@@ -108,18 +108,6 @@ def _to_station_summary(
         latest_pressure=latest_pressure,
         latest_humidity=latest_humidity,
     )
-
-
-def _station_data_quality(station_id: str) -> str:
-    try:
-        from app.services.csv_replay_service import station_data_quality
-    except Exception:
-        return "good"
-
-    try:
-        return station_data_quality(station_id)
-    except Exception:
-        return "good"
 
 
 def _get_station_model(db: Session, station_id: str) -> Station | None:

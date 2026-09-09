@@ -11,7 +11,7 @@ ML_DIR = Path(__file__).resolve().parents[3] / "ml"
 if str(ML_DIR) not in sys.path:
     sys.path.insert(0, str(ML_DIR))
 
-from skyguard.stream import StreamingSkyGuard
+from sahasraksha.stream import StreamingSahasraksha
 
 
 class AnomalyDetector(Protocol):
@@ -56,18 +56,18 @@ class MockAnomalyDetector:
         )
 
 
-class SkyGuardAnomalyDetector:
+class SahasrakshaAnomalyDetector:
     """Adapter from the repository's streaming ML engine to the API verdict."""
 
     def __init__(self) -> None:
-        self._streams: dict[str, StreamingSkyGuard] = {}
+        self._streams: dict[str, StreamingSahasraksha] = {}
         self._lock = Lock()
 
     def evaluate(self, reading: WeatherReading) -> AnomalyVerdict:
         with self._lock:
             stream = self._streams.get(reading.station_id)
             if stream is None:
-                stream = StreamingSkyGuard({reading.station_id: self._initial_coeffs(reading)})
+                stream = StreamingSahasraksha({reading.station_id: self._initial_coeffs(reading)})
                 self._streams[reading.station_id] = stream
 
             raw = stream.update(
@@ -160,7 +160,7 @@ def _evidence_value(value: Any) -> float:
         return 0.0
 
 
-_anomaly_detector: AnomalyDetector = SkyGuardAnomalyDetector()
+_anomaly_detector: AnomalyDetector = SahasrakshaAnomalyDetector()
 
 
 def get_anomaly_detector() -> AnomalyDetector:

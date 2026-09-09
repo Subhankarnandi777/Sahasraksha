@@ -119,7 +119,7 @@ plots for one station:
 - **bottom** — `amp_ratio_P` (the tide heartbeat) visibly fading, crossing an
   alarm line at 0.55
 
-Annotate the crossing: *"SkyGuard raises the alarm here — days before any
+Annotate the crossing: *"Sahasraksha raises the alarm here — days before any
 reading looked wrong."* Give this chart room.
 
 ---
@@ -166,6 +166,6 @@ POST /ingest                       → §2
 GET  /health                       → network summary
 ```
 
-`StreamingSkyGuard` holds O(1) state per station — keep it in memory, no
+`StreamingSahasraksha` holds O(1) state per station — keep it in memory, no
 database round-trip per observation. At 15,579 obs/sec you will not be the
 bottleneck.

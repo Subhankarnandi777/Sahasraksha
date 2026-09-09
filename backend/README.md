@@ -1,6 +1,6 @@
-# SkyGuard AI Backend
+# Sahasraksha Backend
 
-FastAPI backend for the SkyGuard AI weather-station anomaly monitoring flow.
+FastAPI backend for the Sahasraksha weather-station anomaly monitoring flow.
 
 Current flow:
 

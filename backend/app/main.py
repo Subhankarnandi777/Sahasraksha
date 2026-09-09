@@ -7,7 +7,7 @@ from app.services import alert_service, station_service, work_order_service
 
 
 app = FastAPI(
-    title="SkyGuard AI Backend",
+    title="Sahasraksha Backend",
     description="Backend API foundation for weather-station anomaly detection.",
     version="0.1.0",
 )
@@ -35,7 +35,7 @@ def on_startup() -> None:
 
 @app.get("/")
 def read_root() -> dict[str, str]:
-    return {"message": "SkyGuard AI backend"}
+    return {"message": "Sahasraksha backend"}
 
 
 @app.get("/health")

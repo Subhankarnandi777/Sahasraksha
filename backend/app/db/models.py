@@ -16,6 +16,7 @@ class Station(Base):
     lon: Mapped[float | None] = mapped_column(Float, nullable=True)
     health: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
+    data_quality: Mapped[str] = mapped_column(String, nullable=False, default="good")
     health_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     degradation: Mapped[float] = mapped_column(Float, nullable=False)
     trend_per_day: Mapped[float | None] = mapped_column(Float, nullable=True)

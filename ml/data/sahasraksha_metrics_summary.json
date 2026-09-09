@@ -1,0 +1,119 @@
+{
+  "overall_performance": {
+    "wmo": {
+      "precision": 0.9433,
+      "recall": 0.5511,
+      "false_alarm_rate": 0.0029
+    },
+    "sahasraksha": {
+      "precision": 0.8198,
+      "recall": 0.762,
+      "false_alarm_rate": 0.0148
+    }
+  },
+  "recall_by_fault_class": {
+    "drift": {
+      "wmo_recall": 0.1006,
+      "sahasraksha_recall": 0.3274
+    },
+    "dropout": {
+      "wmo_recall": 1.0,
+      "sahasraksha_recall": 1.0
+    },
+    "frozen": {
+      "wmo_recall": 0.9462,
+      "sahasraksha_recall": 0.9483
+    },
+    "noise": {
+      "wmo_recall": 0.2656,
+      "sahasraksha_recall": 0.6765
+    },
+    "sluggish": {
+      "wmo_recall": 0.2333,
+      "sahasraksha_recall": 0.5875
+    },
+    "spike": {
+      "wmo_recall": 0.6667,
+      "sahasraksha_recall": 1.0
+    },
+    "stale_repeat": {
+      "wmo_recall": 0.9542,
+      "sahasraksha_recall": 0.9542
+    },
+    "step": {
+      "wmo_recall": 0.0,
+      "sahasraksha_recall": 0.8971
+    }
+  },
+  "root_cause_precision": [
+    {
+      "true_class": "drift",
+      "n_detected": 166,
+      "precision": 0.578
+    },
+    {
+      "true_class": "dropout",
+      "n_detected": 468,
+      "precision": 0.797
+    },
+    {
+      "true_class": "frozen",
+      "n_detected": 917,
+      "precision": 1.0
+    },
+    {
+      "true_class": "noise",
+      "n_detected": 782,
+      "precision": 0.578
+    },
+    {
+      "true_class": "sluggish",
+      "n_detected": 282,
+      "precision": 0.294
+    },
+    {
+      "true_class": "spike",
+      "n_detected": 3,
+      "precision": 1.0
+    },
+    {
+      "true_class": "stale_repeat",
+      "n_detected": 458,
+      "precision": 1.0
+    },
+    {
+      "true_class": "step",
+      "n_detected": 122,
+      "precision": 0.967
+    }
+  ],
+  "severity_distribution": {
+    "CRITICAL": 3338,
+    "MAJOR": 290,
+    "MINOR": 273
+  },
+  "self_healing_mae_recovery": [
+    {
+      "Channel": "T",
+      "MAE (Reported)": 4.255,
+      "MAE (Repaired)": 0.885,
+      "Error Recovery %": 79.2
+    },
+    {
+      "Channel": "P",
+      "MAE (Reported)": 1.807,
+      "MAE (Repaired)": 0.605,
+      "Error Recovery %": 66.53
+    },
+    {
+      "Channel": "RH",
+      "MAE (Reported)": 15.738,
+      "MAE (Repaired)": 6.196,
+      "Error Recovery %": 60.63
+    }
+  ],
+  "stations": {
+    "total": 60,
+    "low_confidence": 3
+  }
+}

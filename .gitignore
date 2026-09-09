@@ -4,3 +4,6 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/*.pyc
 backend/skyguard.db
+
+ml/**/__pycache__/
+ml/**/*.pyc

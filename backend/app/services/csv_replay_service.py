@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import argparse
 import csv
+import gzip
 import math
 from pathlib import Path
 from typing import Any
@@ -14,12 +15,12 @@ from app.db.database import SessionLocal, init_db
 from app.db.models import Station
 from app.schemas import StationStatus, WeatherReading
 from app.services import alert_service
-from app.services.anomaly_detector import SkyGuardAnomalyDetector
+from app.services.anomaly_detector import SahasrakshaAnomalyDetector
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_COORDS_PATH = PROJECT_ROOT / "data" / "skyguard_station_coords.csv"
-DEFAULT_OBSERVATIONS_PATH = PROJECT_ROOT / "data" / "skyguard_big_export.csv"
+DEFAULT_COORDS_PATH = PROJECT_ROOT / "ml" / "data" / "sahasraksha_all_stations_coords.csv"
+DEFAULT_OBSERVATIONS_PATH = PROJECT_ROOT / "ml" / "data" / "sahasraksha_big_export.csv.gz"
 LOW_CONFIDENCE = "low_confidence"
 GOOD_QUALITY = "good"
 UNKNOWN_QUALITY = "unknown"
@@ -99,6 +100,7 @@ def import_stations_from_csv(
                 existing.name = station.name
                 existing.lat = station.lat
                 existing.lon = station.lon
+                existing.data_quality = station.data_quality
                 if station.data_quality == LOW_CONFIDENCE:
                     _mark_low_confidence(existing)
                 summary.stations_updated += 1
@@ -128,7 +130,7 @@ def replay_observations_from_csv(
         for station_id, station in metadata.items()
         if station.data_quality == LOW_CONFIDENCE
     }
-    detector = SkyGuardAnomalyDetector()
+    detector = SahasrakshaAnomalyDetector()
     latest_by_station: dict[str, tuple[WeatherReading, Any]] = {}
     last_timestamp_by_station: dict[str, datetime] = {}
     summary = ReplaySummary(
@@ -136,7 +138,7 @@ def replay_observations_from_csv(
         low_confidence_station_ids=set(low_confidence_ids),
     )
 
-    with Path(observations_path).open(newline="", encoding="utf-8-sig") as handle:
+    with _open_maybe_gzip(observations_path) as handle:
         reader = csv.DictReader(handle)
         for row in reader:
             summary.rows_seen += 1
@@ -238,6 +240,7 @@ def _new_station(metadata: StationMetadata) -> Station:
         lat=metadata.lat,
         lon=metadata.lon,
         health="unknown",
+        data_quality=metadata.data_quality,
         status=StationStatus.MONITOR.value,
         health_score=0.0,
         degradation=0.0,
@@ -294,6 +297,15 @@ def _timestamp(value: str | None) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def _open_maybe_gzip(path: Path | str):
+    """The big observations export ships gzipped to stay under GitHub's
+    100MB file limit -- transparently decompress if the extension says so."""
+    path = Path(path)
+    if path.suffix == ".gz":
+        return gzip.open(path, mode="rt", newline="", encoding="utf-8-sig")
+    return path.open(newline="", encoding="utf-8-sig")
 
 
 def _optional_float(value: str | None) -> float | None:

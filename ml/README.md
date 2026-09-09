@@ -1,4 +1,4 @@
-# SkyGuard AI — ML Engine
+# Sahasraksha — ML Engine
 
 **SIH26073** · AI/ML-Based Intelligent Anomaly Detection for Automatic Weather Stations
 Ministry of Earth Sciences · India Meteorological Department
@@ -17,7 +17,7 @@ that are wrong. Gurugram's station was dead for over twenty days while the city
 recorded 128 mm of rain — its heaviest since 2010 — and the official record
 shows none of it.
 
-SkyGuard finds the stations that are lying.
+Sahasraksha finds the stations that are lying.
 
 ---
 
@@ -25,7 +25,7 @@ SkyGuard finds the stations that are lying.
 
 ```bash
 pip install -r requirements.txt
-jupyter notebook notebooks/SkyGuard_SIH26073.ipynb
+jupyter notebook notebooks/Sahasraksha_SIH26073.ipynb
 ```
 
 Turn **Internet ON** in the notebook settings, then Run All. About five minutes.
@@ -34,8 +34,8 @@ Cells 1–30 run offline; the rest download real Indian station records from NOA
 To use the modules directly:
 
 ```python
-from skyguard.network import generate_network
-from skyguard.model import build_feature_frame, fit_score_models, threshold_at_budget, fuse
+from sahasraksha.network import generate_network
+from sahasraksha.model import build_feature_frame, fit_score_models, threshold_at_budget, fuse
 
 df = generate_network(days=180, seed=42)
 F  = build_feature_frame(df)
@@ -107,7 +107,7 @@ Threshold QC is *excellent* when it fires — but it has a hard ceiling at 38%.
 
 | Method | ROC-AUC | recall@top5% |
 |---|---|---|
-| **SkyGuard** | **0.780** | **0.196** |
+| **Sahasraksha** | **0.780** | **0.196** |
 | Raw IsolationForest | 0.660 | 0.087 |
 | Raw One-Class SVM | 0.519 | 0.158 |
 | Threshold QC | 0.500 | no signal by construction |
@@ -192,7 +192,7 @@ deviation. It had **twenty readings in two years**.
 - **Humidity drift correction** — noise floor 5.9–10.8%, no threshold works.
   Dropped.
 
-**The conclusion across all four: SkyGuard's value is knowing what to
+**The conclusion across all four: Sahasraksha's value is knowing what to
 distrust, not inventing replacements.** It flags; it does not silently rewrite.
 
 ---
@@ -207,7 +207,7 @@ distrust, not inventing replacements.** It flags; it does not silently rewrite.
 | `detect.py` | Layers 0, 1, 2, 2b — gates, harmonics, spatial, tide, CUSUM |
 | `model.py` | Feature assembly, ML, fusion, root cause, evaluation |
 | `stream.py` | O(1) streaming detector + `fit_coeffs` |
-| `operate.py` | Calibration, maintenance work order, safe repair, `SkyGuard` class |
+| `operate.py` | Calibration, maintenance work order, safe repair, `Sahasraksha` class |
 | `validate.py` | LOSO, bootstrap CIs, balanced injection |
 | `compare.py` | Baselines + ESP32 C source generation |
 | `gapfill.py` | Conformal confidence, trust scores, recalibration offsets |

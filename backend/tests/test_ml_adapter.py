@@ -13,7 +13,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.main import app
 from app.schemas import AnomalyReason, WeatherReading
-from app.services.anomaly_detector import SkyGuardAnomalyDetector
+from app.services.anomaly_detector import SahasrakshaAnomalyDetector
 
 
 class SkyGuardAdapterTests(unittest.TestCase):
@@ -41,7 +41,7 @@ class SkyGuardAdapterTests(unittest.TestCase):
         )
 
     def test_adapter_uses_streaming_skyguard_contract(self) -> None:
-        detector = SkyGuardAnomalyDetector()
+        detector = SahasrakshaAnomalyDetector()
 
         verdict = detector.evaluate(self._reading())
 
@@ -56,7 +56,7 @@ class SkyGuardAdapterTests(unittest.TestCase):
         self.assertTrue(all(isinstance(pair, list) and len(pair) == 2 for pair in verdict.evidence))
 
     def test_adapter_preserves_api_evidence_names(self) -> None:
-        detector = SkyGuardAnomalyDetector()
+        detector = SahasrakshaAnomalyDetector()
         first = self._reading()
         detector.evaluate(first)
 
@@ -69,7 +69,7 @@ class SkyGuardAdapterTests(unittest.TestCase):
         self.assertFalse(any(key.startswith("z_") for key in keys))
 
     def test_adapter_keeps_state_per_station(self) -> None:
-        detector = SkyGuardAnomalyDetector()
+        detector = SahasrakshaAnomalyDetector()
         timestamp = datetime(2026, 9, 4, 10, tzinfo=timezone.utc)
 
         detector.evaluate(self._reading("STATION-A", timestamp=timestamp, P=950.0))
