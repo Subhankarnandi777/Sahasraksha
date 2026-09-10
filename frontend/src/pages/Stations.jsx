@@ -49,7 +49,7 @@ export default function Stations({ stations, openAlerts, loading, error }) {
         <div>
           <span>IMD National Network</span>
           <h1>Stations</h1>
-          <p>{loading ? "Loading monitored stations" : `${stations.length} Stations Monitored across 36 meteorological subdivisions`}</p>
+          <p>{loading ? "Loading monitored stations" : `${stations.length} real Indian AWS/synoptic stations, nationwide coverage`}</p>
         </div>
         <strong>{percent(activePercent, 1)} Active</strong>
       </section>

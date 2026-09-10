@@ -100,7 +100,7 @@ export default function MapPanel({ stations, selectedId, mode = "health" }) {
                   <p>Humidity: {station.latest_humidity === null || station.latest_humidity === undefined ? "No Data" : `${number(station.latest_humidity, 1)}%`}</p>
                   <p>Degradation: {percent(station.degradation, 1)}</p>
                   <p>Trend: {number(station.trend_per_day, 3)} / day</p>
-                  <p>Threshold: {daysToThreshold(station.days_to_threshold)}</p>
+                  <p>Est. service window: {daysToThreshold(station.days_to_threshold)}</p>
                   <p>Last seen: {timeAgo(station.last_seen)}</p>
                   <a href={`/stations/${encodeURIComponent(station.station_id)}`}>Open station detail</a>
                 </div>

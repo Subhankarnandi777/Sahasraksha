@@ -35,7 +35,7 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
               <StatusBadge status={station.status}>{station.status}</StatusBadge>
               <small>Last updated {timeAgo(station.last_seen)}</small>
             </div>
-            <small>Service window: {daysToThreshold(station.days_to_threshold)} days</small>
+            <small>Estimated service window: {daysToThreshold(station.days_to_threshold)} days</small>
           </section>
           <TelemetryCard label="Temperature" value={latest.T} unit="C" status={channelStatus(latestVerdict, "T", "Normal")} values={timeseries.map((row) => row.T)} />
           <TelemetryCard label="Pressure" value={latest.P} unit=" hPa" status={latestVerdict?.degradation ? `Heartbeat ${percent(latestVerdict.degradation, 0)}` : "Stable"} values={timeseries.map((row) => row.P)} tone="amber" />

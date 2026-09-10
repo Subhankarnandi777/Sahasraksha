@@ -13,7 +13,7 @@ export default function StationCard({ station, alert, onOpen }) {
         <strong>{station.name}</strong>
         <span className="station-health">{percent(station.health, 1)}</span>
         <span className="station-meta">Last seen: {timeAgo(station.last_seen)}</span>
-        <span className="station-service">{days === "-" ? "No service date" : `${days} days to service`}</span>
+        <span className="station-service">{days === "-" ? "No service date" : `~${days} days to service (est.)`}</span>
         <StatusBadge status={station.status}>{station.status}</StatusBadge>
         <span className="station-anomaly">{anomaly}</span>
       </button>

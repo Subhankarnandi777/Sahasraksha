@@ -176,10 +176,12 @@ def impute_extreme_safe(df, F, flag, dewpoint_fn, spatial_z_cut=3.0,
     return out
 
 
-# ═══════════ 5. TAMPER vs NATURAL FAILURE ═══════════
+# ═══════════ 5. TAMPER CANDIDATE vs NATURAL FAILURE ═══════════
 def tamper_signature(df, F, window=24):
     """
-    Distinguish deliberate manipulation from natural degradation.
+    Flag a CANDIDATE signature distinguishing deliberate manipulation from
+    natural degradation -- a statistical pattern match, not a forensic
+    determination. A human should confirm before acting on this label.
 
     Not in the problem statement, but documented in India: an AWS in the
     Deodaithan circle of Shrigonda taluka, Ahmednagar reported rainfall that
