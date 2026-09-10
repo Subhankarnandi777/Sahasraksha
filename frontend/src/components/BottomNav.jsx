@@ -13,14 +13,27 @@ function Icon({ name }) {
 
 export default function BottomNav({ active, alertCount = 0 }) {
   return (
-    <nav className="bottom-nav" aria-label="Primary">
-      {items.map((item) => (
-        <a key={item.href} href={item.href} className={active === item.label.toLowerCase() ? "active" : ""}>
-          <Icon name={item.icon} />
-          <span>{item.label}</span>
-          {item.label === "Alerts" && alertCount > 0 ? <b>{alertCount}</b> : null}
-        </a>
-      ))}
-    </nav>
+    <>
+      <nav className="bottom-nav" aria-label="Primary">
+        {items.map((item) => (
+          <a key={item.href} href={item.href} className={active === item.label.toLowerCase() ? "active" : ""}>
+            <Icon name={item.icon} />
+            <span>{item.label}</span>
+            {item.label === "Alerts" && alertCount > 0 ? <b>{alertCount}</b> : null}
+          </a>
+        ))}
+      </nav>
+      {/* Desktop-only equivalent -- a standard top nav row, shown instead
+          of the floating mobile tab bar above 900px (see styles.css). */}
+      <nav className="top-nav" aria-label="Primary">
+        {items.map((item) => (
+          <a key={item.href} href={item.href} className={active === item.label.toLowerCase() ? "active" : ""}>
+            <Icon name={item.icon} />
+            <span>{item.label}</span>
+            {item.label === "Alerts" && alertCount > 0 ? <b>{alertCount}</b> : null}
+          </a>
+        ))}
+      </nav>
+    </>
   );
 }

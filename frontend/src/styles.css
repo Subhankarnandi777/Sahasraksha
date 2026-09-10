@@ -60,27 +60,7 @@ p {
    website. This instead widens into a genuine desktop dashboard: a wide,
    centred panel that actually uses the available width, with card grids
    that expand into more columns rather than staying phone-narrow. */
-/* Desktop presentation, standard version: the app is mobile-first, and
-   every page's internal grids were designed and tested to look right at
-   that width. Rather than reflow them into wider multi-column layouts
-   (tried, but left uneven gaps since two-item grids don't fill four
-   columns) or shrink into a small phone-style card (looked isolated),
-   the simple, conventional fix: keep every page at its own natural,
-   already-correct width, and just centre that column on a wider screen. */
-@media (min-width: 900px) {
-  body {
-    background: #eef2f7;
-    display: flex;
-    justify-content: center;
-  }
 
-  .phone-shell {
-    width: 480px;
-    margin: 0 auto;
-    background: #f7f8ff;
-    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
-  }
-}
 
 .screen {
   position: relative;
@@ -856,7 +836,7 @@ p {
 
 .live-stream {
   gap: 12px;
-  margin: -28px 14px 22px;
+  margin: 12px 14px 22px;
   padding: 12px;
 }
 
@@ -1274,5 +1254,82 @@ p {
   .telemetry-mini-grid,
   .metric-grid.three {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Desktop presentation: a genuine website layout, not a phone app centred
+   in a browser. The floating bottom tab bar -- the single biggest "mobile
+   app" signal -- is replaced by a standard top navigation row above 900px,
+   and the content column is widened enough that the three-way telemetry
+   cards (Temperature/Pressure/Humidity) actually fit without clipping.
+   This block is placed at the END of the file deliberately: the base
+   .bottom-nav { display: flex } rule appears later than an earlier attempt
+   at this same override, and CSS resolves equal-specificity ties by source
+   order -- putting this last guarantees it actually wins. */
+.top-nav {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  body {
+    background: #eef2f7;
+    display: flex;
+    justify-content: center;
+  }
+
+  .phone-shell {
+    width: 760px;
+    margin: 0 auto;
+    background: #f7f8ff;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
+  }
+
+  .screen {
+    padding: 96px 32px 40px;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .top-nav {
+    display: flex;
+    position: fixed;
+    top: 0;
+    width: 760px;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 24px;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(210, 218, 232, 0.9);
+    z-index: 10;
+  }
+
+  .top-nav a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .top-nav a.active {
+    color: #0b82ad;
+    background: #eef9ff;
+  }
+
+  .top-nav b {
+    display: inline-grid;
+    place-items: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 10px;
   }
 }
