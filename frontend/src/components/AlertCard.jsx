@@ -22,7 +22,7 @@ export default function AlertCard({ alert }) {
       <div className="diagnostic-grid">
         <span><strong>{spatial === "-" ? "-" : Number(spatial).toFixed(1)}</strong><small>Spatial dev.</small></span>
         <span><strong>{drift === "-" ? "-" : Number(drift).toFixed(1)}</strong><small>Drift</small></span>
-        <span><strong>{heartbeat === "-" ? "-" : `${Math.round(Number(heartbeat) * -100)}%`}</strong><small>Heartbeat</small></span>
+        <span><strong>{heartbeat === "-" ? "-" : `${Math.round(Number(heartbeat) * 100)}%`}</strong><small>Heartbeat</small></span>
       </div>
       <ul>
         {(alert.evidence || []).slice(0, 3).map((pair) => (

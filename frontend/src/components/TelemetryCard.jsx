@@ -11,7 +11,7 @@ export default function TelemetryCard({ label, value, unit, status, values = [],
         <em>{status}</em>
       </div>
       <strong>{formatted}</strong>
-      <small>{label === "Pressure" ? `Heartbeat ${percent(values.length ? 1 - Math.min(...values.map(Number).filter(Number.isFinite)) / 1100 : 0, 0)}` : "24h diurnal trace"}</small>
+      <small>24h diurnal trace</small>
       <Sparkline values={values.slice(-24)} tone={tone} />
     </article>
   );
