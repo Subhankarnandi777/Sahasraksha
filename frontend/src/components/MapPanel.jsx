@@ -32,7 +32,10 @@ function markerLabel(station, mode) {
     if (!station.last_seen) return "No Data";
     return station.data_quality === "good" ? "Reporting" : station.data_quality;
   }
-  return station.station_id;
+  // Health mode (default): status is already conveyed by marker colour,
+  // matching the legend -- a raw 11-digit station ID as an inline label
+  // just clutters the map. Detail is one tap away via the popup.
+  return "";
 }
 
 function markerIcon(station, mode) {
@@ -66,7 +69,7 @@ export default function MapPanel({ stations, selectedId, mode = "health" }) {
       <div className="india-map" aria-label="Station network map">
         <MapContainer
           center={INDIA_CENTER}
-          zoom={4}
+          zoom={5}
           minZoom={3}
           maxZoom={12}
           scrollWheelZoom={false}
