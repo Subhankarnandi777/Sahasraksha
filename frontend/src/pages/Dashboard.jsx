@@ -14,7 +14,17 @@ function countSilent(stations) {
 }
 
 function hourlyAlertCounts(alerts) {
-  const now = new Date();
+  // Bucket relative to the DATA's own most recent activity, not the wall
+  // clock -- same principle as the silence-detection fix. This way the
+  // widget works whether the data is a historical replay, a live feed, or
+  // (during a demo) briefly empty right after the live simulator stops.
+  let referenceTime = 0;
+  for (const alert of alerts) {
+    const created = new Date(alert.created_at).getTime();
+    if (!Number.isNaN(created)) referenceTime = Math.max(referenceTime, created);
+  }
+  const now = referenceTime ? new Date(referenceTime) : new Date();
+
   const buckets = Array.from({ length: 6 }, (_, index) => {
     const date = new Date(now);
     date.setHours(now.getHours() - 5 + index, 0, 0, 0);
