@@ -54,7 +54,7 @@ function isMappable(station) {
   return Number.isFinite(lat) && Number.isFinite(lon);
 }
 
-export default function MapPanel({ stations, selectedId, mode = "health" }) {
+export default function MapPanel({ stations, selectedId, mode = "health", onSelect }) {
   const mappableStations = stations.filter(isMappable);
 
   return (
@@ -87,6 +87,9 @@ export default function MapPanel({ stations, selectedId, mode = "health" }) {
               position={[Number(station.lat), Number(station.lon)]}
               icon={markerIcon(station, mode)}
               zIndexOffset={selectedId === station.station_id ? 500 : 0}
+              eventHandlers={{
+                click: () => { if (onSelect) onSelect(station.station_id); }
+              }}
             >
               <Popup>
                 <div className="station-popup">
