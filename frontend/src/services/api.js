@@ -97,20 +97,37 @@ export function timeAgo(timestamp) {
   return `${Math.floor(hours / 24)} d ago`;
 }
 
+
 // Matches the SILENT_HOURS_THRESHOLD used throughout the ML pipeline (6h) --
-// a station this far past its last reading is genuinely silent, not just
-// "healthy but unlucky on timing."
+// a station this far behind the network's own most recent reading is
+// genuinely silent, not just "healthy but unlucky on timing."
+//
+// Compared against the NETWORK's latest reading, not the browser's wall
+// clock -- correct for both live ingestion and a replayed historical
+// dataset, where every station's last_seen can legitimately sit far behind
+// "now" without any station actually being silent relative to the others.
 const SILENT_HOURS_THRESHOLD = 6;
 
-export function hoursSinceLastSeen(timestamp) {
+export function hoursSinceLastSeen(timestamp, referenceTime = Date.now()) {
   if (!timestamp) return Infinity;
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return Infinity;
-  return Math.max(0, (Date.now() - date.getTime()) / 3600000);
+  return Math.max(0, (referenceTime - date.getTime()) / 3600000);
 }
 
-export function isSilent(station) {
-  return hoursSinceLastSeen(station?.last_seen) > SILENT_HOURS_THRESHOLD;
+export function networkReferenceTime(stations) {
+  let latest = 0;
+  for (const station of stations) {
+    const date = new Date(station?.last_seen);
+    if (!Number.isNaN(date.getTime())) {
+      latest = Math.max(latest, date.getTime());
+    }
+  }
+  return latest || Date.now();
+}
+
+export function isSilent(station, referenceTime) {
+  return hoursSinceLastSeen(station?.last_seen, referenceTime) > SILENT_HOURS_THRESHOLD;
 }
 
 // Evidence keys are channel-suffixed (spatial_z_T, runlen_RH, cusum_fast_P)
@@ -125,6 +142,7 @@ export function channelStatus(verdict, channel, fallback) {
   const severity = Number(verdict?.severity || 0);
   return severity >= 0.5 ? `Attention ${percent(severity, 0)}` : `Watch ${percent(severity, 0)}`;
 }
+
 
 export function evidenceText(pair) {
   const [key, value] = pair;

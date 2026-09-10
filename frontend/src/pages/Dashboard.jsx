@@ -2,14 +2,15 @@ import BottomNav from "../components/BottomNav.jsx";
 import Header from "../components/Header.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import Sparkline from "../components/Sparkline.jsx";
-import { isSilent, percent } from "../services/api.js";
+import { isSilent, networkReferenceTime, percent } from "../services/api.js";
 
 function countStatus(stations, status) {
   return stations.filter((station) => station.status === status).length;
 }
 
 function countSilent(stations) {
-  return stations.filter(isSilent).length;
+  const referenceTime = networkReferenceTime(stations);
+  return stations.filter((station) => isSilent(station, referenceTime)).length;
 }
 
 function hourlyAlertCounts(alerts) {
