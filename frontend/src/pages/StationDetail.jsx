@@ -2,7 +2,7 @@ import BottomNav from "../components/BottomNav.jsx";
 import Header from "../components/Header.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
-import { daysToThreshold, percent, timeAgo } from "../services/api.js";
+import { channelStatus, daysToThreshold, percent, timeAgo } from "../services/api.js";
 
 export default function StationDetail({ selectedStation, timeseries, verdicts, openAlerts, loading, error }) {
   const station = selectedStation;
@@ -37,9 +37,9 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
             </div>
             <small>Service window: {daysToThreshold(station.days_to_threshold)} days</small>
           </section>
-          <TelemetryCard label="Temperature" value={latest.T} unit="C" status="Normal" values={timeseries.map((row) => row.T)} />
+          <TelemetryCard label="Temperature" value={latest.T} unit="C" status={channelStatus(latestVerdict, "T", "Normal")} values={timeseries.map((row) => row.T)} />
           <TelemetryCard label="Pressure" value={latest.P} unit=" hPa" status={latestVerdict?.degradation ? `Heartbeat ${percent(latestVerdict.degradation, 0)}` : "Stable"} values={timeseries.map((row) => row.P)} tone="amber" />
-          <TelemetryCard label="Humidity" value={latest.RH} unit="%" status="Stable" values={timeseries.map((row) => row.RH)} tone="blue" />
+          <TelemetryCard label="Humidity" value={latest.RH} unit="%" status={channelStatus(latestVerdict, "RH", "Stable")} values={timeseries.map((row) => row.RH)} tone="blue" />
           <section className="card">
             <h2>Latest AI Verdict</h2>
             {latestVerdict ? (

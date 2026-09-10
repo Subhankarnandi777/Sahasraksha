@@ -2,10 +2,14 @@ import BottomNav from "../components/BottomNav.jsx";
 import Header from "../components/Header.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import Sparkline from "../components/Sparkline.jsx";
-import { percent } from "../services/api.js";
+import { isSilent, percent } from "../services/api.js";
 
 function countStatus(stations, status) {
   return stations.filter((station) => station.status === status).length;
+}
+
+function countSilent(stations) {
+  return stations.filter(isSilent).length;
 }
 
 function hourlyAlertCounts(alerts) {
@@ -36,6 +40,7 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
   const healthy = countStatus(stations, "OK");
   const monitoring = countStatus(stations, "MONITOR") + countStatus(stations, "SCHEDULE");
   const serviceNow = countStatus(stations, "SERVICE NOW");
+  const silent = countSilent(stations);
   const scoredStations = stations.filter((station) => Number.isFinite(Number(station.health)));
   const networkHealth = scoredStations.length
     ? scoredStations.reduce((sum, station) => sum + Number(station.health), 0) / scoredStations.length
@@ -73,7 +78,7 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
       </div>
       <div className="metric-grid two">
         <MetricCard tone="critical" label="Service Now" value={serviceNow} subtext={`${total ? (serviceNow / total * 100).toFixed(1) : 0}% faulted`} />
-        <MetricCard tone="nodata" label="Offline / Silent" value={serviceNow} subtext="Inactive" />
+        <MetricCard tone="nodata" label="Offline / Silent" value={silent} subtext="No signal 6h+" />
       </div>
 
       <section className="card">

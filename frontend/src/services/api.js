@@ -97,6 +97,35 @@ export function timeAgo(timestamp) {
   return `${Math.floor(hours / 24)} d ago`;
 }
 
+// Matches the SILENT_HOURS_THRESHOLD used throughout the ML pipeline (6h) --
+// a station this far past its last reading is genuinely silent, not just
+// "healthy but unlucky on timing."
+const SILENT_HOURS_THRESHOLD = 6;
+
+export function hoursSinceLastSeen(timestamp) {
+  if (!timestamp) return Infinity;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return Infinity;
+  return Math.max(0, (Date.now() - date.getTime()) / 3600000);
+}
+
+export function isSilent(station) {
+  return hoursSinceLastSeen(station?.last_seen) > SILENT_HOURS_THRESHOLD;
+}
+
+// Evidence keys are channel-suffixed (spatial_z_T, runlen_RH, cusum_fast_P)
+// except pressure's tide_loss, which has no suffix but is pressure-specific.
+export function channelStatus(verdict, channel, fallback) {
+  const evidence = verdict?.evidence || [];
+  const relevant = evidence.filter(([key]) => {
+    if (channel === "P" && key === "tide_loss") return true;
+    return typeof key === "string" && key.endsWith(`_${channel}`);
+  });
+  if (!relevant.length) return fallback;
+  const severity = Number(verdict?.severity || 0);
+  return severity >= 0.5 ? `Attention ${percent(severity, 0)}` : `Watch ${percent(severity, 0)}`;
+}
+
 export function evidenceText(pair) {
   const [key, value] = pair;
   const displayValue = number(value, 2);

@@ -5,12 +5,13 @@ import Header from "../components/Header.jsx";
 import MapPanel from "../components/MapPanel.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
-import { number, percent } from "../services/api.js";
+import { number, percent, channelStatus } from "../services/api.js";
 
-export default function Network({ stations, selectedStation, selectedStationId, timeseries, openAlerts, loading, error }) {
+export default function Network({ stations, selectedStation, selectedStationId, timeseries, verdicts, openAlerts, loading, error }) {
   const [mode, setMode] = useState("health");
   const selected = selectedStation || stations[0];
   const latest = timeseries[timeseries.length - 1] || {};
+  const latestVerdict = verdicts[verdicts.length - 1];
   const mapStations = useMemo(() => stations.filter((station) => Number.isFinite(Number(station.lat)) && Number.isFinite(Number(station.lon))), [stations]);
 
   function selectStation(stationId) {
@@ -25,7 +26,6 @@ export default function Network({ stations, selectedStation, selectedStationId, 
           <h1>Station Network</h1>
           <p>{loading ? "Loading stations" : `${stations.length} Stations Monitored`}</p>
         </div>
-        <div className="circle-actions"><button>⌕</button><button>☷</button></div>
       </div>
       {error ? <p className="state error">{error}</p> : null}
       <FilterTabs
@@ -52,9 +52,9 @@ export default function Network({ stations, selectedStation, selectedStationId, 
           </div>
           <p>{selected.name}</p>
           <div className="telemetry-mini-grid">
-            <TelemetryCard label="Temperature" value={latest.T} unit="C" status="Normal" values={timeseries.map((row) => row.T)} />
-            <TelemetryCard label="Pressure" value={latest.P} unit=" hPa" status="Heartbeat" values={timeseries.map((row) => row.P)} tone="amber" />
-            <TelemetryCard label="Humidity" value={latest.RH} unit="%" status="Stable" values={timeseries.map((row) => row.RH)} />
+            <TelemetryCard label="Temperature" value={latest.T} unit="C" status={channelStatus(latestVerdict, "T", "Normal")} values={timeseries.map((row) => row.T)} />
+            <TelemetryCard label="Pressure" value={latest.P} unit=" hPa" status={latestVerdict?.degradation ? `Heartbeat ${percent(latestVerdict.degradation, 0)}` : "Stable"} values={timeseries.map((row) => row.P)} tone="amber" />
+            <TelemetryCard label="Humidity" value={latest.RH} unit="%" status={channelStatus(latestVerdict, "RH", "Stable")} values={timeseries.map((row) => row.RH)} />
           </div>
           <small>Coordinates {number(selected.lat, 2)}, {number(selected.lon, 2)}</small>
         </section>

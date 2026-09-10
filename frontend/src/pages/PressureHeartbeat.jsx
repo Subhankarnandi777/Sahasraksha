@@ -46,27 +46,31 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
           ]}
         />
       </section>
-      <section className="card pressure-chart">
-        <div className="chart-head">
-          <span>Raw Pressure Trend</span>
-          <b>IMD Range QC: Pass</b>
-        </div>
-        <h2>Standard Hydrostatic Envelope</h2>
-        {pressureValues.length ? <Sparkline values={pressureValues.slice(-21)} tone="blue" height={110} /> : <p className="state">No pressure telemetry available.</p>}
-        <p>Surface barometrics oscillate within operational bounds while harmonic loss can still indicate sensor degradation.</p>
-      </section>
-      <section className="card resonance-card">
-        <div className="chart-head">
-          <span>S2 Solar-Tide Resonance</span>
-          <b className={loss > 0.1 ? "danger-pill" : "ok-pill"}>{loss > 0.1 ? "Anomaly Active" : "Normal"}</b>
-        </div>
-        <h2>12h Harmonic Amplitude Response</h2>
-        <div className="resonance-visual">
-          <Sparkline values={pressureValues.slice(-48)} tone="red" height={120} />
-          <mark>Alert threshold</mark>
-        </div>
-        {evidence.length ? evidence.slice(0, 3).map((pair) => <p className="state" key={`${pair[0]}-${pair[1]}`}>{evidenceText(pair)}</p>) : null}
-      </section>
+      {mode !== "heartbeat" ? (
+        <section className="card pressure-chart">
+          <div className="chart-head">
+            <span>Raw Pressure Trend</span>
+            <b>IMD Range QC: Pass</b>
+          </div>
+          <h2>Standard Hydrostatic Envelope</h2>
+          {pressureValues.length ? <Sparkline values={pressureValues.slice(-21)} tone="blue" height={110} /> : <p className="state">No pressure telemetry available.</p>}
+          <p>Surface barometrics oscillate within operational bounds while harmonic loss can still indicate sensor degradation.</p>
+        </section>
+      ) : null}
+      {mode !== "actual" ? (
+        <section className="card resonance-card">
+          <div className="chart-head">
+            <span>S2 Solar-Tide Resonance</span>
+            <b className={loss > 0.1 ? "danger-pill" : "ok-pill"}>{loss > 0.1 ? "Anomaly Active" : "Normal"}</b>
+          </div>
+          <h2>12h Harmonic Amplitude Response</h2>
+          <div className="resonance-visual">
+            <Sparkline values={pressureValues.slice(-48)} tone="red" height={120} />
+            <mark>Alert threshold</mark>
+          </div>
+          {evidence.length ? evidence.slice(0, 3).map((pair) => <p className="state" key={`${pair[0]}-${pair[1]}`}>{evidenceText(pair)}</p>) : null}
+        </section>
+      ) : null}
       <BottomNav active="alerts" alertCount={openAlerts.length} />
     </main>
   );

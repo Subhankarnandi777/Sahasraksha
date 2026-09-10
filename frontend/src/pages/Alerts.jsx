@@ -38,7 +38,7 @@ export default function Alerts({ openAlerts, loading, error }) {
       <div className="metric-grid three">
         <MetricCard tone="critical" label="Critical" value={counts.critical} subtext="Service req." />
         <MetricCard tone="monitor" label="Monitoring" value={counts.monitoring} subtext="Early drift" />
-        <MetricCard tone="nodata" label="No Data" value={counts.nodata} subtext="Silent pod" />
+        <MetricCard tone="nodata" label="Advisory" value={counts.nodata} subtext="Low severity" />
       </div>
       <FilterTabs
         value={filter}
@@ -47,7 +47,7 @@ export default function Alerts({ openAlerts, loading, error }) {
           { value: "all", label: `All (${openAlerts.length})` },
           { value: "critical", label: `Critical (${counts.critical})` },
           { value: "monitoring", label: `Monitoring (${counts.monitoring})` },
-          { value: "nodata", label: `No Data (${counts.nodata})` }
+          { value: "nodata", label: `Advisory (${counts.nodata})` }
         ]}
       />
       <section className="alert-section">

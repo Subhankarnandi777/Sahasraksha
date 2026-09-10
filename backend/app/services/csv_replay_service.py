@@ -328,3 +328,7 @@ def _normalize_data_quality(value: str | None) -> str:
     if normalized == GOOD_QUALITY:
         return GOOD_QUALITY
     return UNKNOWN_QUALITY if normalized else GOOD_QUALITY
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
