@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import init_db
 from app.routers import alerts, ingest, readings, stations, verdicts, work_orders
-from app.services import alert_service, station_service, work_order_service
+from app.services import alert_service, keepalive_service, station_service, work_order_service
 
 
 app = FastAPI(
@@ -31,6 +31,7 @@ app.include_router(verdicts.router)
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    keepalive_service.start_keepalive()
 
 
 @app.get("/")
