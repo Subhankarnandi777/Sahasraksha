@@ -55,6 +55,12 @@ def _clamp(value, channel):
 
 
 def _keepalive_loop():
+    # Brief grace period before the first self-ping: Render's own external
+    # routing can take a few seconds to finish registering the service as
+    # ready right after a deploy, and pinging too early causes a harmless
+    # but avoidable 502 on the very first tick.
+    time.sleep(15)
+
     last_values, ticks_seen, frozen_left = {}, {}, {}
     stations, focus, tick = [], [], 0
 
