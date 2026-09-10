@@ -1,0 +1,58 @@
+diff --git a/frontend/src/styles.css b/frontend/src/styles.css
+index 2159f5e..5a418b6 100644
+--- a/frontend/src/styles.css
++++ b/frontend/src/styles.css
+@@ -60,42 +60,25 @@ p {
+    website. This instead widens into a genuine desktop dashboard: a wide,
+    centred panel that actually uses the available width, with card grids
+    that expand into more columns rather than staying phone-narrow. */
++/* Desktop presentation, standard version: the app is mobile-first, and
++   every page's internal grids were designed and tested to look right at
++   that width. Rather than reflow them into wider multi-column layouts
++   (tried, but left uneven gaps since two-item grids don't fill four
++   columns) or shrink into a small phone-style card (looked isolated),
++   the simple, conventional fix: keep every page at its own natural,
++   already-correct width, and just centre that column on a wider screen. */
+ @media (min-width: 900px) {
+   body {
+     background: #eef2f7;
++    display: flex;
++    justify-content: center;
+   }
+ 
+   .phone-shell {
+-    max-width: 1180px;
++    width: 480px;
+     margin: 0 auto;
+     background: #f7f8ff;
+-    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+-  }
+-
+-  .screen {
+-    padding: 28px 40px 40px;
+-  }
+-
+-  .metric-grid.two {
+-    grid-template-columns: repeat(4, 1fr);
+-  }
+-
+-  .metric-grid.three,
+-  .telemetry-mini-grid {
+-    grid-template-columns: repeat(3, 1fr);
+-    max-width: 720px;
+-  }
+-
+-  .content-grid,
+-  .dashboard-screen > .card,
+-  .dashboard-screen > .hero-card,
+-  .dashboard-screen > .photo-card {
+-    max-width: 900px;
+-  }
+-
+-  .map-panel,
+-  .leaflet-container {
+-    max-width: 900px;
++    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
+   }
+ }
+ 
