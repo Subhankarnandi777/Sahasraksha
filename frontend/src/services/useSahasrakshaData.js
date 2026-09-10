@@ -44,10 +44,13 @@ export default function useSahasrakshaData(routeStationId) {
       const [healthData, stationData] = await Promise.all([getHealth(), getStations()]);
       setHealth(healthData);
       setStations(stationData);
+      // "Loading" only reflects the data the UI actually blocks on --
+      // stations and health. Alerts (one fetch per station) load in the
+      // background afterward and shouldn't stall the page on 60 requests.
+      setLoading(false);
       setAlerts(await allAlerts(stationData));
     } catch (err) {
       setError(err.message || "Unable to load backend data.");
-    } finally {
       setLoading(false);
     }
   }, []);

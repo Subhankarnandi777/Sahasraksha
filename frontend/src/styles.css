@@ -52,35 +52,50 @@ p {
   box-shadow: none;
 }
 
-/* Desktop presentation: the app was designed mobile-first, and on a laptop
-   or projector -- almost certainly how this gets judged -- that used to mean
-   the content simply stretched edge-to-edge with no intentional framing.
-   Above a real desktop width, present it as a centred device frame instead:
-   a fixed, phone-proportioned column with a soft shadow, against a branded
-   backdrop, so the extra width reads as deliberate rather than empty. */
+/* Desktop presentation: the app was designed mobile-first. Below 900px it's
+   untouched -- full width, exactly as built for a phone. Above that, this
+   used to either stretch content edge-to-edge with huge empty margins, or
+   (an earlier attempt) shrink into a narrow phone-width card that looked
+   small and isolated on a real monitor. Neither reads as a finished
+   website. This instead widens into a genuine desktop dashboard: a wide,
+   centred panel that actually uses the available width, with card grids
+   that expand into more columns rather than staying phone-narrow. */
 @media (min-width: 900px) {
   body {
-    background: radial-gradient(circle at 20% 20%, #eef9ff 0%, #dff3fb 35%, #cfeaf5 100%);
-    display: flex;
-    justify-content: center;
-    padding: 40px 0;
-  }
-
-  #root {
-    min-height: auto;
+    background: #eef2f7;
   }
 
   .phone-shell {
-    width: 428px;
-    min-height: calc(100vh - 80px);
-    border-radius: 32px;
-    box-shadow: 0 30px 70px -20px rgba(11, 121, 157, 0.35), 0 0 0 10px #ffffff, 0 0 0 11px #dbe6ee;
-    overflow: hidden;
-    position: relative;
+    max-width: 1180px;
+    margin: 0 auto;
+    background: #f7f8ff;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
   }
 
   .screen {
-    min-height: calc(100vh - 80px);
+    padding: 28px 40px 40px;
+  }
+
+  .metric-grid.two {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .metric-grid.three,
+  .telemetry-mini-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 720px;
+  }
+
+  .content-grid,
+  .dashboard-screen > .card,
+  .dashboard-screen > .hero-card,
+  .dashboard-screen > .photo-card {
+    max-width: 900px;
+  }
+
+  .map-panel,
+  .leaflet-container {
+    max-width: 900px;
   }
 }
 
