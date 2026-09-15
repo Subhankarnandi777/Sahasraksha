@@ -151,7 +151,7 @@ uint8_t sg_update(sg_state_t *st, float lst, float doy,
     const uint16_t runl[3] = {{6, 6, 10}};
     float v[3] = {{T, P, RH}};
     const float *bt[3] = {{BT, BP, BH}};
-    const float a = 0.02f, k = 1.5f, h = 12.0f;
+    const float a = 0.02f, k = 3.0f, h = 12.0f;
     uint8_t flags = 0;
 
     for (int c = 0; c < 3; c++) {{

@@ -180,7 +180,7 @@ def tide_heartbeat(df, resid, window_hours=72):
         for _, idx in df.groupby("station_id", observed=True).indices.items():
             y = pd.Series(y_all[idx])
             # Detrend so the harmonic fit is not dragged by synoptic swings
-            y_dt = y - y.rolling(window_hours, min_periods=12, center=True).mean()
+            y_dt = y - y.rolling(window_hours, min_periods=12).mean()
             A = 2 * (y_dt * c[idx]).rolling(window_hours, min_periods=36).mean()
             B = 2 * (y_dt * s[idx]).rolling(window_hours, min_periods=36).mean()
             amp[idx] = np.sqrt(A.to_numpy() ** 2 + B.to_numpy() ** 2)
@@ -210,7 +210,7 @@ def tide_heartbeat(df, resid, window_hours=72):
 
 
 # ---------------------------------------------------------------- Layer 2b
-def cusum_features(resid, df, k=1.5, h=12.0):
+def cusum_features(resid, df, k=3.0, h=12.0):
     """
     Two-sided CUSUM on the spatially-corrected standardised residual.
 
