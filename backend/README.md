@@ -20,7 +20,7 @@ The real ML engine is external and is not included in this repository yet. The b
 - SQLAlchemy ORM
 - Supabase PostgreSQL through `DATABASE_URL`
 
-SQLite is no longer the default backend database. The old local SQLite file, if present at `backend/skyguard.db`, is not deleted by this migration. SQLite can still be used only when explicitly enabled for local-only development with `SKYGUARD_ALLOW_SQLITE=true`.
+SQLite is no longer the default backend database. The old local SQLite file, if present at `backend/sahasraksha.db`, is not deleted by this migration. SQLite can still be used only when explicitly enabled for local-only development with `SAHASRAKSHA_ALLOW_SQLITE=true`.
 
 ## Environment
 
@@ -65,7 +65,7 @@ Demo seed data is disabled by default so the shared Supabase database is not sil
 For local demo-only data, set this explicitly before startup:
 
 ```text
-SKYGUARD_SEED_DEMO_DATA=true
+SAHASRAKSHA_SEED_DEMO_DATA=true
 ```
 
 The seed function checks whether any station already exists and will not duplicate stations on repeated runs.
