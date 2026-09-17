@@ -1,5 +1,5 @@
 """
-SkyGuard AI — closing the gaps, and going past the specification.
+Sahasraksha — closing the gaps, and going past the specification.
 
 FOUR THINGS THE PROBLEM STATEMENT ASKED FOR THAT WE COULD NOT YET EVIDENCE
   1. multivariate consistency  — the dewpoint gate was UNTESTED on ISD,

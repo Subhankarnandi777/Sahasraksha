@@ -1,5 +1,5 @@
 """
-SkyGuard AI - Layer 0: Atmospheric physics.
+Sahasraksha - Layer 0: Atmospheric physics.
 
 Everything here is deterministic, needs no training, and is defensible to an
 IMD scientist. These are the constraints the atmosphere cannot violate.
@@ -53,7 +53,7 @@ def heat_index(T, RH):
 
     This is the bridge to problem statement 26083 (Extreme Heatwave Early
     Warning and Human Thermal Stress Index). It is computed from exactly the
-    two channels SkyGuard already validates, which is precisely why sensor
+    two channels Sahasraksha already validates, which is precisely why sensor
     quality is a public-health question and not just a data-hygiene one.
     """
     Tf = T * 9.0 / 5.0 + 32.0

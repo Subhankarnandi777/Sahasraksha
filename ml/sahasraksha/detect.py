@@ -1,5 +1,5 @@
 """
-SkyGuard AI - the detection stack.
+Sahasraksha - the detection stack.
 
   Layer 0  Physics gates        deterministic, untrained, ~100% precision
   Layer 1  Harmonic + spatial   removes weather, isolates the sensor

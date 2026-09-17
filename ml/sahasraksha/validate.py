@@ -1,5 +1,5 @@
 """
-SkyGuard AI - validation rigour.
+Sahasraksha - validation rigour.
 
 Three questions a judge will ask that the notebook cannot currently answer:
 
