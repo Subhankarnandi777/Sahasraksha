@@ -180,7 +180,7 @@ def replay_observations_from_csv(
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Import NOAA station coordinates and replay observations through SkyGuard."
+        description="Import NOAA station coordinates and replay observations through Sahasraksha."
     )
     parser.add_argument("--coords", type=Path, default=DEFAULT_COORDS_PATH)
     parser.add_argument("--observations", type=Path, default=DEFAULT_OBSERVATIONS_PATH)

@@ -15,7 +15,7 @@ class Base(DeclarativeBase):
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(BACKEND_DIR / ".env")
 
-DATABASE_FILE = BACKEND_DIR / "skyguard.db"
+DATABASE_FILE = BACKEND_DIR / "sahasraksha.db"
 
 
 def _database_url() -> str:
@@ -25,13 +25,13 @@ def _database_url() -> str:
             return configured_url.replace("postgres://", "postgresql://", 1)
         return configured_url
 
-    allow_sqlite = os.getenv("SKYGUARD_ALLOW_SQLITE", "").lower() in {"1", "true", "yes"}
+    allow_sqlite = os.getenv("SAHASRAKSHA_ALLOW_SQLITE", "").lower() in {"1", "true", "yes"}
     if allow_sqlite:
         return f"sqlite:///{DATABASE_FILE.as_posix()}"
 
     raise RuntimeError(
         "DATABASE_URL is required. Set it in backend/.env for Supabase PostgreSQL. "
-        "For explicit local-only SQLite development, set SKYGUARD_ALLOW_SQLITE=true."
+        "For explicit local-only SQLite development, set SAHASRAKSHA_ALLOW_SQLITE=true."
     )
 
 
@@ -68,7 +68,7 @@ def init_db() -> None:
 
 
 def should_seed_demo_data() -> bool:
-    return os.getenv("SKYGUARD_SEED_DEMO_DATA", "").lower() in {"1", "true", "yes"}
+    return os.getenv("SAHASRAKSHA_SEED_DEMO_DATA", "").lower() in {"1", "true", "yes"}
 
 
 def ensure_sqlite_schema() -> None:

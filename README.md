@@ -62,15 +62,15 @@ The frontend does not calculate station health or anomaly status. It displays ba
 
 ### Database
 
-The backend uses SQLAlchemy with PostgreSQL as the normal configured database. In the project deployment setup this is Supabase PostgreSQL. A SQLite fallback exists only when `SKYGUARD_ALLOW_SQLITE=true` is explicitly enabled for local-only development.
+The backend uses SQLAlchemy with PostgreSQL as the normal configured database. In the project deployment setup this is Supabase PostgreSQL. A SQLite fallback exists only when `SAHASRAKSHA_ALLOW_SQLITE=true` is explicitly enabled for local-only development.
 
 ### ML and anomaly detection
 
-`ml/skyguard/stream.py` provides the online detector used by the backend adapter. `backend/app/services/anomaly_detector.py` creates one streaming detector state per station, maps the detector result into the API verdict schema, and preserves evidence pairs such as spatial, CUSUM, and tide signals. The `MockAnomalyDetector` remains available for tests or fallback scenarios, but the normal adapter is the streaming implementation.
+`ml/sahasraksha/stream.py` provides the online detector used by the backend adapter. `backend/app/services/anomaly_detector.py` creates one streaming detector state per station, maps the detector result into the API verdict schema, and preserves evidence pairs such as spatial, CUSUM, and tide signals. The `MockAnomalyDetector` remains available for tests or fallback scenarios, but the normal adapter is the streaming implementation.
 
 ### Data replay
 
-`backend/app/tools/csv_replay.py` invokes `backend/app/services/csv_replay_service.py`. The service reads station coordinates from `data/skyguard_station_coords.csv`, reads observations from `data/skyguard_big_export.csv`, checks chronological order per station, skips configured low-confidence stations, evaluates usable rows, and persists the latest replay verdict for each station.
+`backend/app/tools/csv_replay.py` invokes `backend/app/services/csv_replay_service.py`. The service reads station coordinates from `data/sahasraksha_all_stations_coords.csv`, reads observations from `data/sahasraksha_big_export.csv.gz`, checks chronological order per station, skips configured low-confidence stations, evaluates usable rows, and persists the latest replay verdict for each station.
 
 ## Repository Structure
 
@@ -97,7 +97,7 @@ Sahasraksha/
 │   ├── vite.config.js
 │   └── README.md
 ├── ml/
-│   ├── skyguard/            Batch, streaming, validation, and analysis modules
+│   ├── sahasraksha/            Batch, streaming, validation, and analysis modules
 │   ├── notebooks/           Research and reproducibility notebook
 │   ├── docs/                ML/API contract documentation
 │   └── requirements.txt
@@ -165,7 +165,7 @@ Verify the service with:
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
-On startup, the backend creates missing ORM tables. It does not automatically seed demo data unless `SKYGUARD_SEED_DEMO_DATA=true` is set.
+On startup, the backend creates missing ORM tables. It does not automatically seed demo data unless `SAHASRAKSHA_SEED_DEMO_DATA=true` is set.
 
 ## Running the Frontend
 
@@ -276,10 +276,10 @@ Useful options:
 ```powershell
 python -m app.tools.csv_replay --stations-only
 python -m app.tools.csv_replay --max-observations 1000
-python -m app.tools.csv_replay --coords ..\data\skyguard_station_coords.csv --observations ..\data\skyguard_big_export.csv
+python -m app.tools.csv_replay --coords ..\data\sahasraksha_all_stations_coords.csv --observations ..\data\sahasraksha_big_export.csv.gz
 ```
 
-The default inputs are `data/skyguard_station_coords.csv` and `data/skyguard_big_export.csv`. Replay expects observations to be chronological for each station. Coordinate metadata identifies low-confidence stations; those stations remain importable but are skipped for meaningful scoring.
+The default inputs are `data/sahasraksha_all_stations_coords.csv` and `data/sahasraksha_big_export.csv.gz`. Replay expects observations to be chronological for each station. Coordinate metadata identifies low-confidence stations; those stations remain importable but are skipped for meaningful scoring.
 
 ## Environment Variables and Configuration
 
@@ -288,8 +288,8 @@ The default inputs are `data/skyguard_station_coords.csv` and `data/skyguard_big
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes for normal operation | PostgreSQL connection string, normally the Supabase database |
-| `SKYGUARD_ALLOW_SQLITE` | No | Explicitly enables the local SQLite fallback when set to `true`, `1`, or `yes` |
-| `SKYGUARD_SEED_DEMO_DATA` | No | Explicitly enables demo seed data when set to `true`, `1`, or `yes` |
+| `SAHASRAKSHA_ALLOW_SQLITE` | No | Explicitly enables the local SQLite fallback when set to `true`, `1`, or `yes` |
+| `SAHASRAKSHA_SEED_DEMO_DATA` | No | Explicitly enables demo seed data when set to `true`, `1`, or `yes` |
 
 Use `backend/.env.example` as the safe template. Never place passwords or service credentials in source files.
 
@@ -322,7 +322,7 @@ Do not commit:
 - `backend/.venv/` or `node_modules/`.
 - Frontend `dist/` and `.vite/` output.
 - Python caches and compiled files.
-- The local `backend/skyguard.db` fallback database.
+- The local `backend/sahasraksha.db` fallback database.
 - Local editor or operating-system files.
 
 The root `.gitignore` and `frontend/.gitignore` are the repository's ignore files. Confirm repository tracking status before adding new datasets.
@@ -331,7 +331,7 @@ The root `.gitignore` and `frontend/.gitignore` are the repository's ignore file
 
 ### Backend will not start
 
-Confirm the virtual environment is active, dependencies are installed, and `backend/.env` contains a valid `DATABASE_URL`. If PostgreSQL is intentionally unavailable for local-only work, enable `SKYGUARD_ALLOW_SQLITE=true`; do not use that fallback for shared data.
+Confirm the virtual environment is active, dependencies are installed, and `backend/.env` contains a valid `DATABASE_URL`. If PostgreSQL is intentionally unavailable for local-only work, enable `SAHASRAKSHA_ALLOW_SQLITE=true`; do not use that fallback for shared data.
 
 ### Frontend cannot reach the API
 
@@ -379,7 +379,7 @@ Run it from `backend/` with the backend virtual environment active. Check that b
 
 - Frontend work belongs primarily in `frontend/src/`: presentation, route views, API consumption, loading/error states, and authentication UI.
 - Backend work belongs primarily in `backend/app/`: request validation, API routes, persistence, station state, alert behavior, and replay orchestration.
-- ML work belongs primarily in `ml/skyguard/`: detector algorithms, streaming state, feature logic, validation, and reproducibility materials. The backend adapter is the boundary between the detector and API contracts.
+- ML work belongs primarily in `ml/sahasraksha/`: detector algorithms, streaming state, feature logic, validation, and reproducibility materials. The backend adapter is the boundary between the detector and API contracts.
 
 Changes that cross these boundaries should include contract-focused tests and an explanation of any changed request or response shape.
 
