@@ -1,5 +1,5 @@
 """
-SkyGuard AI - streaming engine.
+Sahasraksha - streaming engine.
 
 The batch pipeline proves the science. This proves it can run operationally.
 

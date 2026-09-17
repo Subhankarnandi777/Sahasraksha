@@ -1,5 +1,5 @@
 """
-SkyGuard AI - the fault injector.
+Sahasraksha - the fault injector.
 
 Problem statement 26073 says evaluation happens "in anomaly injected data".
 So the injector is not a testing afterthought -- it IS the benchmark, and it

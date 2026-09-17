@@ -1,5 +1,5 @@
 """
-SkyGuard AI - the comparison that makes the case.
+Sahasraksha - the comparison that makes the case.
 
 "9.2x lift" means nothing to a judge until they see what the obvious approach
 scores on the same data. Five baselines, ordered by how likely a rival team is
@@ -10,10 +10,10 @@ to build them:
   3. Raw LOF                 the textbook density approach
   4. Raw One-Class SVM       the textbook boundary approach
   5. Raw PCA reconstruction  the "autoencoder" everyone reaches for
-  6. SkyGuard                physics-first, ML on residuals only
+  6. Sahasraksha             physics-first, ML on residuals only
 
 Baselines 2-5 see the same three channels. The only difference is that
-SkyGuard subtracts the climatology and the neighbours first.
+Sahasraksha subtracts the climatology and the neighbours first.
 """
 import numpy as np
 import pandas as pd
@@ -31,7 +31,7 @@ STEP = {"T": 6.0, "P": 5.0, "RH": 45.0}
 
 def wmo_threshold_qc(df):
     """The classical operational check: plausible range plus step limit.
-    This is the bar SkyGuard has to clear to be worth deploying."""
+    This is the bar Sahasraksha has to clear to be worth deploying."""
     score = np.zeros(len(df))
     for ch in CHANNELS:
         v = df[ch].to_numpy(dtype=float)
@@ -48,7 +48,7 @@ def _raw_matrix(df):
     return np.nan_to_num(X, nan=np.nanmedian(X))
 
 
-def run_baselines(df, y, skyguard_score, train_mask, seed=0, svm_sub=6000):
+def run_baselines(df, y, sahasraksha_score, train_mask, seed=0, svm_sub=6000):
     """Score every method against the same labels with the same metrics."""
     X = _raw_matrix(df)
     sc = StandardScaler().fit(X[train_mask])
@@ -71,7 +71,7 @@ def run_baselines(df, y, skyguard_score, train_mask, seed=0, svm_sub=6000):
     scores["Raw PCA reconstruction"] = np.sqrt(
         ((Xs - pca.inverse_transform(pca.transform(Xs))) ** 2).sum(axis=1))
 
-    scores["SkyGuard (physics-first)"] = np.asarray(skyguard_score)
+    scores["Sahasraksha (physics-first)"] = np.asarray(sahasraksha_score)
 
     base = y.mean()
     rows = []
@@ -105,7 +105,7 @@ def esp32_c_source(beta_T, beta_P, beta_RH, station="AWS_XXX"):
     """
     def arr(b):
         return ", ".join(f"{v:.6f}f" for v in b)
-    return f"""// SkyGuard-Edge  |  {station}  |  auto-generated, no dependencies
+    return f"""// Sahasraksha-Edge  |  {station}  |  auto-generated, no dependencies
 #include <math.h>
 #include <stdint.h>
 

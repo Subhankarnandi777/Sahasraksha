@@ -1,5 +1,5 @@
 """
-SkyGuard AI - synthetic AWS network.
+Sahasraksha - synthetic AWS network.
 
 This is NOT toy data. Each channel is generated from the physical process that
 actually produces it, which is what makes the detectors meaningful:

@@ -1,5 +1,5 @@
 """
-SkyGuard AI - the operational layer.
+Sahasraksha - the operational layer.
 
 Four deliverables the problem statement asks for by name and the notebook did
 not yet provide:
@@ -179,11 +179,11 @@ def impute_safe(df, F, flag, spatial_z_cut=3.0):
 
 
 # ────────────────────────────────────────────── 4. one packaged API
-class SkyGuard:
+class Sahasraksha:
     """
     The whole system behind four methods.
 
-        sg = SkyGuard().fit(train_df)
+        sg = Sahasraksha().fit(train_df)
         res = sg.score(new_df)            # batch
         sg.stream(station, lst, doy, obs) # one observation, O(1)
         sg.report()                       # maintenance work order
