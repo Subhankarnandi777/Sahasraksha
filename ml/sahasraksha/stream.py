@@ -149,7 +149,7 @@ class StreamingSahasraksha:
                 if deg > self.deg_cut:
                     evidence["tide_loss"] = deg
 
-        flag = int(physics or drift or ml_like or (deg > self.deg_cut))
+        flag = int(physics or missing or drift or ml_like or (deg > self.deg_cut))
         if hard:
             reason = hard[0][0]
         elif missing:
@@ -164,7 +164,7 @@ class StreamingSahasraksha:
             reason = "ok"
 
         sev = float(np.clip(max([abs(v) for v in z.values()] or [0])/8.0
-                            + 0.5*physics + deg, 0, 1))
+                            + 0.5*physics + 0.5*missing + deg, 0, 1))
         top = sorted(evidence.items(), key=lambda kv: -kv[1])[:3]
         return {"flag": flag, "reason": reason, "severity": round(sev, 3),
                 "evidence": top, "degradation": round(deg, 3)}
