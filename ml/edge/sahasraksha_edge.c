@@ -1,13 +1,13 @@
-// Sahasraksha-Edge  |  AWS_NGP  |  auto-generated, no dependencies
+// Sahasraksha-Edge  |  AWS_REGEN  |  auto-generated, no dependencies
 #include <math.h>
 #include <stdint.h>
 
 #define SG_PI 3.14159265358979f
 
 #define NC 11                       // 1 + 3 diurnal harmonic pairs + 2 annual pairs
-static const float BT[NC] = {27.035170f, 4.575867f, 4.514236f, 0.047329f, 0.013246f, 0.005573f, 0.010678f, -4.879513f, 5.144121f, 0.305477f, 0.418972f};
-static const float BP[NC] = {979.666302f, 0.793331f, 0.927743f, 0.515260f, -0.874228f, 0.002138f, 0.014823f, -2.262526f, -2.572637f, -0.126214f, -1.612867f};
-static const float BH[NC] = {65.625943f, -12.606898f, -12.556452f, -0.119523f, 1.661399f, 0.029031f, -0.037116f, 14.189415f, -23.852796f, -1.487746f, -1.130551f};
+static const float BT[NC] = {26.500000f, 4.300000f, 4.400000f, 0.030000f, 0.006000f, -0.000800f, 0.019000f, -5.300000f, 5.600000f, 0.440000f, 1.160000f};
+static const float BP[NC] = {1008.800000f, 0.320000f, 0.470000f, 0.470000f, -0.820000f, 0.011000f, 0.012000f, -2.800000f, -3.000000f, -0.770000f, -1.310000f};
+static const float BH[NC] = {58.900000f, -11.800000f, -11.900000f, -0.090000f, 1.690000f, 0.100000f, -0.150000f, 6.500000f, -17.600000f, -2.020000f, -0.180000f};
 
 typedef struct {
     float mean[3], var[3], last[3];
@@ -44,7 +44,7 @@ uint8_t sg_update(sg_state_t *st, float lst, float doy,
     const uint16_t runl[3] = {6, 6, 10};
     float v[3] = {T, P, RH};
     const float *bt[3] = {BT, BP, BH};
-    const float a = 0.02f, k = 1.5f, h = 12.0f;
+    const float a = 0.02f, k = 3.0f, h = 12.0f;
     uint8_t flags = 0;
 
     for (int c = 0; c < 3; c++) {

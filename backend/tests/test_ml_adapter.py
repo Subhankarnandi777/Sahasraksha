@@ -55,7 +55,14 @@ class SkyGuardAdapterTests(unittest.TestCase):
         self.assertLessEqual(verdict.confidence, 1.0)
         self.assertTrue(all(isinstance(pair, list) and len(pair) == 2 for pair in verdict.evidence))
 
-    def test_adapter_preserves_api_evidence_names(self) -> None:
+    def test_adapter_no_fake_spatial_labels_when_isolated(self) -> None:
+        """A single station with no other stations in the database has no
+        real neighbour to consult. Before the fix, z_* was unconditionally
+        renamed to spatial_z_* regardless of whether any spatial
+        computation happened -- this asserted that exact mislabeling as
+        the contract. The honest behaviour is the opposite: an isolated
+        station gets its own temporal z_* evidence, unrenamed, and no
+        spatial_z_* claim it cannot support."""
         detector = SahasrakshaAnomalyDetector()
         first = self._reading()
         detector.evaluate(first)
@@ -65,8 +72,7 @@ class SkyGuardAdapterTests(unittest.TestCase):
         )
 
         keys = {key for key, _ in verdict.evidence}
-        self.assertTrue(any(key.startswith("spatial_z_") for key in keys))
-        self.assertFalse(any(key.startswith("z_") for key in keys))
+        self.assertFalse(any(key.startswith("spatial_z_") for key in keys))
 
     def test_adapter_keeps_state_per_station(self) -> None:
         detector = SahasrakshaAnomalyDetector()
@@ -88,6 +94,9 @@ class SkyGuardAdapterTests(unittest.TestCase):
         self.assertEqual(evidence_b.get("step_P", 0.0), 0.0)
 
     def test_ingest_uses_skyguard_adapter_evidence(self) -> None:
+        """Same correction as above, exercised through the real /ingest
+        endpoint: an isolated station with no real neighbour in the
+        database should not receive a fabricated spatial_z_* claim."""
         client = TestClient(app)
         station_id = "INGEST-ML-ADAPTER"
         first = self._reading(station_id=station_id)
@@ -102,7 +111,7 @@ class SkyGuardAdapterTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         evidence_keys = {key for key, _ in response.json()["evidence"]}
-        self.assertTrue(any(key.startswith("spatial_z_") for key in evidence_keys))
+        self.assertFalse(any(key.startswith("spatial_z_") for key in evidence_keys))
         self.assertNotIn("temporary_mock_detector", evidence_keys)
 
 
