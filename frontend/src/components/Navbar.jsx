@@ -1,4 +1,5 @@
 import { useAuth } from "../auth/AuthContext.jsx";
+import { useTheme } from "../services/theme.js";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -9,6 +10,7 @@ const NAV_LINKS = [
 
 export default function Navbar({ active = "dashboard", alertCount = 0 }) {
   const { session, user, logout } = useAuth();
+  const { theme, toggleTheme, isDark } = useTheme();
 
   async function handleLogout() {
     await logout();
@@ -62,6 +64,22 @@ export default function Navbar({ active = "dashboard", alertCount = 0 }) {
 
         {/* Right Side Actions */}
         <div className="nav-actions">
+          {/* Global System Dark / Light Theme Toggle */}
+          <button
+            type="button"
+            className="nav-theme-toggle"
+            onClick={toggleTheme}
+            title={`Switch to ${isDark ? "Light Mode (Warm Solar)" : "Dark Mode (Command Center)"}`}
+            aria-label="Toggle System Theme"
+          >
+            <span className="nav-theme-knob">
+              {isDark ? "🌙" : "☀️"}
+            </span>
+            <span className="nav-theme-text">
+              {isDark ? "Dark Mode" : "Light Mode"}
+            </span>
+          </button>
+
           {/* Live Sync Satellite Indicator */}
           <div className="nav-live-indicator" title="Live INSAT-3DR Atmospheric Stream Connected">
             <span className="live-radar-dot" />

@@ -164,6 +164,10 @@ export function evidenceText(pair) {
   if (key.startsWith("runlen_")) {
     return `${key.replace("runlen_", "")}: ${displayValue} repeated`;
   }
+  if (key.startsWith("step_")) {
+    const ch = key.replace("step_", "").toUpperCase();
+    return `${ch} channel: abrupt step jump ${value ? `(${displayValue})` : "detected"}`;
+  }
   if (key === "gate_dewpoint") {
     return "Dewpoint above air temperature";
   }
