@@ -10,6 +10,8 @@ import Alerts from "./pages/Alerts.jsx";
 import Login from "./pages/Login.jsx";
 import SignUp from "./pages/SignUp.jsx";
 
+import Navbar from "./components/Navbar.jsx";
+
 function route() {
   const path = window.location.pathname.replace(/\/$/, "") || "/dashboard";
   const parts = path.split("/").filter(Boolean);
@@ -34,13 +36,19 @@ function DataRoute({ current }) {
   const data = useSahasrakshaData(current.stationId);
   const commonProps = { ...data };
 
-  if (current.name === "network") return <Network {...commonProps} />;
-  if (current.name === "stations") return <Stations {...commonProps} />;
-  if (current.name === "station") return <StationDetail {...commonProps} />;
-  if (current.name === "pressure") return <PressureHeartbeat {...commonProps} />;
-  if (current.name === "alerts") return <Alerts {...commonProps} />;
-
-  return <Dashboard {...commonProps} />;
+  return (
+    <div className="app-layout">
+      <Navbar active={current.name} alertCount={data.openAlerts?.length || 0} />
+      <div className="main-content-viewport">
+        {current.name === "network" ? <Network {...commonProps} /> : null}
+        {current.name === "stations" ? <Stations {...commonProps} /> : null}
+        {current.name === "station" ? <StationDetail {...commonProps} /> : null}
+        {current.name === "pressure" ? <PressureHeartbeat {...commonProps} /> : null}
+        {current.name === "alerts" ? <Alerts {...commonProps} /> : null}
+        {current.name === "dashboard" ? <Dashboard {...commonProps} /> : null}
+      </div>
+    </div>
+  );
 }
 
 function RedirectToLogin() {
@@ -53,7 +61,7 @@ function RedirectToLogin() {
       <section className="auth-card">
         <span>SAHASRAKSHA Access</span>
         <h1>Login Required</h1>
-        <p>Redirecting to secure access.</p>
+        <p>Redirecting to secure access console...</p>
       </section>
     </main>
   );
@@ -64,21 +72,21 @@ export default function App() {
   const { loading, session } = useAuth();
 
   if (current.name === "login") {
-    return <div className="phone-shell"><Login /></div>;
+    return <div className="auth-shell"><Login /></div>;
   }
 
   if (current.name === "signup") {
-    return <div className="phone-shell"><SignUp /></div>;
+    return <div className="auth-shell"><SignUp /></div>;
   }
 
   if (loading) {
     return (
-      <div className="phone-shell">
+      <div className="auth-shell">
         <main className="screen auth-screen">
           <section className="auth-card">
-            <span>SAHASRAKSHA</span>
+            <span className="auth-brand-eyebrow">SAHASRAKSHA</span>
             <h1>Loading Session</h1>
-            <p>Checking secure access.</p>
+            <p>Checking secure telemetry access...</p>
           </section>
         </main>
       </div>
@@ -86,8 +94,9 @@ export default function App() {
   }
 
   if (!session) {
-    return <div className="phone-shell"><RedirectToLogin /></div>;
+    return <div className="auth-shell"><RedirectToLogin /></div>;
   }
 
-  return <div className="phone-shell"><DataRoute current={current} /></div>;
+  return <DataRoute current={current} />;
 }
+

@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import BottomNav from "../components/BottomNav.jsx";
 import FilterTabs from "../components/FilterTabs.jsx";
-import Header from "../components/Header.jsx";
 import MapPanel from "../components/MapPanel.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
@@ -9,9 +7,6 @@ import { number, percent, channelStatus, getStationTimeseries, getStationVerdict
 
 export default function Network({ stations, selectedStation, selectedStationId, timeseries, verdicts, openAlerts, loading, error }) {
   const [mode, setMode] = useState("health");
-  // Local, in-page selection driven by map clicks -- independent of the
-  // URL-driven selectedStationId, so clicking a marker updates this card
-  // without navigating away.
   const [focusedId, setFocusedId] = useState(null);
   const [focusedTimeseries, setFocusedTimeseries] = useState(null);
   const [focusedVerdicts, setFocusedVerdicts] = useState(null);
@@ -35,7 +30,6 @@ export default function Network({ stations, selectedStation, selectedStationId, 
     return () => { cancelled = true; };
   }, [focusedId]);
 
-  // Whichever station is actually being shown in the bottom card right now.
   const selected = (focusedId && stations.find((s) => s.station_id === focusedId))
     || selectedStation || stations[0];
   const activeTimeseries = focusedId ? (focusedTimeseries || []) : timeseries;
@@ -45,47 +39,112 @@ export default function Network({ stations, selectedStation, selectedStationId, 
 
   return (
     <main className="screen network-screen">
-      <Header subtitle="Station Network Telemetry" liveText="LIVE - INSAT-3DR" />
-      <div className="page-heading">
+      {/* Page Header */}
+      <div className="page-header-strip">
         <div>
-          <h1>Station Network</h1>
-          <p>{loading ? "Loading stations" : `${stations.length} Stations Monitored`}</p>
+          <span className="section-eyebrow">GEOSPATIAL FLEET SURVEILLANCE</span>
+          <h1 className="page-main-heading">Station Network Map</h1>
+          <p className="page-sub-heading">
+            {loading ? "Loading station telemetry..." : `${stations.length} Synoptic AWS Nodes Active across Indian Subcontinent`}
+          </p>
+        </div>
+        <div className="map-layer-controls">
+          <FilterTabs
+            value={mode}
+            onChange={setMode}
+            tabs={[
+              { value: "health", label: "Health Status" },
+              { value: "temperature", label: "Temperature" },
+              { value: "pressure", label: "Barometric" },
+              { value: "reporting", label: "Signal Quality" }
+            ]}
+          />
         </div>
       </div>
+
       {error ? <p className="state error">{error}</p> : null}
-      <FilterTabs
-        value={mode}
-        onChange={setMode}
-        tabs={[
-          { value: "health", label: "Health" },
-          { value: "temperature", label: "Temperature" },
-          { value: "pressure", label: "Pressure" },
-          { value: "reporting", label: "Reporting" }
-        ]}
-      />
-      <MapPanel stations={mapStations} selectedId={focusedId || selectedStationId} mode={mode} onSelect={setFocusedId} />
-      <section className="live-stream">
-        <button type="button">▶</button>
-        <div><span>Live Stream</span><i /></div>
-        <b>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</b>
-      </section>
-      {selected ? (
-        <section className="selected-station card">
-          <div className="station-card-top">
-            <h2>{selected.station_id}</h2>
-            <StatusBadge status={selected.status}>{selected.status} - {percent(selected.health, 1)}</StatusBadge>
-          </div>
-          <p>{selected.name}{focusedLoading ? " (loading...)" : ""}</p>
-          <div className="telemetry-mini-grid">
-            <TelemetryCard label="Temperature" value={latest.T} unit="C" status={channelStatus(latestVerdict, "T", "Normal")} values={activeTimeseries.map((row) => row.T)} />
-            <TelemetryCard label="Pressure" value={latest.P} unit=" hPa" status={latestVerdict?.degradation ? `Heartbeat ${percent(latestVerdict.degradation, 0)}` : "Stable"} values={activeTimeseries.map((row) => row.P)} tone="amber" />
-            <TelemetryCard label="Humidity" value={latest.RH} unit="%" status={channelStatus(latestVerdict, "RH", "Stable")} values={activeTimeseries.map((row) => row.RH)} />
-          </div>
-          <small>Coordinates {number(selected.lat, 2)}, {number(selected.lon, 2)}</small>
-          <a className="inline-action" href={`/stations/${encodeURIComponent(selected.station_id)}`}>Open full station detail</a>
-        </section>
-      ) : <p className="state">No stations available.</p>}
-      <BottomNav active="map" alertCount={openAlerts.length} />
+
+      {/* Split Map & Telemetry Inspector Layout */}
+      <div className="network-split-layout">
+        {/* Map Container */}
+        <div className="network-map-card">
+          <MapPanel
+            stations={mapStations}
+            selectedId={focusedId || selectedStationId}
+            mode={mode}
+            onSelect={setFocusedId}
+          />
+        </div>
+
+        {/* Selected Station Telemetry Sidebar */}
+        <div className="network-telemetry-sidebar">
+          {selected ? (
+            <section className="station-focus-card">
+              <div className="focus-header">
+                <div>
+                  <span className="focus-eyebrow">SELECTED STATION</span>
+                  <h2 className="focus-title">{selected.name}</h2>
+                  <span className="focus-id-tag">{selected.station_id}</span>
+                </div>
+                <StatusBadge status={selected.status}>
+                  {selected.status} • {percent(selected.health, 1)}
+                </StatusBadge>
+              </div>
+
+              <div className="focus-coords">
+                <span>📍 Lat: {number(selected.lat, 3)}°N</span>
+                <span>Lon: {number(selected.lon, 3)}°E</span>
+                {focusedLoading && <span className="focus-loading-tag">Updating...</span>}
+              </div>
+
+              <div className="focus-telemetry-grid">
+                <TelemetryCard
+                  label="Temperature"
+                  value={latest.T}
+                  unit="°C"
+                  status={channelStatus(latestVerdict, "T", "Normal")}
+                  values={activeTimeseries.map((row) => row.T)}
+                />
+                <TelemetryCard
+                  label="Surface Pressure"
+                  value={latest.P}
+                  unit=" hPa"
+                  status={latestVerdict?.degradation ? `Harmonic Loss ${percent(latestVerdict.degradation, 0)}` : "Stable"}
+                  values={activeTimeseries.map((row) => row.P)}
+                  tone="amber"
+                />
+                <TelemetryCard
+                  label="Relative Humidity"
+                  value={latest.RH}
+                  unit="%"
+                  status={channelStatus(latestVerdict, "RH", "Nominal")}
+                  values={activeTimeseries.map((row) => row.RH)}
+                  tone="blue"
+                />
+              </div>
+
+              <div className="focus-actions">
+                <a
+                  className="btn-deep-dive"
+                  href={`/stations/${encodeURIComponent(selected.station_id)}`}
+                >
+                  Inspect Full Telemetry & AI Verdict →
+                </a>
+                <a
+                  className="btn-heartbeat"
+                  href={`/stations/${encodeURIComponent(selected.station_id)}/pressure`}
+                >
+                  S2 Harmonic Tide Curve →
+                </a>
+              </div>
+            </section>
+          ) : (
+            <div className="empty-focus-card">
+              <p>Click any station pin on the map to inspect its real-time telemetry stream.</p>
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

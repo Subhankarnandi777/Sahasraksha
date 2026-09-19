@@ -12,7 +12,7 @@ export default function TelemetryCard({ label, value, unit, status, values = [],
       </div>
       <strong>{formatted}</strong>
       <small>24h diurnal trace</small>
-      <Sparkline values={values.slice(-24)} tone={tone} />
+      <Sparkline values={values.slice(-24)} tone={tone === "blue" ? "orange" : tone} height={72} showLabels={true} />
     </article>
   );
 }

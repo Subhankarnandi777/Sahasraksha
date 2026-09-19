@@ -95,8 +95,11 @@ def push_reading(base_url, station_id, vals):
 
 def main():
     parser = argparse.ArgumentParser(description="Sahasraksha live-feed simulator")
-    parser.add_argument("--base-url", required=True)
-    parser.add_argument("--interval", type=float, default=5.0)
+    parser.add_argument("--base-url", default="http://127.0.0.1:8000",
+                        help="Backend base URL (default: http://127.0.0.1:8000)")
+    parser.add_argument("--interval", type=float, default=3.0)
+
+
     parser.add_argument("--focus-stations", type=int, default=6,
                         help="How many stations to cycle through (small = builds history fast)")
     parser.add_argument("--anomaly-every", type=int, default=10)
@@ -127,9 +130,10 @@ def main():
             reason = verdict.get("reason", "")
             marker = "  <== FLAGGED BY DETECTOR" if flagged else ""
             print(f"[{tick:04d}] {sid:>12s}  T={vals['T']:6.2f}  P={vals['P']:7.2f}  "
-                  f"RH={vals['RH']:5.1f}  [{action}]  reason={reason}{marker}")
+                  f"RH={vals['RH']:5.1f}  [{action}]  reason={reason}{marker}", flush=True)
         except requests.RequestException as exc:
-            print(f"[{tick:04d}] {sid:>12s}  request failed: {exc}")
+            print(f"[{tick:04d}] {sid:>12s}  request failed: {exc}", flush=True)
+
 
         time.sleep(args.interval)
 

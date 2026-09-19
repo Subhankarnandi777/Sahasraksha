@@ -1,33 +1,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  getAlerts,
   getHealth,
-  getStationAlerts,
   getStationTimeseries,
   getStationVerdicts,
   getStations
 } from "./api.js";
 
-async function allAlerts(stations) {
-  const groups = await Promise.all(
-    stations.map(async (station) => {
-      try {
-        return await getStationAlerts(station.station_id);
-      } catch {
-        return [];
-      }
-    })
-  );
-
-  return groups.flat().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-}
+// Fast in-memory cache to make page transitions 0ms instant
+let memoryCache = {
+  health: null,
+  stations: null,
+  alerts: null,
+  timeseries: {},
+  verdicts: {},
+  lastFetched: 0
+};
 
 export default function useSahasrakshaData(routeStationId) {
-  const [health, setHealth] = useState(null);
-  const [stations, setStations] = useState([]);
-  const [alerts, setAlerts] = useState([]);
+  const [health, setHealth] = useState(memoryCache.health);
+  const [stations, setStations] = useState(memoryCache.stations || []);
+  const [alerts, setAlerts] = useState(memoryCache.alerts || []);
   const [timeseries, setTimeseries] = useState([]);
   const [verdicts, setVerdicts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!memoryCache.stations);
   const [error, setError] = useState("");
 
   const selectedStationId = routeStationId || stations[0]?.station_id || "";
@@ -36,19 +32,34 @@ export default function useSahasrakshaData(routeStationId) {
     [selectedStationId, stations]
   );
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError("");
 
     try {
-      const [healthData, stationData] = await Promise.all([getHealth(), getStations()]);
-      setHealth(healthData);
-      setStations(stationData);
-      // "Loading" only reflects the data the UI actually blocks on --
-      // stations and health. Alerts (one fetch per station) load in the
-      // background afterward and shouldn't stall the page on 60 requests.
+      // Single fast parallel fetch: Health, Stations, and All Alerts in 1 batch
+      const [healthData, stationData, alertData] = await Promise.all([
+        getHealth().catch(() => null),
+        getStations().catch(() => []),
+        getAlerts().catch(() => [])
+      ]);
+
+      if (healthData) {
+        setHealth(healthData);
+        memoryCache.health = healthData;
+      }
+      if (stationData && stationData.length > 0) {
+        setStations(stationData);
+        memoryCache.stations = stationData;
+      }
+      if (alertData) {
+        const sorted = (alertData || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setAlerts(sorted);
+        memoryCache.alerts = sorted;
+      }
+
+      memoryCache.lastFetched = Date.now();
       setLoading(false);
-      setAlerts(await allAlerts(stationData));
     } catch (err) {
       setError(err.message || "Unable to load backend data.");
       setLoading(false);
@@ -56,7 +67,14 @@ export default function useSahasrakshaData(routeStationId) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    // If cache is fresh (< 30 seconds), use cache and refresh silently in background
+    const isFresh = Date.now() - memoryCache.lastFetched < 30000 && memoryCache.stations;
+    if (isFresh) {
+      setLoading(false);
+      refresh(true); // background silent refresh
+    } else {
+      refresh(false);
+    }
   }, [refresh]);
 
   useEffect(() => {
@@ -64,6 +82,12 @@ export default function useSahasrakshaData(routeStationId) {
       setTimeseries([]);
       setVerdicts([]);
       return;
+    }
+
+    // Check if station timeseries is cached
+    if (memoryCache.timeseries[selectedStationId]) {
+      setTimeseries(memoryCache.timeseries[selectedStationId]);
+      setVerdicts(memoryCache.verdicts[selectedStationId] || []);
     }
 
     let active = true;
@@ -74,6 +98,8 @@ export default function useSahasrakshaData(routeStationId) {
       if (active) {
         setTimeseries(series);
         setVerdicts(stationVerdicts);
+        memoryCache.timeseries[selectedStationId] = series;
+        memoryCache.verdicts[selectedStationId] = stationVerdicts;
       }
     });
 
