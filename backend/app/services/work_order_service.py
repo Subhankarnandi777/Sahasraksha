@@ -1,12 +1,23 @@
 ﻿from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.db.database import SessionLocal
 from app.db.models import Alert as AlertModel
 from app.db.models import WorkOrder as WorkOrderModel
 from app.schemas import WorkOrder, WorkOrderPriority, WorkOrderStatus
+
+
+def count_active_work_orders() -> int:
+    """Cheap count for /health -- avoids loading and converting every
+    work-order row just to count how many aren't COMPLETED."""
+    with SessionLocal() as db:
+        return db.scalar(
+            select(func.count())
+            .select_from(WorkOrderModel)
+            .where(WorkOrderModel.status != WorkOrderStatus.COMPLETED.value)
+        ) or 0
 
 
 class WorkOrderAlreadyExistsError(Exception):

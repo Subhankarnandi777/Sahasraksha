@@ -3,8 +3,8 @@ import hashlib
 import json
 from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.database import IS_SQLITE, SessionLocal
 from app.db.models import Alert as AlertModel
@@ -15,6 +15,7 @@ from app.services import station_service
 
 
 _REASON_VALUES = {reason.value for reason in AnomalyReason}
+_STATUS_VALUES = {status.value for status in AlertStatus}
 _SEVERITY_MAP = {
     "low": 0.25,
     "medium": 0.5,
@@ -44,6 +45,13 @@ def _reason(value: str) -> AnomalyReason:
         return AnomalyReason(normalized)
 
     return AnomalyReason.UNCLASSIFIED
+
+def _status(value: str) -> AlertStatus:
+    normalized = (value or "").strip().lower()
+    if normalized in _STATUS_VALUES:
+        return AlertStatus(normalized)
+
+    return AlertStatus.OPEN
 
 
 def _severity(value: str | float | int | None) -> float:
@@ -105,7 +113,7 @@ def _to_alert(alert: AlertModel) -> Alert:
         anomaly_verdict_id=alert.anomaly_verdict_id,
         severity=_severity(alert.severity),
         message=_reason(alert.message).value,
-        status=alert.status,
+        status=_status(alert.status),
         confidence=verdict.confidence if verdict else 0.0,
         degradation=verdict.degradation if verdict else 0.0,
         evidence=_evidence(verdict.evidence if verdict else []),
@@ -217,15 +225,33 @@ def save_verdict_and_create_alert(
         return _to_anomaly_verdict(db_verdict)
 
 
-def list_alerts() -> list[Alert]:
+def count_open_alerts() -> int:
+    """Cheap count for /health -- avoids loading and converting every alert
+    row (each of which previously also triggered a lazy-loaded verdict
+    query) just to count how many are open."""
     with SessionLocal() as db:
-        alerts = db.scalars(select(AlertModel).order_by(AlertModel.created_at)).all()
+        return db.scalar(
+            select(func.count()).select_from(AlertModel).where(AlertModel.status == "open")
+        ) or 0
+
+
+def list_alerts() -> list[Alert]:
+    # _to_alert() reads alert.anomaly_verdict for every row. Without eager
+    # loading, SQLAlchemy's default lazy load fires one extra SELECT PER
+    # ALERT -- a real N+1 that gets slower every day the keepalive service
+    # adds more rows to this table. joinedload folds it into the same query.
+    with SessionLocal() as db:
+        alerts = db.scalars(
+            select(AlertModel)
+            .options(joinedload(AlertModel.anomaly_verdict))
+            .order_by(AlertModel.created_at)
+        ).all()
         return [_to_alert(alert) for alert in alerts]
 
 
 def get_alert(alert_id: int) -> Alert | None:
     with SessionLocal() as db:
-        alert = db.get(AlertModel, alert_id)
+        alert = db.get(AlertModel, alert_id, options=[joinedload(AlertModel.anomaly_verdict)])
         if alert is None:
             return None
 
@@ -236,6 +262,7 @@ def list_alerts_for_station(station_id: str) -> list[Alert]:
     with SessionLocal() as db:
         alerts = db.scalars(
             select(AlertModel)
+            .options(joinedload(AlertModel.anomaly_verdict))
             .where(AlertModel.station_id == station_id)
             .order_by(AlertModel.created_at)
         ).all()

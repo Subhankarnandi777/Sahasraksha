@@ -1,15 +1,39 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
+// The Render backend's free tier spins down after 15 min idle, so the first
+// request after a cold start can take several seconds to wake it. Without a
+// cap, a hung or unreachable backend previously left fetch() pending
+// forever, which could freeze the whole dashboard (see useSahasrakshaData's
+// Promise.all note). 15s comfortably covers a cold start while still
+// failing fast enough for a judge/user to see a real error instead of an
+// infinite spinner.
+const DEFAULT_TIMEOUT_MS = 15000;
+
 async function request(path, options = {}) {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...rest } = options;
   const headers = {
-    ...(options.body ? { "Content-Type": "application/json" } : {}),
-    ...(options.headers || {})
+    ...(rest.body ? { "Content-Type": "application/json" } : {}),
+    ...(rest.headers || {})
   };
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers,
-    ...options
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers,
+      signal: controller.signal,
+      ...rest
+    });
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error(`Request to ${path} timed out after ${Math.round(timeoutMs / 1000)}s.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const message = await response.text();
@@ -29,6 +53,10 @@ export function getHealth() {
 
 export function getStations() {
   return request("/stations");
+}
+
+export function getAlerts() {
+  return request("/alerts");
 }
 
 export function getStationTimeseries(stationId) {

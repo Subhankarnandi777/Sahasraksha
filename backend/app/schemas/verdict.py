@@ -11,6 +11,7 @@ class AnomalyReason(str, Enum):
     STEP = "step"
     FROZEN = "frozen"
     MISSING = "missing"
+    IMPOSSIBLE = "impossible"
     DRIFT = "drift"
     DEGRADING = "degrading"
     ANOMALY = "anomaly"

@@ -14,7 +14,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://sahasraksha-iota.vercel.app", "http://localhost:5173", "http://localhost:3000"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,14 +41,17 @@ def read_root() -> dict[str, str]:
 
 @app.get("/health")
 def read_health() -> dict[str, int | str]:
-    stations = station_service.list_stations()
-    alerts = alert_service.list_alerts()
-    work_orders = work_order_service.list_work_orders()
+    # A health/liveness check has to be cheap and O(1)-ish regardless of how
+    # much data the network has accumulated. The previous version loaded
+    # and converted every station, every alert (each also triggering a
+    # lazy-loaded verdict query) and every work order just to compute three
+    # counts -- it got slower every day the keepalive service added rows,
+    # and could hang the whole dashboard since the frontend loads /health
+    # and /stations together and blocks on both. These are plain SQL
+    # COUNT(*) queries instead.
     return {
         "status": "running",
-        "station_count": len(stations),
-        "open_alert_count": sum(1 for alert in alerts if alert.status.value == "open"),
-        "active_work_order_count": sum(
-            1 for work_order in work_orders if work_order.status.value != "COMPLETED"
-        ),
+        "station_count": station_service.count_stations(),
+        "open_alert_count": alert_service.count_open_alerts(),
+        "active_work_order_count": work_order_service.count_active_work_orders(),
     }

@@ -76,40 +76,51 @@ def _keepalive_loop():
                       f"{[s['station_id'] for s in focus]}")
 
             tick += 1
-            station = focus[tick % len(focus)]
-            sid = station["station_id"]
-            seed = {
-                "T": station.get("latest_temperature") or 25.0,
-                "P": station.get("latest_pressure") or 1005.0,
-                "RH": station.get("latest_humidity") or 60.0,
-            }
-            prev = last_values.get(sid, seed)
-            ticks_seen[sid] = ticks_seen.get(sid, 0) + 1
-            warmed = ticks_seen[sid] > WARMUP_TICKS
+            # Update every focus station within this same tick, not just one
+            # per tick. The old one-station-per-tick rotation meant a wider
+            # focus set made EACH station's own refresh cadence slower --
+            # LIVE_KEEPALIVE_STATIONS=60 would have meant once every 60
+            # ticks (5 hours) per station instead of once every 4 ticks (20
+            # min). Looping over the whole focus set here means the
+            # refresh cadence per station stays "every tick" (TICK_SECONDS)
+            # regardless of how many stations are in the focus set.
+            for station in focus:
+                sid = station["station_id"]
+                try:
+                    seed = {
+                        "T": station.get("latest_temperature") or 25.0,
+                        "P": station.get("latest_pressure") or 1005.0,
+                        "RH": station.get("latest_humidity") or 60.0,
+                    }
+                    prev = last_values.get(sid, seed)
+                    ticks_seen[sid] = ticks_seen.get(sid, 0) + 1
+                    warmed = ticks_seen[sid] > WARMUP_TICKS
 
-            if frozen_left.get(sid, 0) > 0:
-                frozen_left[sid] -= 1
-                vals = prev
-            elif warmed and tick % ANOMALY_EVERY == 0:
-                if random.random() < 0.5:
-                    ch = random.choice(["T", "P", "RH"])
-                    vals = dict(prev)
-                    vals[ch] = _clamp(vals[ch] + random.choice([-1, 1]) * random.uniform(9, 14), ch)
-                else:
-                    frozen_left[sid] = 9
-                    vals = prev
-            else:
-                vals = {c: _clamp(prev[c] + random.gauss(0, NOISE[c]), c) for c in ["T", "P", "RH"]}
+                    if frozen_left.get(sid, 0) > 0:
+                        frozen_left[sid] -= 1
+                        vals = prev
+                    elif warmed and tick % ANOMALY_EVERY == 0:
+                        if random.random() < 0.5:
+                            ch = random.choice(["T", "P", "RH"])
+                            vals = dict(prev)
+                            vals[ch] = _clamp(vals[ch] + random.choice([-1, 1]) * random.uniform(9, 14), ch)
+                        else:
+                            frozen_left[sid] = 9
+                            vals = prev
+                    else:
+                        vals = {c: _clamp(prev[c] + random.gauss(0, NOISE[c]), c) for c in ["T", "P", "RH"]}
 
-            last_values[sid] = vals
-            _http_json("POST", "/ingest", {
-                "station_id": sid,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "T": round(vals["T"], 2), "P": round(vals["P"], 2), "RH": round(vals["RH"], 2),
-                "flag": 0,
-            })
-        except URLError as exc:
-            print(f"[keepalive] tick failed (network): {exc}")
+                    last_values[sid] = vals
+                    _http_json("POST", "/ingest", {
+                        "station_id": sid,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "T": round(vals["T"], 2), "P": round(vals["P"], 2), "RH": round(vals["RH"], 2),
+                        "flag": 0,
+                    })
+                except URLError as exc:
+                    print(f"[keepalive] station {sid} failed (network): {exc}")
+                except Exception as exc:  # one station's failure shouldn't skip the rest
+                    print(f"[keepalive] station {sid} failed: {exc}")
         except Exception as exc:  # keep the loop alive no matter what
             print(f"[keepalive] tick failed: {exc}")
 

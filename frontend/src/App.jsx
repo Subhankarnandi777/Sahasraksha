@@ -1,16 +1,32 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { useAuth } from "./auth/AuthContext.jsx";
 import useSahasrakshaData from "./services/useSahasrakshaData.js";
-import Dashboard from "./pages/Dashboard.jsx";
-import Network from "./pages/Network.jsx";
-import Stations from "./pages/Stations.jsx";
-import StationDetail from "./pages/StationDetail.jsx";
-import PressureHeartbeat from "./pages/PressureHeartbeat.jsx";
-import Alerts from "./pages/Alerts.jsx";
-import Login from "./pages/Login.jsx";
-import SignUp from "./pages/SignUp.jsx";
-
 import Navbar from "./components/Navbar.jsx";
+
+// Every page is lazy-loaded so the initial bundle only ships the app shell
+// and auth logic, not all eight pages at once. This matters most for
+// Network, which pulls in Leaflet (a large mapping library) -- previously
+// every visitor downloaded that even if they never opened the map.
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const Network = lazy(() => import("./pages/Network.jsx"));
+const Stations = lazy(() => import("./pages/Stations.jsx"));
+const StationDetail = lazy(() => import("./pages/StationDetail.jsx"));
+const PressureHeartbeat = lazy(() => import("./pages/PressureHeartbeat.jsx"));
+const Alerts = lazy(() => import("./pages/Alerts.jsx"));
+const Login = lazy(() => import("./pages/Login.jsx"));
+const SignUp = lazy(() => import("./pages/SignUp.jsx"));
+
+function RouteLoading() {
+  return (
+    <main className="screen auth-screen">
+      <section className="auth-card">
+        <span>SAHASRAKSHA</span>
+        <h1>Loading</h1>
+        <p>Fetching this page.</p>
+      </section>
+    </main>
+  );
+}
 
 function route() {
   const path = window.location.pathname.replace(/\/$/, "") || "/dashboard";
@@ -40,12 +56,14 @@ function DataRoute({ current }) {
     <div className="app-layout">
       <Navbar active={current.name} alertCount={data.openAlerts?.length || 0} />
       <div className="main-content-viewport">
-        {current.name === "network" ? <Network {...commonProps} /> : null}
-        {current.name === "stations" ? <Stations {...commonProps} /> : null}
-        {current.name === "station" ? <StationDetail {...commonProps} /> : null}
-        {current.name === "pressure" ? <PressureHeartbeat {...commonProps} /> : null}
-        {current.name === "alerts" ? <Alerts {...commonProps} /> : null}
-        {current.name === "dashboard" ? <Dashboard {...commonProps} /> : null}
+        <Suspense fallback={<RouteLoading />}>
+          {current.name === "network" ? <Network {...commonProps} /> : null}
+          {current.name === "stations" ? <Stations {...commonProps} /> : null}
+          {current.name === "station" ? <StationDetail {...commonProps} /> : null}
+          {current.name === "pressure" ? <PressureHeartbeat {...commonProps} /> : null}
+          {current.name === "alerts" ? <Alerts {...commonProps} /> : null}
+          {current.name === "dashboard" ? <Dashboard {...commonProps} /> : null}
+        </Suspense>
       </div>
     </div>
   );
@@ -72,11 +90,23 @@ export default function App() {
   const { loading, session } = useAuth();
 
   if (current.name === "login") {
-    return <div className="auth-shell"><Login /></div>;
+    return (
+      <div className="auth-shell">
+        <Suspense fallback={<RouteLoading />}>
+          <Login />
+        </Suspense>
+      </div>
+    );
   }
 
   if (current.name === "signup") {
-    return <div className="auth-shell"><SignUp /></div>;
+    return (
+      <div className="auth-shell">
+        <Suspense fallback={<RouteLoading />}>
+          <SignUp />
+        </Suspense>
+      </div>
+    );
   }
 
   if (loading) {
@@ -99,4 +129,3 @@ export default function App() {
 
   return <DataRoute current={current} />;
 }
-
