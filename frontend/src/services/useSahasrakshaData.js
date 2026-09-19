@@ -1,24 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  getAlerts,
   getHealth,
-  getStationAlerts,
   getStationTimeseries,
   getStationVerdicts,
   getStations
 } from "./api.js";
 
-async function allAlerts(stations) {
-  const groups = await Promise.all(
-    stations.map(async (station) => {
-      try {
-        return await getStationAlerts(station.station_id);
-      } catch {
-        return [];
-      }
-    })
-  );
-
-  return groups.flat().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+function sortedAlerts(list) {
+  return [...list].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
 
 export default function useSahasrakshaData(routeStationId) {
@@ -40,18 +30,32 @@ export default function useSahasrakshaData(routeStationId) {
     setLoading(true);
     setError("");
 
-    try {
-      const [healthData, stationData] = await Promise.all([getHealth(), getStations()]);
-      setHealth(healthData);
-      setStations(stationData);
-      // "Loading" only reflects the data the UI actually blocks on --
-      // stations and health. Alerts (one fetch per station) load in the
-      // background afterward and shouldn't stall the page on 60 requests.
-      setLoading(false);
-      setAlerts(await allAlerts(stationData));
-    } catch (err) {
-      setError(err.message || "Unable to load backend data.");
-      setLoading(false);
+    // allSettled, not all: /health is a secondary status badge, not
+    // something the whole dashboard should live or die on. Previously a
+    // slow/hung /health call (e.g. a cold-starting backend) blocked
+    // /stations from ever rendering too, even though /stations had already
+    // succeeded -- one bad endpoint froze the entire page.
+    const [healthResult, stationResult] = await Promise.allSettled([getHealth(), getStations()]);
+
+    setHealth(healthResult.status === "fulfilled" ? healthResult.value : null);
+
+    if (stationResult.status === "fulfilled") {
+      setStations(stationResult.value);
+    } else {
+      setError(stationResult.reason?.message || "Unable to load backend data.");
+    }
+
+    // "Loading" only reflects the data the UI actually blocks on -- stations
+    // and health. Alerts load in the background afterward via a single bulk
+    // request and shouldn't stall the page.
+    setLoading(false);
+
+    if (stationResult.status === "fulfilled") {
+      try {
+        setAlerts(sortedAlerts(await getAlerts()));
+      } catch {
+        setAlerts([]);
+      }
     }
   }, []);
 

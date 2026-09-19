@@ -143,6 +143,14 @@ def _latest_readings_by_station(
     return {reading.station_id: reading for reading in readings}
 
 
+def count_stations() -> int:
+    """Cheap station count for /health -- avoids building a full
+    StationSummary (with the per-station latest-reading join) for every
+    row just to report len(list)."""
+    with SessionLocal() as db:
+        return db.scalar(select(func.count()).select_from(Station)) or 0
+
+
 def list_stations() -> list[StationSummary]:
     with SessionLocal() as db:
         stations = db.scalars(select(Station).order_by(Station.station_id)).all()
