@@ -16,6 +16,7 @@ Recursive equivalents used:
 """
 import time
 import numpy as np
+from .physics import dewpoint_from_T_RH
 
 CHANNELS = ["T", "P", "RH"]
 DOMINANT_PERIOD = {"T": 24.0, "P": 12.0, "RH": 24.0}
@@ -127,8 +128,20 @@ class StreamingSahasraksha:
                 st.A[ch] = (1-ta)*st.A[ch] + ta*2*y*np.cos(w)
                 st.B[ch] = (1-ta)*st.B[ch] + ta*2*y*np.sin(w)
 
+        # --- dewpoint gate: physically impossible, no training needed -----
+        # Needs T and RH together, so it runs once per reading, not per
+        # channel. Matches detect.py's batch gate_dewpoint exactly (same
+        # 0.5 deg / 100.5% tolerance) so batch and streaming agree.
+        Tv, RHv = obs.get("T"), obs.get("RH")
+        if (Tv is not None and RHv is not None
+                and np.isfinite(Tv) and np.isfinite(RHv)):
+            Td = float(dewpoint_from_T_RH(Tv, RHv))
+            if Td > Tv + 0.5 or RHv > 100.5:
+                gates.append(("impossible", "T_RH"))
+                evidence["dewpoint_violation"] = round(Td - Tv, 3)
+
         # --- physics verdict ---------------------------------------------
-        hard = [g for g in gates if g[0] in ("range", "frozen", "step")]
+        hard = [g for g in gates if g[0] in ("range", "frozen", "step", "impossible")]
         physics = len(hard) > 0
         missing = any(g[0] == "missing" for g in gates)
         drift = any(g[0] == "drift" for g in gates)
