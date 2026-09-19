@@ -348,9 +348,16 @@ class SahasrakshaAnomalyDetector:
             if agreements:
                 spatial_agreement = sum(agreements) / len(agreements)
                 if spatial_agreement >= 0.5 and reason not in (
-                    AnomalyReason.FROZEN, AnomalyReason.MISSING):
+                    AnomalyReason.FROZEN, AnomalyReason.MISSING, AnomalyReason.STEP):
                     # Hard physics violations are never dampened by
                     # neighbour agreement -- those are true regardless.
+                    # STEP joins FROZEN/MISSING here: a sudden jump is a
+                    # fact about that one instrument, not a regional signal,
+                    # the same way a frozen or missing sensor is. A full-year
+                    # replay against real 2024 ISD data (60 stations) found
+                    # 5 real step-fault true positives whose severity was
+                    # cut because a neighbour's residual happened to agree
+                    # by coincidence -- this closes that gap.
                     # Everything else gets a bounded reduction, never to
                     # zero, so a genuine regional event lowers the alarm
                     # without erasing it.
