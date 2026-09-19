@@ -1,9 +1,6 @@
 import { useMemo, useState } from "react";
 import AlertCard from "../components/AlertCard.jsx";
-import BottomNav from "../components/BottomNav.jsx";
 import FilterTabs from "../components/FilterTabs.jsx";
-import Header from "../components/Header.jsx";
-import MetricCard from "../components/MetricCard.jsx";
 import { severityLevel } from "../services/api.js";
 
 export default function Alerts({ openAlerts, loading, error }) {
@@ -22,50 +19,102 @@ export default function Alerts({ openAlerts, loading, error }) {
 
   return (
     <main className="screen alerts-screen">
-      <Header subtitle="IMD Automated Diagnostics" liveText="LIVE - INSAT-3DR" />
-      <section className="intro-card">
+      {/* Page Header */}
+      <div className="page-header-strip">
         <div>
-          <span>National Fleet Telemetry</span>
-          <h1>Alerts Center</h1>
-          <p>
+          <span className="section-eyebrow">INTELLIGENT ANOMALY SURVEILLANCE</span>
+          <h1 className="page-main-heading">Telemetry Anomaly Center</h1>
+          <p className="page-sub-heading">
             {loading
-              ? "Loading active anomaly detections"
-              : `${openAlerts.length} Active Anomalies Detected Across National Network`}
+              ? "Running conformal inference across station stream..."
+              : `${openAlerts.length} explainable anomalies detected via 4-layer physics & ML verification`}
           </p>
         </div>
-      </section>
-      {error ? <p className="state error">{error}</p> : null}
-      <div className="metric-grid three">
-        <MetricCard tone="critical" label="Critical" value={counts.critical} subtext="Service req." />
-        <MetricCard tone="monitor" label="Monitoring" value={counts.monitoring} subtext="Early drift" />
-        <MetricCard tone="nodata" label="Advisory" value={counts.nodata} subtext="Low severity" />
       </div>
-      <FilterTabs
-        value={filter}
-        onChange={setFilter}
-        tabs={[
-          { value: "all", label: `All (${openAlerts.length})` },
-          { value: "critical", label: `Critical (${counts.critical})` },
-          { value: "monitoring", label: `Monitoring (${counts.monitoring})` },
-          { value: "nodata", label: `Advisory (${counts.nodata})` }
-        ]}
-      />
-      <section className="alert-section">
-        <div className="section-title">
-          <h2>Service Required</h2>
-          <span>Immediate Priority</span>
+
+      {error ? <p className="state error">{error}</p> : null}
+
+      {/* Triage KPI Strip */}
+      <div className="alert-kpi-row">
+        <div
+          className={`alert-kpi-card ${filter === "all" ? "active" : ""}`}
+          onClick={() => setFilter("all")}
+          role="button"
+          tabIndex={0}
+        >
+          <span className="alert-kpi-label">Total Flagged</span>
+          <strong className="alert-kpi-val text-white">{openAlerts.length.toLocaleString()}</strong>
+          <small className="alert-kpi-hint">All detection levels</small>
         </div>
+
+        <div
+          className={`alert-kpi-card tone-critical ${filter === "critical" ? "active" : ""}`}
+          onClick={() => setFilter("critical")}
+          role="button"
+          tabIndex={0}
+        >
+          <span className="alert-kpi-label">Critical Priority</span>
+          <strong className="alert-kpi-val text-rose">{counts.critical.toLocaleString()}</strong>
+          <small className="alert-kpi-hint">Urgent field service</small>
+        </div>
+
+        <div
+          className={`alert-kpi-card tone-monitor ${filter === "monitoring" ? "active" : ""}`}
+          onClick={() => setFilter("monitoring")}
+          role="button"
+          tabIndex={0}
+        >
+          <span className="alert-kpi-label">Drift Monitoring</span>
+          <strong className="alert-kpi-val text-amber">{counts.monitoring.toLocaleString()}</strong>
+          <small className="alert-kpi-hint">CUSUM / Tide decay</small>
+        </div>
+
+        <div
+          className={`alert-kpi-card tone-nodata ${filter === "nodata" ? "active" : ""}`}
+          onClick={() => setFilter("nodata")}
+          role="button"
+          tabIndex={0}
+        >
+          <span className="alert-kpi-label">Sensor Advisory</span>
+          <strong className="alert-kpi-val text-cyan">{counts.nodata.toLocaleString()}</strong>
+          <small className="alert-kpi-hint">Minor variance / transient</small>
+        </div>
+      </div>
+
+      {/* Filter Tabs Bar */}
+      <div className="alert-filter-bar">
+        <FilterTabs
+          value={filter}
+          onChange={setFilter}
+          tabs={[
+            { value: "all", label: `All Alerts (${openAlerts.length})` },
+            { value: "critical", label: `Critical Priority (${counts.critical})` },
+            { value: "monitoring", label: `Drift Monitoring (${counts.monitoring})` },
+            { value: "nodata", label: `Advisory (${counts.nodata})` }
+          ]}
+        />
+        <span className="alert-filter-count">
+          Showing <b>{filteredAlerts.length}</b> notifications
+        </span>
+      </div>
+
+      {/* Alerts Grid */}
+      <section className="alert-grid-container">
         {filteredAlerts.length ? (
-          <div className="alert-list">
-            {filteredAlerts.map((alert) => (
-              <AlertCard key={alert.id || `${alert.station_id}-${alert.created_at}`} alert={alert} />
-            ))}
-          </div>
+          filteredAlerts.map((alert) => (
+            <AlertCard
+              key={alert.id || `${alert.station_id}-${alert.created_at}`}
+              alert={alert}
+            />
+          ))
         ) : (
-          <p className="state">No alerts match this view.</p>
+          <div className="empty-state-card">
+            <span className="empty-icon">✅</span>
+            <h3>No anomalies in this category</h3>
+            <p>All monitored station channels meet nominal physical bounds.</p>
+          </div>
         )}
       </section>
-      <BottomNav active="alerts" alertCount={openAlerts.length} />
     </main>
   );
 }

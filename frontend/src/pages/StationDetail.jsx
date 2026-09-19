@@ -1,8 +1,6 @@
-import BottomNav from "../components/BottomNav.jsx";
-import Header from "../components/Header.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
-import { channelStatus, daysToThreshold, percent, timeAgo } from "../services/api.js";
+import { channelStatus, daysToThreshold, percent, timeAgo, number } from "../services/api.js";
 
 export default function StationDetail({ selectedStation, timeseries, verdicts, openAlerts, loading, error }) {
   const station = selectedStation;
@@ -11,47 +9,145 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
 
   if (!station && !loading) {
     return (
-      <main className="screen">
-        <Header subtitle="Station Deep Dive" />
-        <p className="state error">Station was not found.</p>
-        <BottomNav active="stations" alertCount={openAlerts.length} />
+      <main className="screen station-detail-screen">
+        <div className="breadcrumb-row">
+          <a href="/stations" className="back-link">← Return to Station Fleet</a>
+        </div>
+        <div className="empty-state-card">
+          <span className="empty-icon">⚠️</span>
+          <h2>Station Not Found</h2>
+          <p>The requested station code could not be resolved in the synoptic database.</p>
+          <a href="/stations" className="btn-reset-filters">View All Stations</a>
+        </div>
       </main>
     );
   }
 
   return (
     <main className="screen station-detail-screen">
-      <Header subtitle="Station Deep Dive" liveText="INSAT-3DR Synced" />
-      <a className="back-link" href="/stations">Back to Station Network</a>
+      {/* Breadcrumb Navigation */}
+      <div className="breadcrumb-row">
+        <a href="/stations" className="back-link">
+          ← Back to Station Fleet
+        </a>
+        <span className="breadcrumb-separator">/</span>
+        <span className="breadcrumb-current">{station?.name || "Station Telemetry"}</span>
+      </div>
+
       {error ? <p className="state error">{error}</p> : null}
+
       {station ? (
         <>
-          <section className="deep-card">
-            <span>Station Node - {station.station_id}</span>
-            <h1>{station.name}</h1>
-            <strong>{percent(station.health, 1)}</strong>
-            <p>Station Health Score</p>
-            <div>
-              <StatusBadge status={station.status}>{station.status}</StatusBadge>
-              <small>Last updated {timeAgo(station.last_seen)}</small>
+          {/* Station Overview Hero Banner */}
+          <section className="station-hero-card">
+            <div className="hero-main-details">
+              <div className="hero-id-row">
+                <span className="station-code-badge">{station.station_id}</span>
+                <StatusBadge status={station.status}>
+                  {station.status} • {percent(station.health, 1)} Health
+                </StatusBadge>
+              </div>
+              <h1 className="hero-station-name">{station.name}</h1>
+              <p className="hero-station-coords">
+                📍 Coordinates: {number(station.lat, 4)}°N, {number(station.lon, 4)}°E • Last Seen: {timeAgo(station.last_seen)}
+              </p>
             </div>
-            <small>Estimated service window: {daysToThreshold(station.days_to_threshold)} days</small>
+
+            <div className="hero-health-meter">
+              <div className="health-score-cluster">
+                <span className="score-value">{percent(station.health, 1)}</span>
+                <span className="score-label">Station Health Score</span>
+              </div>
+              <div className="health-service-estimate">
+                <span>Estimated Service Window:</span>
+                <b>{daysToThreshold(station.days_to_threshold)} days</b>
+              </div>
+            </div>
           </section>
-          <TelemetryCard label="Temperature" value={latest.T} unit="C" status={channelStatus(latestVerdict, "T", "Normal")} values={timeseries.map((row) => row.T)} />
-          <TelemetryCard label="Pressure" value={latest.P} unit=" hPa" status={latestVerdict?.degradation ? `Heartbeat ${percent(latestVerdict.degradation, 0)}` : "Stable"} values={timeseries.map((row) => row.P)} tone="amber" />
-          <TelemetryCard label="Humidity" value={latest.RH} unit="%" status={channelStatus(latestVerdict, "RH", "Stable")} values={timeseries.map((row) => row.RH)} tone="blue" />
-          <section className="card">
-            <h2>Latest AI Verdict</h2>
+
+          {/* Real-time Telemetry Sensor Cards */}
+          <div className="detail-section-title">
+            <h2>Real-Time Meteorological Channels</h2>
+            <span>Synchronized with INSAT-3DR Atmospheric Stream</span>
+          </div>
+
+          <div className="telemetry-three-grid">
+            <TelemetryCard
+              label="Atmospheric Temperature"
+              value={latest.T}
+              unit="°C"
+              status={channelStatus(latestVerdict, "T", "Normal")}
+              values={timeseries.map((row) => row.T)}
+            />
+            <TelemetryCard
+              label="Barometric Pressure"
+              value={latest.P}
+              unit=" hPa"
+              status={latestVerdict?.degradation ? `Harmonic Loss ${percent(latestVerdict.degradation, 0)}` : "Stable"}
+              values={timeseries.map((row) => row.P)}
+              tone="amber"
+            />
+            <TelemetryCard
+              label="Relative Humidity"
+              value={latest.RH}
+              unit="%"
+              status={channelStatus(latestVerdict, "RH", "Nominal")}
+              values={timeseries.map((row) => row.RH)}
+              tone="blue"
+            />
+          </div>
+
+          {/* AI Explainability Verdict & Innovation Link */}
+          <section className="verdict-explain-card">
+            <div className="verdict-header">
+              <div>
+                <span className="card-tag">EXPLAINABLE ML VERDICT</span>
+                <h2>Conformal Anomaly Diagnostics</h2>
+              </div>
+              {latestVerdict && (
+                <div className="verdict-metrics-pill">
+                  <span>Confidence: <b>{percent(latestVerdict.confidence, 0)}</b></span>
+                  <span>Severity: <b>{percent(latestVerdict.severity, 0)}</b></span>
+                </div>
+              )}
+            </div>
+
             {latestVerdict ? (
-              <p>{latestVerdict.reason} - Confidence {percent(latestVerdict.confidence, 0)} - Severity {percent(latestVerdict.severity, 0)}</p>
+              <div className="verdict-body">
+                <p className="verdict-text">{latestVerdict.reason}</p>
+                {latestVerdict.evidence && latestVerdict.evidence.length > 0 && (
+                  <div className="verdict-evidence-strip">
+                    <span className="evidence-title">Physics Evidence Markers:</span>
+                    <div className="evidence-pills">
+                      {latestVerdict.evidence.map(([k, v]) => (
+                        <span key={k} className="evidence-pill">
+                          <b>{k}:</b> {typeof v === 'number' ? v.toFixed(2) : String(v)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
-              <p className="state">No verdicts available for this station.</p>
+              <p className="state">Telemetry channels currently operating within nominal bounds.</p>
             )}
-            <a className="inline-action" href={`/stations/${encodeURIComponent(station.station_id)}/pressure`}>Open Pressure Heartbeat</a>
+
+            <div className="verdict-footer-actions">
+              <a
+                className="btn-open-heartbeat"
+                href={`/stations/${encodeURIComponent(station.station_id)}/pressure`}
+              >
+                🔬 Inspect S2 Harmonic Solar Atmospheric Tide →
+              </a>
+            </div>
           </section>
         </>
-      ) : <p className="state">Loading station detail...</p>}
-      <BottomNav active="stations" alertCount={openAlerts.length} />
+      ) : (
+        <div className="loading-state-card">
+          <div className="loading-spinner" />
+          <p>Retrieving synoptic telemetry stream...</p>
+        </div>
+      )}
     </main>
   );
 }

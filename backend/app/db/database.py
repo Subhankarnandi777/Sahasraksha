@@ -20,12 +20,15 @@ DATABASE_FILE = BACKEND_DIR / "sahasraksha.db"
 
 def _database_url() -> str:
     configured_url = os.getenv("DATABASE_URL")
-    if configured_url:
+    if configured_url and "YOUR_SUPABASE_HOST" not in configured_url:
         if configured_url.startswith("postgres://"):
             return configured_url.replace("postgres://", "postgresql://", 1)
         return configured_url
 
-    allow_sqlite = os.getenv("SAHASRAKSHA_ALLOW_SQLITE", "").lower() in {"1", "true", "yes"}
+    allow_sqlite = (
+        os.getenv("SAHASRAKSHA_ALLOW_SQLITE", "").lower() in {"1", "true", "yes"}
+        or os.getenv("SKYGUARD_ALLOW_SQLITE", "").lower() in {"1", "true", "yes"}
+    )
     if allow_sqlite:
         return f"sqlite:///{DATABASE_FILE.as_posix()}"
 
@@ -33,6 +36,7 @@ def _database_url() -> str:
         "DATABASE_URL is required. Set it in backend/.env for Supabase PostgreSQL. "
         "For explicit local-only SQLite development, set SAHASRAKSHA_ALLOW_SQLITE=true."
     )
+
 
 
 SQLALCHEMY_DATABASE_URL = _database_url()
@@ -68,7 +72,11 @@ def init_db() -> None:
 
 
 def should_seed_demo_data() -> bool:
-    return os.getenv("SAHASRAKSHA_SEED_DEMO_DATA", "").lower() in {"1", "true", "yes"}
+    return (
+        os.getenv("SAHASRAKSHA_SEED_DEMO_DATA", "").lower() in {"1", "true", "yes"}
+        or os.getenv("SKYGUARD_SEED_DEMO_DATA", "").lower() in {"1", "true", "yes"}
+    )
+
 
 
 def ensure_sqlite_schema() -> None:

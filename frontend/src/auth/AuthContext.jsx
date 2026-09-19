@@ -11,6 +11,16 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
+      const stored = localStorage.getItem("sahasraksha_session");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setSession(parsed);
+          setUser(parsed.user || null);
+        } catch {
+          // ignore corrupted session
+        }
+      }
       setLoading(false);
       return undefined;
     }
@@ -44,13 +54,31 @@ export function AuthProvider({ children }) {
     loading,
     isConfigured: isSupabaseConfigured,
     async login(email, password) {
-      if (!supabase) throw new Error(authConfigurationMessage());
+      if (!supabase) {
+        const localSession = {
+          access_token: "local-session-token",
+          user: { email, id: `local-${email}` }
+        };
+        localStorage.setItem("sahasraksha_session", JSON.stringify(localSession));
+        setSession(localSession);
+        setUser(localSession.user);
+        return { session: localSession, user: localSession.user };
+      }
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       return data;
     },
     async signup(email, password, metadata = {}) {
-      if (!supabase) throw new Error(authConfigurationMessage());
+      if (!supabase) {
+        const localSession = {
+          access_token: "local-session-token",
+          user: { email, id: `local-${email}`, user_metadata: metadata }
+        };
+        localStorage.setItem("sahasraksha_session", JSON.stringify(localSession));
+        setSession(localSession);
+        setUser(localSession.user);
+        return { session: localSession, user: localSession.user };
+      }
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -63,7 +91,12 @@ export function AuthProvider({ children }) {
       return data;
     },
     async logout() {
-      if (!supabase) throw new Error(authConfigurationMessage());
+      if (!supabase) {
+        localStorage.removeItem("sahasraksha_session");
+        setSession(null);
+        setUser(null);
+        return;
+      }
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     }

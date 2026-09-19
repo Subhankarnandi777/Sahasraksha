@@ -37,6 +37,9 @@ class CsvReplayServiceTests(unittest.TestCase):
         good_id = self._station_id("GOOD")
         missing_pressure_id = self._station_id("MISSING-P")
         low_id = "43296099999"
+        with SessionLocal() as db:
+            db.query(Station).filter(Station.station_id.in_([good_id, missing_pressure_id, low_id])).delete(synchronize_session=False)
+            db.commit()
         with self.coords_path.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(
                 handle,
