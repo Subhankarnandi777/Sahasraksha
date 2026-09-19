@@ -67,10 +67,6 @@ export function getStationAlerts(stationId) {
   return request(`/stations/${encodeURIComponent(stationId)}/alerts`);
 }
 
-export function getAlerts() {
-  return request("/alerts");
-}
-
 export function getStationVerdicts(stationId) {
   return request(`/stations/${encodeURIComponent(stationId)}/verdicts`);
 }
