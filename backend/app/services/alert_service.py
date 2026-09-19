@@ -15,6 +15,7 @@ from app.services import station_service
 
 
 _REASON_VALUES = {reason.value for reason in AnomalyReason}
+_STATUS_VALUES = {status.value for status in AlertStatus}
 _SEVERITY_MAP = {
     "low": 0.25,
     "medium": 0.5,
@@ -44,6 +45,13 @@ def _reason(value: str) -> AnomalyReason:
         return AnomalyReason(normalized)
 
     return AnomalyReason.UNCLASSIFIED
+
+def _status(value: str) -> AlertStatus:
+    normalized = (value or "").strip().lower()
+    if normalized in _STATUS_VALUES:
+        return AlertStatus(normalized)
+
+    return AlertStatus.OPEN
 
 
 def _severity(value: str | float | int | None) -> float:
@@ -105,7 +113,7 @@ def _to_alert(alert: AlertModel) -> Alert:
         anomaly_verdict_id=alert.anomaly_verdict_id,
         severity=_severity(alert.severity),
         message=_reason(alert.message).value,
-        status=alert.status,
+        status=_status(alert.status),
         confidence=verdict.confidence if verdict else 0.0,
         degradation=verdict.degradation if verdict else 0.0,
         evidence=_evidence(verdict.evidence if verdict else []),
