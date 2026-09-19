@@ -1257,6 +1257,43 @@ p {
   }
 }
 
+/* Tablet range (roughly 640-899px: an iPad portrait, a half-split laptop
+   window, a landscape phone). Previously totally unstyled -- the phone
+   layout below 520px and the desktop layout above 900px both had explicit
+   treatment, but this range fell through and rendered the phone design
+   stretched edge-to-edge across a much wider viewport (cards, text and gaps
+   all blown up to fill the space, and the floating bottom nav bar
+   stretching to nearly the full window width). This keeps the familiar
+   mobile bottom-nav layout (a full top-nav swap only happens at 900px,
+   below) but caps and centers the content column the same way the desktop
+   breakpoint does, so it reads as a deliberately-sized card rather than an
+   inflated phone screen. The width formula (min(760px, ...)) is shared with
+   the 900px breakpoint below by design: it already lands on exactly 760px
+   once the viewport is wide enough, so nothing visibly changes at the
+   900px handoff. */
+@media (min-width: 640px) {
+  body {
+    background: #eef2f7;
+    display: flex;
+    justify-content: center;
+  }
+
+  .phone-shell {
+    width: min(760px, calc(100% - 32px));
+    margin: 0 auto;
+    background: #f7f8ff;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
+  }
+
+  .screen {
+    padding: 18px 28px 100px;
+  }
+
+  .bottom-nav {
+    width: min(680px, calc(100% - 48px));
+  }
+}
+
 /* Desktop presentation: a genuine website layout, not a phone app centred
    in a browser. The floating bottom tab bar -- the single biggest "mobile
    app" signal -- is replaced by a standard top navigation row above 900px,
@@ -1271,19 +1308,6 @@ p {
 }
 
 @media (min-width: 900px) {
-  body {
-    background: #eef2f7;
-    display: flex;
-    justify-content: center;
-  }
-
-  .phone-shell {
-    width: 760px;
-    margin: 0 auto;
-    background: #f7f8ff;
-    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
-  }
-
   .screen {
     padding: 96px 32px 40px;
   }
