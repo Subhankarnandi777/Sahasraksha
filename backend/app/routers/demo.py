@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.schemas import AnomalyVerdict, WeatherReading
 from app.services.anomaly_detector import AnomalyDetector, get_anomaly_detector
 from app.services import alert_service, station_service
+from sahasraksha.stream import STEP_LIMITS
 
 router = APIRouter(tags=["demo"])
 
@@ -41,7 +42,11 @@ def inject_demo_anomaly(
     }
     channel = random.choice(["T", "P", "RH"])
     vals = dict(seed)
-    vals[channel] = _clamp(vals[channel] + random.choice([-1, 1]) * random.uniform(9, 14), channel)
+    lo, hi = _CHANNEL_BOUNDS[channel]
+    base = vals[channel]
+    direction = 1 if (hi - base) >= (base - lo) else -1
+    margin = STEP_LIMITS[channel] * random.uniform(1.6, 2.2)
+    vals[channel] = _clamp(base + direction * margin, channel)
 
     reading = WeatherReading(
         station_id=target.station_id,
