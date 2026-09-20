@@ -71,6 +71,12 @@ export function getStationVerdicts(stationId) {
   return request(`/stations/${encodeURIComponent(stationId)}/verdicts`);
 }
 
+export function injectDemoAnomaly(stationId) {
+  return request(`/demo/inject-anomaly${stationId ? `?station_id=${encodeURIComponent(stationId)}` : ""}`, {
+    method: "POST",
+  });
+}
+
 export function ingest(reading) {
   return request("/ingest", {
     method: "POST",
