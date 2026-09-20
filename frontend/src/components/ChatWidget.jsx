@@ -1,6 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { sendChatMessage } from "../services/api.js";
+
+// Wraps every table react-markdown produces in a horizontally-scrollable
+// div -- the model likes answering "what's open right now" with a full
+// markdown table, and a table wider than a ~360px chat panel needs to
+// scroll sideways instead of getting crushed or overflowing the page.
+const MARKDOWN_COMPONENTS = {
+  table: ({ node, ...props }) => (
+    <div className="chat-markdown-table-wrap">
+      <table {...props} />
+    </div>
+  ),
+  a: ({ node, ...props }) => <a target="_blank" rel="noopener noreferrer" {...props} />
+};
+
+function MessageBubble({ role, content }) {
+  if (role !== "assistant") {
+    return <div className={`chat-bubble ${role}`}>{content}</div>;
+  }
+  return (
+    <div className="chat-bubble assistant chat-markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 const GREETING = {
   role: "assistant",
@@ -109,6 +137,17 @@ export default function ChatWidget() {
     }
   }, [messages, open, sending]);
 
+  // Put the focus on the conversation while it's open: Escape closes it,
+  // same as clicking the dimmed backdrop or the header's close button.
+  useEffect(() => {
+    if (!open) return undefined;
+    function onKeyDown(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   // Compared by content, not reference: a history reloaded from
   // localStorage after navigating to a new page is freshly parsed JSON, so
   // it's never === GREETING even when it IS just the greeting.
@@ -172,6 +211,14 @@ export default function ChatWidget() {
 
   return (
     <div className="chat-widget-root">
+      {open ? (
+        <div
+          className="chat-widget-backdrop"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      ) : null}
+
       {!open && showHint ? (
         <div className="chat-widget-hint" role="status" onClick={handleOpen}>
           {HINT_TEXT}
@@ -214,9 +261,7 @@ export default function ChatWidget() {
 
           <div className="chat-widget-messages" ref={scrollRef}>
             {messages.map((msg, index) => (
-              <div key={index} className={`chat-bubble ${msg.role}`}>
-                {msg.content}
-              </div>
+              <MessageBubble key={index} role={msg.role} content={msg.content} />
             ))}
             {sending ? (
               <div className="chat-bubble assistant chat-bubble-typing">

@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect } from "react";
 import { useAuth } from "./auth/AuthContext.jsx";
 import useSahasrakshaData from "./services/useSahasrakshaData.js";
 import Navbar from "./components/Navbar.jsx";
-import ChatWidget from "./components/ChatWidget.jsx";
 
 // Every page is lazy-loaded so the initial bundle only ships the app shell
 // and auth logic, not all eight pages at once. This matters most for
@@ -16,6 +15,10 @@ const PressureHeartbeat = lazy(() => import("./pages/PressureHeartbeat.jsx"));
 const Alerts = lazy(() => import("./pages/Alerts.jsx"));
 const Login = lazy(() => import("./pages/Login.jsx"));
 const SignUp = lazy(() => import("./pages/SignUp.jsx"));
+// Same reasoning as the pages above: ChatWidget pulls in react-markdown +
+// remark-gfm to render the bot's replies, which nobody should have to
+// download before they've even opened the chat.
+const ChatWidget = lazy(() => import("./components/ChatWidget.jsx"));
 
 function RouteLoading() {
   return (
@@ -65,7 +68,9 @@ function DataRoute({ current }) {
           {current.name === "dashboard" ? <Dashboard {...commonProps} /> : null}
         </Suspense>
       </div>
-      <ChatWidget />
+      <Suspense fallback={null}>
+        <ChatWidget />
+      </Suspense>
     </div>
   );
 }
