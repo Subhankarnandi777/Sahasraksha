@@ -5,7 +5,7 @@ import StatusBadge from "./StatusBadge.jsx";
 export default function StationCard({ station, alert, onOpen }) {
   const tone = statusTone(station.status);
   const days = daysToThreshold(station.days_to_threshold);
-  const anomaly = alert?.message || (station.status === "OK" ? "Nominal physical bounds" : "Requires attention");
+  const anomaly = alert?.explanation || alert?.message || (station.status === "OK" ? "Nominal physical bounds" : "Requires attention");
   const photo = getStationImage(station.name);
   const healthVal = station.health === null || station.health === undefined ? null : Number(station.health);
 

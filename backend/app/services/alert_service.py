@@ -11,7 +11,7 @@ from app.db.models import Alert as AlertModel
 from app.db.models import AnomalyVerdict as AnomalyVerdictModel
 from app.db.models import WeatherReading as WeatherReadingModel
 from app.schemas import Alert, AlertStatus, AnomalyReason, AnomalyVerdict, WeatherReading
-from app.services import station_service
+from app.services import llm_service, station_service
 
 
 _REASON_VALUES = {reason.value for reason in AnomalyReason}
@@ -104,6 +104,11 @@ def _to_anomaly_verdict(verdict: AnomalyVerdictModel) -> AnomalyVerdict:
     )
 
 
+def _station_display_name(station_id: str) -> str:
+    station = station_service.get_station(station_id)
+    return station.name if station is not None else station_id
+
+
 def _to_alert(alert: AlertModel) -> Alert:
     verdict = alert.anomaly_verdict
     return Alert(
@@ -113,6 +118,7 @@ def _to_alert(alert: AlertModel) -> Alert:
         anomaly_verdict_id=alert.anomaly_verdict_id,
         severity=_severity(alert.severity),
         message=_reason(alert.message).value,
+        explanation=alert.explanation,
         status=_status(alert.status),
         confidence=verdict.confidence if verdict else 0.0,
         degradation=verdict.degradation if verdict else 0.0,
@@ -206,6 +212,13 @@ def save_verdict_and_create_alert(
                 .where(AlertModel.status == AlertStatus.OPEN.value)
             )
             if existing_open_alert is None:
+                explanation = llm_service.narrate_evidence(
+                    station_name=_station_display_name(reading.station_id),
+                    reason=verdict.reason.value,
+                    severity=verdict.severity,
+                    degradation=verdict.degradation,
+                    evidence=verdict.evidence,
+                )
                 db.add(
                     AlertModel(
                         station_id=reading.station_id,
@@ -213,6 +226,7 @@ def save_verdict_and_create_alert(
                         anomaly_verdict_id=db_verdict.id,
                         severity=str(verdict.severity),
                         message=verdict.reason.value,
+                        explanation=explanation,
                         status=AlertStatus.OPEN.value,
                     )
                 )

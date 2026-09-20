@@ -1,4 +1,5 @@
 ﻿from app.schemas.alert import Alert, AlertStatus, AlertStatusUpdate
+from app.schemas.chat import ChatRequest, ChatResponse, ChatTurn
 from app.schemas.reading import TimeSeriesRow, WeatherReading
 from app.schemas.station import StationOverview, StationStatus, StationSummary
 from app.schemas.verdict import AnomalyReason, AnomalyVerdict, AnomalyVerdictRecord
@@ -9,6 +10,9 @@ __all__ = [
     "AlertStatus",
     "AlertStatusUpdate",
     "AnomalyReason",
+    "ChatRequest",
+    "ChatResponse",
+    "ChatTurn",
     "AnomalyVerdict",
     "AnomalyVerdictRecord",
     "StationOverview",

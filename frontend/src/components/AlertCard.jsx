@@ -17,7 +17,7 @@ export default function AlertCard({ alert }) {
         <span className="station-id">{alert.station_id}</span>
         <span className="risk-pill">{percent(alert.severity, 1)} risk</span>
       </div>
-      <h3>{alert.message || "Anomaly detected"}</h3>
+      <h3>{alert.explanation || alert.message || "Anomaly detected"}</h3>
       <p>{percent(alert.confidence, 0)} calibrated confidence - {timeAgo(alert.created_at)}</p>
       <div className="diagnostic-grid">
         <span><strong>{spatial === "-" ? "-" : Number(spatial).toFixed(1)}</strong><small>Spatial dev.</small></span>

@@ -84,6 +84,16 @@ export function ingest(reading) {
   });
 }
 
+export function sendChatMessage(message, history = []) {
+  return request("/chat", {
+    method: "POST",
+    // Chat replies come from an LLM call on the backend, which can run
+    // slower than the 15s default used for ordinary data fetches.
+    timeoutMs: 30000,
+    body: JSON.stringify({ message, history })
+  });
+}
+
 export function percent(value, digits = 0) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return "-";

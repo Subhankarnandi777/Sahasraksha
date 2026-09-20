@@ -97,6 +97,9 @@ def ensure_sqlite_schema() -> None:
         "anomaly_verdicts": {
             "degradation": "FLOAT NOT NULL DEFAULT 0.0",
         },
+        "alerts": {
+            "explanation": "TEXT",
+        },
     }
 
     with engine.begin() as connection:

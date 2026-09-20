@@ -17,6 +17,10 @@ class Alert(BaseModel):
     anomaly_verdict_id: int = Field(..., examples=[7])
     severity: float = Field(..., ge=0.0, le=1.0, examples=[0.734])
     message: str = Field(..., min_length=1, examples=["degrading"])
+    explanation: str | None = Field(
+        None,
+        examples=["AWS_PNQ's pressure sensor jumped 9.2 hPa in one reading -- far outside a normal step, and no neighbour station saw anything similar."],
+    )
     status: AlertStatus = Field(..., examples=[AlertStatus.OPEN])
     confidence: float = Field(..., ge=0.0, le=1.0, examples=[0.83])
     degradation: float = Field(..., ge=0.0, le=1.0, examples=[0.512])

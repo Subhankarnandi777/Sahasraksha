@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import init_db
-from app.routers import alerts, demo, ingest, readings, stations, verdicts, work_orders
+from app.routers import alerts, chat, demo, ingest, readings, stations, verdicts, work_orders
 from app.services import alert_service, keepalive_service, station_service, work_order_service
 
 
@@ -27,6 +27,7 @@ app.include_router(alerts.router)
 app.include_router(work_orders.router)
 app.include_router(verdicts.router)
 app.include_router(demo.router)
+app.include_router(chat.router)
 
 
 @app.on_event("startup")

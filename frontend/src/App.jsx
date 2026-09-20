@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { useAuth } from "./auth/AuthContext.jsx";
 import useSahasrakshaData from "./services/useSahasrakshaData.js";
 import Navbar from "./components/Navbar.jsx";
+import ChatWidget from "./components/ChatWidget.jsx";
 
 // Every page is lazy-loaded so the initial bundle only ships the app shell
 // and auth logic, not all eight pages at once. This matters most for
@@ -64,6 +65,7 @@ function DataRoute({ current }) {
           {current.name === "dashboard" ? <Dashboard {...commonProps} /> : null}
         </Suspense>
       </div>
+      <ChatWidget />
     </div>
   );
 }
