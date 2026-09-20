@@ -278,6 +278,23 @@ def get_alert(alert_id: int) -> Alert | None:
         return _to_alert(alert)
 
 
+def list_open_alerts() -> list[Alert]:
+    """Like list_alerts(), but filtered to OPEN at the database level. The
+    chatbot's context snapshot needs the currently-open alerts on every
+    turn -- filtering in SQL keeps that cheap regardless of how large the
+    historical `alerts` table grows (list_alerts() loads every row ever
+    created, which is fine for the /alerts page's one-shot fetch but would
+    be a real N+1-scale cost if re-run on every chat message)."""
+    with SessionLocal() as db:
+        alerts = db.scalars(
+            select(AlertModel)
+            .options(joinedload(AlertModel.anomaly_verdict))
+            .where(AlertModel.status == AlertStatus.OPEN.value)
+            .order_by(AlertModel.created_at.desc())
+        ).all()
+        return [_to_alert(alert) for alert in alerts]
+
+
 def list_alerts_for_station(station_id: str) -> list[Alert]:
     with SessionLocal() as db:
         alerts = db.scalars(
