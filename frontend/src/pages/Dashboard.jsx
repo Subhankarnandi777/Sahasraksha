@@ -3,7 +3,7 @@ import FilterTabs from "../components/FilterTabs.jsx";
 import MapPanel from "../components/MapPanel.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import Sparkline from "../components/Sparkline.jsx";
-import { isSilent, networkReferenceTime, percent, number } from "../services/api.js";
+import { isSilent, networkReferenceTime, percent, number, injectDemoAnomaly } from "../services/api.js";
 import { useTheme } from "../services/theme.js";
 
 function countStatus(stations, status) {
@@ -45,6 +45,25 @@ function hourlyAlertCounts(alerts) {
 }
 
 export default function Dashboard({ health, stations, openAlerts, timeseries, loading, error }) {
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoStatus, setDemoStatus] = useState(null);
+
+  async function handleInjectDemo() {
+    setDemoLoading(true);
+    setDemoStatus(null);
+    try {
+      const verdict = await injectDemoAnomaly();
+      setDemoStatus(
+        verdict.flag
+          ? `Detected: ${verdict.reason} (severity ${percent(verdict.severity, 0)})`
+          : "No anomaly flagged this time — try again."
+      );
+    } catch (err) {
+      setDemoStatus(`Failed: ${err.message}`);
+    } finally {
+      setDemoLoading(false);
+    }
+  }
   const [mapMode, setMapMode] = useState("health");
   const [selectedStationId, setSelectedStationId] = useState(null);
   const { isDark } = useTheme();
@@ -98,6 +117,10 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
           <a href="/alerts" className="alert-count-pill">
             <b>{openAlerts.length.toLocaleString()}</b> Active ML Flags
           </a>
+          <button type="button" className="btn-reset-filters" onClick={handleInjectDemo} disabled={demoLoading}>
+            {demoLoading ? "Injecting..." : "⚡ Inject Test Anomaly"}
+          </button>
+          {demoStatus && <span className="state">{demoStatus}</span>}
         </div>
       </div>
 

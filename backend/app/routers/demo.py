@@ -1,0 +1,56 @@
+import random
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.schemas import AnomalyVerdict, WeatherReading
+from app.services.anomaly_detector import AnomalyDetector, get_anomaly_detector
+from app.services import alert_service, station_service
+
+router = APIRouter(tags=["demo"])
+
+_CHANNEL_BOUNDS = {"T": (-40.0, 55.0), "P": (850.0, 1080.0), "RH": (0.0, 100.0)}
+
+
+def _clamp(value: float, channel: str) -> float:
+    lo, hi = _CHANNEL_BOUNDS[channel]
+    return max(lo, min(hi, value))
+
+
+@router.post("/demo/inject-anomaly", response_model=AnomalyVerdict, status_code=status.HTTP_200_OK)
+def inject_demo_anomaly(
+    station_id: str | None = None,
+    detector: AnomalyDetector = Depends(get_anomaly_detector),
+) -> AnomalyVerdict:
+    stations = station_service.list_stations()
+    if not stations:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No stations available.")
+
+    if station_id:
+        target = next((s for s in stations if s.station_id == station_id), None)
+        if target is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station '{station_id}' was not found.")
+    else:
+        healthy = [s for s in stations if s.status == "OK"] or stations
+        target = random.choice(healthy)
+
+    seed = {
+        "T": target.latest_temperature if target.latest_temperature is not None else 25.0,
+        "P": target.latest_pressure if target.latest_pressure is not None else 1005.0,
+        "RH": target.latest_humidity if target.latest_humidity is not None else 60.0,
+    }
+    channel = random.choice(["T", "P", "RH"])
+    vals = dict(seed)
+    vals[channel] = _clamp(vals[channel] + random.choice([-1, 1]) * random.uniform(9, 14), channel)
+
+    reading = WeatherReading(
+        station_id=target.station_id,
+        timestamp=datetime.now(timezone.utc),
+        T=round(vals["T"], 2),
+        P=round(vals["P"], 2),
+        RH=round(vals["RH"], 2),
+        flag=0,
+    )
+
+    verdict = detector.evaluate(reading)
+    return alert_service.save_verdict_and_create_alert(reading, verdict)
