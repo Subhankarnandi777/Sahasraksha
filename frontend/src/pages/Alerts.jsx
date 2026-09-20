@@ -16,6 +16,16 @@ export default function Alerts({ openAlerts, loading, error }) {
     if (filter === "all") return openAlerts;
     return openAlerts.filter((alert) => severityLevel(alert.severity) === filter);
   }, [filter, openAlerts]);
+  if (loading) {
+    return (
+      <main className="screen alerts-screen">
+        <div className="loading-state-card">
+          <div className="loading-spinner" />
+          <p>Running conformal inference across station stream...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="screen alerts-screen">
