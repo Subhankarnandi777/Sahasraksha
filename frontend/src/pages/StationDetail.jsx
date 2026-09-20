@@ -114,16 +114,34 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
 
             {latestVerdict ? (
               <div className="verdict-body">
-                <p className="verdict-text">{latestVerdict.reason}</p>
+                <div className="verdict-status-banner">
+                  <span className="verdict-icon">⚠️</span>
+                  <p className="verdict-text">
+                    {(() => {
+                      const r = String(latestVerdict.reason || "").trim().toLowerCase();
+                      if (r === "step") return "Abrupt step displacement detected across telemetry channels.";
+                      if (r === "drift" || r === "cusum") return "Continuous cumulative sum (CUSUM) calibration drift detected.";
+                      if (r === "tide_loss") return "Significant S₂ harmonic tidal resonance loss: diaphragm fatigue or port obstruction.";
+                      if (r === "flatline" || r === "frozen") return "Persistent static sensor reading (flatline) detected.";
+                      if (r === "spike" || r === "noise") return "High-frequency non-physical impulse spikes detected.";
+                      return latestVerdict.reason || "Autonomous QC anomaly flag active.";
+                    })()}
+                  </p>
+                </div>
                 {latestVerdict.evidence && latestVerdict.evidence.length > 0 && (
                   <div className="verdict-evidence-strip">
                     <span className="evidence-title">Physics Evidence Markers:</span>
                     <div className="evidence-pills">
-                      {latestVerdict.evidence.map(([k, v]) => (
-                        <span key={k} className="evidence-pill">
-                          <b>{k}:</b> {typeof v === 'number' ? v.toFixed(2) : String(v)}
-                        </span>
-                      ))}
+                      {latestVerdict.evidence.map(([k, v]) => {
+                        const valDisplay = v !== null && v !== undefined && v !== ""
+                          ? (typeof v === "number" ? v.toFixed(2) : String(v))
+                          : "Detected";
+                        return (
+                          <span key={k} className="evidence-pill">
+                            <b>{k}:</b> {valDisplay}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

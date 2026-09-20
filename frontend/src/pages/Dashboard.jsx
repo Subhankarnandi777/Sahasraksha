@@ -4,6 +4,7 @@ import MapPanel from "../components/MapPanel.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import Sparkline from "../components/Sparkline.jsx";
 import { isSilent, networkReferenceTime, percent, number } from "../services/api.js";
+import { useTheme } from "../services/theme.js";
 
 function countStatus(stations, status) {
   return stations.filter((station) => station.status === status).length;
@@ -46,6 +47,7 @@ function hourlyAlertCounts(alerts) {
 export default function Dashboard({ health, stations, openAlerts, timeseries, loading, error }) {
   const [mapMode, setMapMode] = useState("health");
   const [selectedStationId, setSelectedStationId] = useState(null);
+  const { isDark } = useTheme();
 
   const total = health?.station_count ?? stations.length;
   const healthy = countStatus(stations, "OK");
@@ -175,17 +177,48 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
               tabs={[
                 { value: "health", label: "Health Status" },
                 { value: "temperature", label: "Temperature" },
+                { value: "humidity", label: "Humidity" },
                 { value: "pressure", label: "Pressure" },
                 { value: "reporting", label: "Quality" },
               ]}
             />
           </div>
+
+          {/* Station Status Points Meaning Legend */}
+          <div className="map-legend-bar">
+            <span className="legend-title">Station Points Status:</span>
+            <div className="legend-items">
+              <span className="legend-badge" title="Health ≥ 90%, all sensor channels nominal">
+                <span className="legend-dot ok" />
+                <span className="legend-name">Nominal (OK)</span>
+              </span>
+              <span className="legend-badge" title="Routine maintenance calibration scheduled">
+                <span className="legend-dot schedule" />
+                <span className="legend-name">Schedule</span>
+              </span>
+              <span className="legend-badge" title="Elevated sensor degradation or drift detected">
+                <span className="legend-dot monitor" />
+                <span className="legend-name">Monitor</span>
+              </span>
+              <span className="legend-badge" title="Critical anomaly threshold exceeded - field service needed">
+                <span className="legend-dot service-now" />
+                <span className="legend-name">Service Now</span>
+              </span>
+              <span className="legend-badge" title="Data confidence low / harmonic flagging">
+                <span className="legend-dot low-confidence" />
+                <span className="legend-name">Low Confidence</span>
+              </span>
+            </div>
+          </div>
+
           <div className="dashboard-map-wrapper">
             <MapPanel
               stations={stations}
               selectedId={selectedStationId}
               mode={mapMode}
               onSelect={setSelectedStationId}
+              isDark={isDark}
+              hideFloatingTopControls={false}
             />
           </div>
         </section>
@@ -246,6 +279,7 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
                     <div className="st-telemetry-mini">
                       <span>{st.latest_temperature !== null && st.latest_temperature !== undefined ? `${number(st.latest_temperature, 1)}°C` : "--"}</span>
                       <span>{st.latest_pressure !== null && st.latest_pressure !== undefined ? `${number(st.latest_pressure, 0)} hPa` : "--"}</span>
+                      <span>{st.latest_humidity !== null && st.latest_humidity !== undefined ? `${number(st.latest_humidity, 0)}% RH` : "--"}</span>
                     </div>
                     <div className="st-deg-pill">
                       <span className={`deg-badge ${degPct > 10 ? "warn" : "ok"}`}>
