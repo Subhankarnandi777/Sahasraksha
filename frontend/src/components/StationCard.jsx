@@ -7,7 +7,7 @@ export default function StationCard({ station, alert, onOpen }) {
   const days = daysToThreshold(station.days_to_threshold);
   const anomaly = alert?.message || (station.status === "OK" ? "Nominal physical bounds" : "Requires attention");
   const photo = getStationImage(station.name);
-  const healthVal = Number.isFinite(Number(station.health)) ? Number(station.health) : 0.95;
+  const healthVal = station.health === null || station.health === undefined ? null : Number(station.health);
 
   return (
     <article className={`station-card ${tone}`} onClick={() => onOpen(station.station_id)}>
@@ -53,7 +53,7 @@ export default function StationCard({ station, alert, onOpen }) {
           <div className="station-health-row">
             <div className="health-score-pill">
               <span className="health-dot" />
-              <span>Health: <b>{percent(healthVal, 1)}</b></span>
+              <span>Health: <b>{healthVal === null ? "--" : percent(healthVal, 1)}</b></span>
             </div>
             <span className="station-seen-meta">{timeAgo(station.last_seen)}</span>
           </div>
