@@ -33,6 +33,16 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
     const amplitude = (v - baseline) * (1 - Math.min(0.85, loss || 0.35));
     return baseline + amplitude + (Math.sin(i * 0.8) * 0.15);
   });
+  if (!selectedStation) {
+    return (
+      <main className="screen pressure-screen">
+        <div className="loading-state-card">
+          <div className="loading-spinner" />
+          <p>Loading tidal heartbeat data...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="screen pressure-screen">

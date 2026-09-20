@@ -68,6 +68,17 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
       .slice(0, 5);
   }, [stations]);
 
+  if (loading) {
+    return (
+      <main className="screen dashboard-screen">
+        <div className="loading-state-card">
+          <div className="loading-spinner" />
+          <p>Loading network overview...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="screen dashboard-screen">
       {/* Top Header Row with Status */}

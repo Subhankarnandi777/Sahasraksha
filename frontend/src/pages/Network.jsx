@@ -106,6 +106,16 @@ export default function Network({ stations = [], selectedStation, selectedStatio
   const latest = activeTimeseries[activeTimeseries.length - 1] || {};
   const latestVerdict = activeVerdicts[activeVerdicts.length - 1];
 
+  if (loading) {
+    return (
+      <main className="screen network-screen">
+        <div className="loading-state-card">
+          <div className="loading-spinner" />
+          <p>Connecting to live station stream...</p>
+        </div>
+      </main>
+    );
+  }
   return (
     <main className="screen network-screen">
       {/* 1. Page Header Strip: Title + Telemetry Vitals */}

@@ -40,6 +40,17 @@ export default function Stations({ stations, openAlerts, loading, error }) {
     window.location.href = `/stations/${encodeURIComponent(stationId)}`;
   }
 
+    if (loading) {
+    return (
+      <main className="screen stations-screen">
+        <div className="loading-state-card">
+          <div className="loading-spinner" />
+          <p>Connecting to live station stream...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="screen stations-screen">
       {/* Page Header */}
