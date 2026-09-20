@@ -158,13 +158,21 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
             </div>
           </div>
           <div className="evidence-chip-list">
-            {evidence.map((pair) => (
-              <div key={`${pair[0]}-${pair[1]}`} className="evidence-chip-card">
-                <span className="chip-key">{pair[0]}</span>
-                <strong className="chip-val">{typeof pair[1] === "number" ? pair[1].toFixed(3) : String(pair[1])}</strong>
-                <small className="chip-expl">{evidenceText(pair)}</small>
-              </div>
-            ))}
+            {evidence.map((pair) => {
+              const [rawKey, rawVal] = pair;
+              const formattedKey = rawKey.replace(/_/g, " ").toUpperCase();
+              const hasVal = rawVal !== null && rawVal !== undefined && rawVal !== "";
+              const valDisplay = hasVal
+                ? (typeof rawVal === "number" ? rawVal.toFixed(3) : String(rawVal))
+                : "Threshold Exceeded";
+              return (
+                <div key={`${rawKey}-${rawVal}`} className="evidence-chip-card">
+                  <span className="chip-key">{formattedKey}</span>
+                  <strong className="chip-val">{valDisplay}</strong>
+                  <small className="chip-expl">{evidenceText(pair)}</small>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
