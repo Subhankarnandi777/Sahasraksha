@@ -15,12 +15,19 @@ missing, or the API call errors/times out, each function falls back to
 a deterministic, rule-based answer rather than raising -- a live demo
 in front of judges must never 500 because an LLM call hiccuped.
 """
+import logging
 import os
 from typing import Any
 
+logger = logging.getLogger("sahasraksha.llm")
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-NARRATION_MODEL = os.getenv("GROQ_NARRATION_MODEL", "llama-3.1-8b-instant")
-CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
+# groq deprecated llama-3.1-8b-instant / llama-3.3-70b-versatile to
+# Enterprise-only access on 2026-08-16; every developer/free-tier key now
+# gets a 4xx on those model IDs. openai/gpt-oss-20b and openai/gpt-oss-120b
+# are their supported replacements (faster + cheaper too).
+NARRATION_MODEL = os.getenv("GROQ_NARRATION_MODEL", "openai/gpt-oss-20b")
+CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b")
 REQUEST_TIMEOUT_S = 8.0
 
 _client = None
@@ -33,6 +40,7 @@ def _get_client():
         return _client
     if not GROQ_API_KEY:
         _client_init_failed = True
+        logger.warning("llm_service: GROQ_API_KEY is unset -- falling back to rule-based text")
         return None
     try:
         from groq import Groq
@@ -41,6 +49,7 @@ def _get_client():
     except Exception:
         _client_init_failed = True
         _client = None
+        logger.exception("llm_service: failed to construct Groq client -- falling back to rule-based text")
     return _client
 
 
@@ -113,6 +122,10 @@ def narrate_evidence(
         text = (completion.choices[0].message.content or "").strip()
         return text or fallback
     except Exception:
+        logger.exception(
+            "llm_service.narrate_evidence: Groq call failed (model=%s) -- returning fallback text",
+            NARRATION_MODEL,
+        )
         return fallback
 
 
@@ -195,4 +208,8 @@ def chat_reply(message: str, context_snapshot: str, history: list[dict[str, str]
         text = (completion.choices[0].message.content or "").strip()
         return text or _fallback_chat_reply(message)
     except Exception:
+        logger.exception(
+            "llm_service.chat_reply: Groq call failed (model=%s) -- returning fallback text",
+            CHAT_MODEL,
+        )
         return _fallback_chat_reply(message)
