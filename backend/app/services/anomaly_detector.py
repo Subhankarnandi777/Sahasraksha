@@ -125,8 +125,12 @@ class SahasrakshaAnomalyDetector:
             insufficient_history = False
 
             if sid not in self._engine.states:
-                coeffs, insufficient_history = self._seed_coeffs(sid, reading)
-                self._engine.states[sid] = StationState(coeffs)
+                coeffs, insufficient_history, seed_last = self._seed_coeffs(sid, reading)
+                state = StationState(coeffs)
+                for ch, val in seed_last.items():
+                    if val is not None:
+                        state.last[ch] = val
+                self._engine.states[sid] = state
 
             raw = self._engine.update(
                 sid,
@@ -140,12 +144,22 @@ class SahasrakshaAnomalyDetector:
 
         return self._to_verdict(raw, spatial_evidence, insufficient_history, own_z)
 
-    def _seed_coeffs(self, sid: str, reading: WeatherReading) -> tuple[dict, bool]:
+    def _seed_coeffs(self, sid: str, reading: WeatherReading) -> tuple[dict, bool, dict]:
         """Fit real harmonic coefficients from this station's own history
         in the database. Below MIN_READINGS_FOR_REAL_FIT, there is no real
         harmonic to fit -- fall back to an honest intercept-only seed and
         say so, rather than silently pretending a short window supports
-        an annual term."""
+        an annual term.
+
+        The intercept-only fallback must never be seeded from `reading` --
+        that is the observation currently being evaluated, and doing so
+        made any reading (anomalous or not) its own baseline, guaranteeing
+        a ~zero residual on a station's first-ever evaluation regardless of
+        how extreme that first reading was. It is seeded from this
+        station's actual last stored reading instead (or an honest
+        climatological default if none exists yet). The same last-reading
+        values are also returned so the caller can prime StationState.last,
+        letting the STEP gate run from the first evaluation too."""
         self._fit_attempted.add(sid)
         lon = self._get_lon(sid, reading)
 
@@ -171,15 +185,26 @@ class SahasrakshaAnomalyDetector:
                 try:
                     fitted = fit_coeffs(df)
                     if sid in fitted:
-                        return fitted[sid], False
+                        last_row = rows[-1]
+                        seed_last = {
+                            "T": last_row.temperature_c,
+                            "P": last_row.pressure_hpa,
+                            "RH": last_row.humidity_pct,
+                        }
+                        return fitted[sid], False, seed_last
                 except Exception:
                     pass
 
+        last_row = rows[-1] if rows else None
+        last_t = last_row.temperature_c if last_row else None
+        last_p = last_row.pressure_hpa if last_row else None
+        last_rh = last_row.humidity_pct if last_row else None
+
         return {
-            "T": _intercept_coeff(reading.T, 25.0),
-            "P": _intercept_coeff(reading.P, 1013.0),
-            "RH": _intercept_coeff(reading.RH, 50.0),
-        }, True
+            "T": _intercept_coeff(last_t, 25.0),
+            "P": _intercept_coeff(last_p, 1013.0),
+            "RH": _intercept_coeff(last_rh, 50.0),
+        }, True, {"T": last_t, "P": last_p, "RH": last_rh}
 
     def _get_lon(self, sid: str, reading: WeatherReading) -> float:
         if sid in self._coord_cache:
