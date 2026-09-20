@@ -19,11 +19,10 @@ const SignUp = lazy(() => import("./pages/SignUp.jsx"));
 function RouteLoading() {
   return (
     <main className="screen auth-screen">
-      <section className="auth-card">
-        <span>SAHASRAKSHA</span>
-        <h1>Loading</h1>
-        <p>Fetching this page.</p>
-      </section>
+      <div className="loading-state-card">
+        <div className="loading-spinner" />
+        <p>Fetching this page...</p>
+      </div>
     </main>
   );
 }
@@ -113,11 +112,10 @@ export default function App() {
     return (
       <div className="auth-shell">
         <main className="screen auth-screen">
-          <section className="auth-card">
-            <span className="auth-brand-eyebrow">SAHASRAKSHA</span>
-            <h1>Loading Session</h1>
+          <div className="loading-state-card">
+            <div className="loading-spinner" />
             <p>Checking secure telemetry access...</p>
-          </section>
+          </div>
         </main>
       </div>
     );

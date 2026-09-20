@@ -5,6 +5,10 @@ from app.services import alert_service, station_service
 
 router = APIRouter(tags=["alerts"])
 
+@router.post("/alerts/resolve-all", status_code=status.HTTP_200_OK)
+def resolve_all_alerts() -> dict:
+    count = alert_service.resolve_all_open_alerts()
+    return {"resolved": count}
 
 @router.get("/alerts", response_model=list[Alert], status_code=status.HTTP_200_OK)
 def list_alerts() -> list[Alert]:
