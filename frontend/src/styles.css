@@ -1162,6 +1162,48 @@ button {
   border-color: var(--status-danger-border);
 }
 
+/* Phone-width navbar: .navbar-container already wraps at <=1024px, but
+   .nav-actions itself (theme toggle + live indicator + user cluster +
+   sign out, all in one unwrapped row) stayed wide enough on its own to
+   force horizontal scroll on the whole page at ~390px. Let it wrap too,
+   and drop the purely decorative bits (live-indicator label, theme-toggle
+   label, email/role text) that duplicate information already shown by an
+   icon, rather than trying to shrink everything to fit on one line. */
+@media (max-width: 640px) {
+  .navbar-container {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .nav-menu {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    order: 3;
+  }
+
+  .nav-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .nav-theme-toggle .nav-theme-text,
+  .nav-live-indicator .live-indicator-text,
+  .user-info-text {
+    display: none;
+  }
+
+  .nav-user-cluster {
+    padding-left: 8px;
+    gap: 6px;
+  }
+}
+
 /* ==========================================================================
    Page Headers & Control Strips
    ========================================================================== */
@@ -1522,6 +1564,15 @@ button {
   display: grid;
   grid-template-columns: 1.55fr 1fr;
   gap: 22px;
+}
+
+/* Grid items default to min-width:auto, so a wide-enough descendant (the
+   Leaflet map, the hourly bar chart) forces its 1fr track to grow past the
+   viewport instead of shrinking to it -- this was the actual source of the
+   84px page-wide horizontal overflow at phone width (the navbar's own
+   overflow, fixed separately below, was a second, unrelated issue). */
+.dashboard-dual-pane > * {
+  min-width: 0;
 }
 
 @media (max-width: 1200px) {
@@ -2866,6 +2917,25 @@ button {
   box-shadow: 0 1px 3px rgba(28, 25, 23, 0.08);
   border: 1px solid var(--brand-border);
   font-weight: 700;
+}
+
+/* The Dashboard map pane's 5-way filter (Health/Temperature/Humidity/
+   Pressure/Quality) doesn't fit in one row under ~420px. Rather than
+   wrapping it into a ragged multi-line pill cluster, let it scroll
+   horizontally within its own box -- this was the last remaining source
+   of page-level horizontal overflow at phone width, since an unclamped
+   flex row here was wide enough to push the whole page wider than the
+   viewport instead of just scrolling internally. */
+@media (max-width: 640px) {
+  .filter-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter-tabs button {
+    flex-shrink: 0;
+  }
 }
 
 /* ==========================================================================
