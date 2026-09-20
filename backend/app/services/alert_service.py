@@ -200,16 +200,22 @@ def save_verdict_and_create_alert(
         db.flush()
 
         if verdict.flag == 1:
-            db.add(
-                AlertModel(
-                    station_id=reading.station_id,
-                    reading_id=db_reading.id,
-                    anomaly_verdict_id=db_verdict.id,
-                    severity=str(verdict.severity),
-                    message=verdict.reason.value,
-                    status=AlertStatus.OPEN.value,
-                )
+            existing_open_alert = db.scalar(
+                select(AlertModel)
+                .where(AlertModel.station_id == reading.station_id)
+                .where(AlertModel.status == AlertStatus.OPEN.value)
             )
+            if existing_open_alert is None:
+                db.add(
+                    AlertModel(
+                        station_id=reading.station_id,
+                        reading_id=db_reading.id,
+                        anomaly_verdict_id=db_verdict.id,
+                        severity=str(verdict.severity),
+                        message=verdict.reason.value,
+                        status=AlertStatus.OPEN.value,
+                    )
+                )
 
         station_service.update_station_from_verdict(
             reading.station_id,
@@ -280,4 +286,17 @@ def update_alert_status(alert_id: int, status: AlertStatus) -> Alert | None:
         db.commit()
         db.refresh(alert)
         return _to_alert(alert)
+
+def resolve_all_open_alerts() -> int:
+    """One-off cleanup: bulk-resolve every currently open alert. Needed
+    once, right after the per-station dedup fix lands, to clear the
+    backlog the un-deduped keepalive fault injection built up."""
+    with SessionLocal() as db:
+        result = db.execute(
+            AlertModel.__table__.update()
+            .where(AlertModel.status == AlertStatus.OPEN.value)
+            .values(status=AlertStatus.RESOLVED.value, resolved_at=_as_db_datetime(datetime.now(timezone.utc)))
+        )
+        db.commit()
+        return result.rowcount
 
