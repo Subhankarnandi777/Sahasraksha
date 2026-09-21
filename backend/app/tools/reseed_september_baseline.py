@@ -114,6 +114,18 @@ PURGE_CHANNELS = {
     "RH": "humidity_pct",
 }
 
+# The real bulk-imported archive (ml/data/sahasraksha_big_export.csv.gz)
+# contains ONLY dates in 2020-2024 -- confirmed by scanning every row's
+# year. Real weather has far more variation across those five years than
+# in any one 48-hour reseed window, so a value-only bounds check applied
+# to that archive would flag genuine seasonal extremes as "implausible"
+# and delete real historical data. A reading can only be pre-fix keepalive
+# drift if it was written by live ingestion, which stamps recorded_at with
+# the actual wall-clock time -- i.e. 2025 or later. This cutoff is what
+# actually separates "real archived history" from "live-fed data" in this
+# database; the purge must never look at anything before it.
+PURGE_NOT_BEFORE = datetime(2025, 1, 1, tzinfo=timezone.utc)
+
 # Confirmed against the full 5-year archive to have zero clean readings.
 # Left unseeded on purpose -- see module docstring.
 KNOWN_UNSEEDABLE_STATIONS = {"42875099999"}
@@ -157,8 +169,16 @@ def _purge_implausible(db, windows: dict, dry_run: bool) -> tuple[int, int, int,
     computed from fabricated values, so leaving them would keep false
     alarms on the board. Rows are removed in foreign-key order:
     WorkOrder -> Alert -> AnomalyVerdict -> WeatherReading.
+
+    Scope is restricted to readings recorded_at >= PURGE_NOT_BEFORE. This
+    is deliberately a hard date cutoff, not just a value check: the value
+    bounds alone cannot distinguish a real historical extreme from
+    keepalive drift, but the date can -- the real archive never contains a
+    2025+ timestamp, so anything in that range was written by live
+    ingestion and is fair game for the value check.
     """
     doomed_reading_ids = []
+    cutoff = _as_db_datetime(PURGE_NOT_BEFORE)
 
     for station_id, points in windows.items():
         bounds = _plausible_bounds(points)
@@ -167,7 +187,10 @@ def _purge_implausible(db, windows: dict, dry_run: bool) -> tuple[int, int, int,
 
         readings = (
             db.query(WeatherReadingModel)
-            .filter(WeatherReadingModel.station_id == station_id)
+            .filter(
+                WeatherReadingModel.station_id == station_id,
+                WeatherReadingModel.recorded_at >= cutoff,
+            )
             .all()
         )
         for reading in readings:
@@ -232,11 +255,13 @@ def main() -> None:
         "--purge-implausible",
         action="store_true",
         help=(
-            "Also delete readings that fall more than "
-            f"{PURGE_MARGIN:g} units outside the station's own real observed range, "
-            "along with the verdicts/alerts/work orders derived from them. "
-            "Use this once after deploying the keepalive drift fix to clear "
-            "values the pre-fix feed had already drifted into the database."
+            f"Also delete readings recorded on or after {PURGE_NOT_BEFORE.date()} "
+            f"(the earliest a live-fed reading could exist -- the real archive is "
+            f"only ever 2020-2024) that fall more than {PURGE_MARGIN:g} units outside "
+            "the station's own real observed range, along with the "
+            "verdicts/alerts/work orders derived from them. Use this once after "
+            "deploying the keepalive drift fix to clear values the pre-fix feed "
+            "had already drifted into the database."
         ),
     )
     args = parser.parse_args()
