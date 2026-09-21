@@ -46,7 +46,14 @@ function hourlyAlertCounts(alerts) {
   return buckets;
 }
 
-export default function Dashboard({ health, stations, openAlerts, timeseries, loading, error }) {
+export default function Dashboard({
+  health,
+  stations,
+  openAlerts,
+  networkTimeseries,
+  loading,
+  error
+}) {
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoStatus, setDemoStatus] = useState(null);
 
@@ -79,7 +86,17 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
   const networkHealth = scoredStations.length
     ? scoredStations.reduce((sum, station) => sum + Number(station.health), 0) / scoredStations.length
     : 0;
-  const chartValues = timeseries.map((row) => row.T).filter((value) => value !== null);
+  // Network-wide hourly medians, NOT one station's raw trace. The live
+  // feed deliberately injects transient anomalies into individual
+  // stations so the detector has something real to catch; plotting a
+  // single station here meant the headline chart read an impossible
+  // "Min: 10.0" for an Indian September whenever that station happened
+  // to be mid-injection -- and made the chart's own "Network" title an
+  // overclaim. A median across ~60 stations barely moves for one
+  // outlier, while a genuine network-wide shift still shows.
+  const chartValues = (networkTimeseries || [])
+    .map((row) => row.T)
+    .filter((value) => value !== null && value !== undefined);
   const hourlyAlerts = hourlyAlertCounts(openAlerts);
 
   // The dataset this demo replays is real archival IMD/NOAA-ISD station

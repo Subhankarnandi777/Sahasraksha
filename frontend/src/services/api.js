@@ -77,6 +77,17 @@ export function getStationTimeseries(stationId) {
   return request(`/stations/${encodeURIComponent(stationId)}/timeseries?${query}`);
 }
 
+// Hourly median across every trusted station, for the dashboard's
+// network-wide ambient chart. Deliberately NOT one station's trace: the
+// live feed injects transient demo anomalies, and a single station
+// mid-injection must not be able to drag a network-wide figure to a
+// physically impossible value.
+export function getNetworkTimeseries() {
+  const from = new Date(Date.now() - TIMESERIES_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString();
+  const query = new URLSearchParams({ from }).toString();
+  return request(`/readings/network/timeseries?${query}`);
+}
+
 export function getStationAlerts(stationId) {
   return request(`/stations/${encodeURIComponent(stationId)}/alerts`);
 }

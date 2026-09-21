@@ -1,10 +1,30 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status
+﻿from datetime import datetime
 
-from app.schemas import AnomalyVerdict, WeatherReading
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from app.schemas import AnomalyVerdict, TimeSeriesRow, WeatherReading
 from app.services.anomaly_detector import AnomalyDetector, get_anomaly_detector
 from app.services import alert_service, reading_service, station_service
 
 router = APIRouter(prefix="/readings", tags=["readings"])
+
+
+@router.get(
+    "/network/timeseries",
+    response_model=list[TimeSeriesRow],
+    status_code=status.HTTP_200_OK,
+)
+def list_network_timeseries(
+    from_: datetime | None = Query(None, alias="from"),
+    to: datetime | None = None,
+) -> list[TimeSeriesRow]:
+    """Hourly median across the whole network.
+
+    Backs the dashboard's "Ambient Network Temperature Oscillation" chart,
+    which is network-wide by name and now by behaviour too -- see
+    reading_service.list_network_timeseries for why the median matters.
+    """
+    return reading_service.list_network_timeseries(from_, to)
 
 
 @router.post("", response_model=WeatherReading, status_code=status.HTTP_201_CREATED)

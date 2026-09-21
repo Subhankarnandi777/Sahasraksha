@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getAlerts,
   getHealth,
+  getNetworkTimeseries,
   getStationTimeseries,
   getStationVerdicts,
   getStations
@@ -12,6 +13,7 @@ let memoryCache = {
   health: null,
   stations: null,
   alerts: null,
+  networkTimeseries: null,
   timeseries: {},
   verdicts: {},
   lastFetched: 0
@@ -21,6 +23,11 @@ export default function useSahasrakshaData(routeStationId) {
   const [health, setHealth] = useState(memoryCache.health);
   const [stations, setStations] = useState(memoryCache.stations || []);
   const [alerts, setAlerts] = useState(memoryCache.alerts || []);
+  // Network-wide hourly medians, independent of whichever station is
+  // selected -- this is what the dashboard's ambient chart plots.
+  const [networkTimeseries, setNetworkTimeseries] = useState(
+    memoryCache.networkTimeseries || []
+  );
   const [timeseries, setTimeseries] = useState([]);
   const [verdicts, setVerdicts] = useState([]);
   const [loading, setLoading] = useState(!memoryCache.stations);
@@ -53,11 +60,13 @@ export default function useSahasrakshaData(routeStationId) {
     setError("");
 
     try {
-      // Single fast parallel fetch: Health, Stations, and All Alerts in 1 batch
-      const [healthData, stationData, alertData] = await Promise.all([
+      // Single fast parallel fetch: Health, Stations, All Alerts and the
+      // network-wide ambient series in 1 batch
+      const [healthData, stationData, alertData, networkSeries] = await Promise.all([
         getHealth().catch(() => null),
         getStations().catch(() => []),
-        getAlerts().catch(() => [])
+        getAlerts().catch(() => []),
+        getNetworkTimeseries().catch(() => [])
       ]);
 
       if (healthData) {
@@ -72,6 +81,10 @@ export default function useSahasrakshaData(routeStationId) {
         const sorted = (alertData || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         setAlerts(sorted);
         memoryCache.alerts = sorted;
+      }
+      if (networkSeries && networkSeries.length > 0) {
+        setNetworkTimeseries(networkSeries);
+        memoryCache.networkTimeseries = networkSeries;
       }
 
       memoryCache.lastFetched = Date.now();
@@ -131,6 +144,7 @@ export default function useSahasrakshaData(routeStationId) {
     openAlerts: alerts.filter((alert) => alert.status === "open"),
     selectedStation,
     selectedStationId,
+    networkTimeseries,
     timeseries,
     verdicts,
     loading,
