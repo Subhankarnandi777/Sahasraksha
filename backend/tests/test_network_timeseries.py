@@ -23,8 +23,11 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
+from fastapi.testclient import TestClient
+
 from app.db.database import SessionLocal, init_db
 from app.db.models import Station, WeatherReading
+from app.main import app
 from app.services.reading_service import list_network_timeseries
 
 # This series aggregates across EVERY station in the database, so these
@@ -179,6 +182,36 @@ class NetworkTimeseriesTests(unittest.TestCase):
         self.assertAlmostEqual(rows[0].T, 24.0, places=1)
         self.assertAlmostEqual(rows[1].T, 30.0, places=1)
         self.assertLess(rows[0].timestamp, rows[1].timestamp)
+
+    def test_the_exact_url_the_frontend_calls_is_served(self) -> None:
+        """Guards the frontend/backend contract, not just the maths.
+
+        Every other test in this file calls the service function directly,
+        which cannot catch a wrong route path or a router-prefix mistake --
+        and that failure mode is invisible in the UI: api.js swallows the
+        error (`.catch(() => [])`), so a 404 here renders as a permanently
+        empty "Awaiting telemetry frames..." chart rather than an error.
+        This asserts the literal URL and query-parameter spelling that
+        frontend/src/services/api.js#getNetworkTimeseries builds.
+        """
+        with SessionLocal() as db:
+            for station_id in self.station_ids:
+                self._add(db, station_id, BASE, 28.0)
+            db.commit()
+
+        from_time, to_time = self._window()
+        response = TestClient(app).get(
+            "/readings/network/timeseries",
+            params={"from": from_time.isoformat(), "to": to_time.isoformat()},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload), 1)
+        # The chart reads row.T off each entry; the key must survive
+        # serialization exactly as the frontend spells it.
+        self.assertIn("T", payload[0])
+        self.assertAlmostEqual(payload[0]["T"], 28.0, places=1)
 
     def test_from_bound_is_respected(self) -> None:
         """The frontend asks for a 72-hour window; older readings must
