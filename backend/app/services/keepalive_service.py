@@ -11,8 +11,44 @@ inbound traffic.
 This reuses that same requirement to solve two problems with one
 mechanism: it keeps the service awake, AND it keeps real, fresh data
 flowing through the real /ingest endpoint automatically, so the live
-dashboard never sits static on historical data waiting for someone to
-manually run a script.
+dashboard never sits static waiting for someone to manually run a script.
+
+Where the values come from
+--------------------------
+Each tick's value for a station is read from that station's REAL archived
+hourly observations (app/tools/data/september_baseline_windows.json,
+genuine NOAA-ISD/IMD data -- the same file the reseed tool uses), indexed
+by the current hour of day so the diurnal cycle lines up with the actual
+clock. A small amount of noise is layered on so consecutive ticks within
+the same hour aren't byte-identical (an exact flatline would itself trip
+the frozen-sensor detector).
+
+This replaced an unanchored random walk, which was the root cause of the
+network drifting into physically impossible readings. The old loop
+carried a running value forward tick to tick, and its demo anomaly
+injection PERMANENTLY displaced that running value:
+
+    vals[ch] = _clamp(vals[ch] + random.choice([-1, 1]) * random.uniform(9, 14), ch)
+
+Nothing ever brought it back. Each injection shifted the baseline by up to
+14 units and the next tick's walk simply continued from the displaced
+figure, so over hours a station staggered an unbounded ±9-14 per event
+until it hit the outer BOUNDS clamp and sat there. Observed live on
+2026-09-20: station 42111099999 (Dehradun) held ~0.0C for over 24
+continuous hours in September. Worse, because it then sat *stably* at the
+wrong value, the change-based detector saw nothing changing and kept
+reporting the station as OK -- an impossible reading that looked healthy.
+
+Driving each tick from real archived data instead means a station's value
+is recomputed from scratch every tick rather than accumulated, so it
+cannot drift, and an injected anomaly can no longer poison everything
+that follows it.
+
+Demo anomalies still happen -- that's the point of this mechanism, it
+gives the detector something genuine to catch -- but they are now
+TRANSIENT: an offset is applied for a few ticks and then released, so the
+station spikes, gets flagged, and recovers. That is both a better
+demonstration (detection AND recovery) and a bounded one.
 
 Same warmup + anomaly logic already verified in live_feed_simulator.py,
 condensed to run as a background thread inside the deployed backend
@@ -24,6 +60,7 @@ import random
 import threading
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib import request as urllib_request
 from urllib.error import URLError
 
@@ -34,8 +71,33 @@ FOCUS_COUNT = int(os.getenv("LIVE_KEEPALIVE_STATIONS", "4"))
 WARMUP_TICKS = 6
 ANOMALY_EVERY = int(os.getenv("LIVE_KEEPALIVE_ANOMALY_EVERY", "12"))
 
+# How many ticks an injected step anomaly stays applied before the station
+# recovers to its real value. Long enough for the detector to see it and
+# raise an alert, short enough that the station doesn't sit misreporting.
+ANOMALY_TICKS = int(os.getenv("LIVE_KEEPALIVE_ANOMALY_TICKS", "3"))
+FROZEN_TICKS = 9
+
 NOISE = {"T": 0.15, "P": 0.05, "RH": 0.6}
 BOUNDS = {"T": (-40.0, 55.0), "P": (850.0, 1080.0), "RH": (0.0, 100.0)}
+CHANNELS = ("T", "P", "RH")
+
+REAL_WINDOWS_PATH = (
+    Path(__file__).resolve().parents[1] / "tools" / "data" / "september_baseline_windows.json"
+)
+
+
+def _load_real_windows():
+    """Real archived hourly observations, keyed by station_id.
+
+    Returns {} if the file is missing rather than raising -- the keepalive
+    is a demo/uptime convenience and must never take the service down.
+    """
+    try:
+        with open(REAL_WINDOWS_PATH, encoding="utf-8") as handle:
+            return json.load(handle)
+    except Exception as exc:
+        print(f"[keepalive] could not load real observation windows: {exc}")
+        return {}
 
 
 def _http_json(method, path, payload=None, timeout=15):
@@ -54,6 +116,83 @@ def _clamp(value, channel):
     return max(lo, min(hi, value))
 
 
+def _real_value_for_now(window):
+    """Pick the real observation matching the current hour of day.
+
+    Indexing by hour (rather than walking a cursor forward) keeps the
+    diurnal shape aligned with the actual clock and, more importantly,
+    makes each tick's value a pure function of real data and the current
+    time -- there is no carried-forward state that could accumulate drift.
+    """
+    hour = datetime.now(timezone.utc).hour
+    return window[hour % len(window)]
+
+
+class LiveFeedState:
+    """Per-station demo-feed state.
+
+    Extracted from the loop so the no-drift invariant is directly
+    testable: next_values() is the whole of the per-tick value decision,
+    and a test can call it for thousands of ticks and assert the output
+    never wanders away from the real observations (see
+    tests/test_keepalive_live_feed.py).
+    """
+
+    def __init__(self):
+        self.ticks_seen = {}
+        self.frozen_left = {}
+        self.anomaly_left = {}
+        self.anomaly_offset = {}
+        self.last_sent = {}
+
+    def next_values(self, station_id, window, tick):
+        self.ticks_seen[station_id] = self.ticks_seen.get(station_id, 0) + 1
+        warmed = self.ticks_seen[station_id] > WARMUP_TICKS
+
+        # Always recomputed from real data + current time. No value is
+        # ever carried forward, so nothing accumulates.
+        real = _real_value_for_now(window)
+        vals = {
+            channel: _clamp(real[channel] + random.gauss(0, NOISE[channel]), channel)
+            for channel in CHANNELS
+        }
+
+        if self.frozen_left.get(station_id, 0) > 0:
+            # Flatline demo: republish the exact previous value so the
+            # frozen-sensor detector has something to catch. Bounded by
+            # FROZEN_TICKS, then recovers.
+            self.frozen_left[station_id] -= 1
+            vals = self.last_sent.get(station_id, vals)
+        elif self.anomaly_left.get(station_id, 0) > 0:
+            # Step anomaly still in effect -- applied as an offset ON TOP
+            # of the real value, never folded into it, so releasing it
+            # restores the real value exactly.
+            self.anomaly_left[station_id] -= 1
+            offset = self.anomaly_offset.get(station_id, {})
+            vals = {
+                channel: _clamp(vals[channel] + offset.get(channel, 0.0), channel)
+                for channel in CHANNELS
+            }
+            if self.anomaly_left[station_id] == 0:
+                self.anomaly_offset.pop(station_id, None)
+                print(f"[keepalive] station {station_id} anomaly released, back to real values")
+        elif warmed and tick % ANOMALY_EVERY == 0:
+            if random.random() < 0.5:
+                channel = random.choice(list(CHANNELS))
+                magnitude = random.choice([-1, 1]) * random.uniform(9, 14)
+                self.anomaly_offset[station_id] = {channel: magnitude}
+                self.anomaly_left[station_id] = ANOMALY_TICKS
+                vals[channel] = _clamp(vals[channel] + magnitude, channel)
+                print(f"[keepalive] station {station_id} step anomaly injected on "
+                      f"{channel} ({magnitude:+.1f}) for {ANOMALY_TICKS} ticks")
+            else:
+                self.frozen_left[station_id] = FROZEN_TICKS
+                vals = self.last_sent.get(station_id, vals)
+
+        self.last_sent[station_id] = vals
+        return vals
+
+
 def _keepalive_loop():
     # Brief grace period before the first self-ping: Render's own external
     # routing can take a few seconds to finish registering the service as
@@ -61,7 +200,9 @@ def _keepalive_loop():
     # but avoidable 502 on the very first tick.
     time.sleep(15)
 
-    last_values, ticks_seen, frozen_left = {}, {}, {}
+    real_windows = _load_real_windows()
+
+    state = LiveFeedState()
     stations, focus, tick = [], [], 0
 
     while True:
@@ -71,11 +212,28 @@ def _keepalive_loop():
                 if not stations:
                     time.sleep(TICK_SECONDS)
                     continue
-                focus = random.sample(stations, min(FOCUS_COUNT, len(stations)))
+                # Only stations we hold real observations for are eligible.
+                # A station with no real archived data (e.g. 42875099999,
+                # which has none anywhere in the 5-year archive) is left
+                # alone rather than fed invented numbers.
+                eligible = [s for s in stations if s.get("station_id") in real_windows]
+                if not eligible:
+                    print("[keepalive] no stations have real observation windows -- "
+                          "self-ping only, no data will be published")
+                focus = random.sample(eligible, min(FOCUS_COUNT, len(eligible)))
                 print(f"[keepalive] live feed focus set: "
                       f"{[s['station_id'] for s in focus]}")
 
             tick += 1
+            if not focus:
+                # Still self-ping so Render doesn't sleep the service.
+                try:
+                    _http_json("GET", "/health")
+                except Exception as exc:
+                    print(f"[keepalive] self-ping failed: {exc}")
+                time.sleep(TICK_SECONDS)
+                continue
+
             # Update every focus station within this same tick, not just one
             # per tick. The old one-station-per-tick rotation meant a wider
             # focus set made EACH station's own refresh cadence slower --
@@ -87,30 +245,11 @@ def _keepalive_loop():
             for station in focus:
                 sid = station["station_id"]
                 try:
-                    seed = {
-                        "T": station.get("latest_temperature") or 25.0,
-                        "P": station.get("latest_pressure") or 1005.0,
-                        "RH": station.get("latest_humidity") or 60.0,
-                    }
-                    prev = last_values.get(sid, seed)
-                    ticks_seen[sid] = ticks_seen.get(sid, 0) + 1
-                    warmed = ticks_seen[sid] > WARMUP_TICKS
+                    window = real_windows.get(sid)
+                    if not window:
+                        continue
 
-                    if frozen_left.get(sid, 0) > 0:
-                        frozen_left[sid] -= 1
-                        vals = prev
-                    elif warmed and tick % ANOMALY_EVERY == 0:
-                        if random.random() < 0.5:
-                            ch = random.choice(["T", "P", "RH"])
-                            vals = dict(prev)
-                            vals[ch] = _clamp(vals[ch] + random.choice([-1, 1]) * random.uniform(9, 14), ch)
-                        else:
-                            frozen_left[sid] = 9
-                            vals = prev
-                    else:
-                        vals = {c: _clamp(prev[c] + random.gauss(0, NOISE[c]), c) for c in ["T", "P", "RH"]}
-
-                    last_values[sid] = vals
+                    vals = state.next_values(sid, window, tick)
                     _http_json("POST", "/ingest", {
                         "station_id": sid,
                         "timestamp": datetime.now(timezone.utc).isoformat(),

@@ -90,9 +90,29 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.db.database import IS_SQLITE, SessionLocal, init_db
-from app.db.models import Alert, AnomalyVerdict, Station, WeatherReading as WeatherReadingModel
+from app.db.models import (
+    Alert,
+    AnomalyVerdict,
+    Station,
+    WeatherReading as WeatherReadingModel,
+    WorkOrder,
+)
 
 WINDOWS_PATH = Path(__file__).resolve().parent / "data" / "september_baseline_windows.json"
+
+# --purge-implausible margin. The live-feed keepalive deliberately injects
+# demo anomalies of at most 14 units (see keepalive_service.ANOMALY magnitude,
+# random.uniform(9, 14)), so a reading within 15 units of a station's own real
+# observed range is explainable as one of those and is left alone. Anything
+# beyond that cannot be a single injected anomaly -- it's accumulated drift
+# from the pre-fix keepalive, which carried its value forward and folded each
+# anomaly permanently into it.
+PURGE_MARGIN = 15.0
+PURGE_CHANNELS = {
+    "T": "temperature_c",
+    "P": "pressure_hpa",
+    "RH": "humidity_pct",
+}
 
 # Confirmed against the full 5-year archive to have zero clean readings.
 # Left unseeded on purpose -- see module docstring.
@@ -113,12 +133,111 @@ def load_windows() -> dict:
         return json.load(handle)
 
 
+def _plausible_bounds(points: list) -> dict:
+    """Per-channel bounds for a station, derived from its OWN real data.
+
+    No climatology is hardcoded -- the acceptable band is whatever that
+    station actually recorded in the archive, widened by PURGE_MARGIN to
+    leave room for a legitimately injected demo anomaly.
+    """
+    bounds = {}
+    for channel in PURGE_CHANNELS:
+        values = [point[channel] for point in points if point.get(channel) is not None]
+        if not values:
+            continue
+        bounds[channel] = (min(values) - PURGE_MARGIN, max(values) + PURGE_MARGIN)
+    return bounds
+
+
+def _purge_implausible(db, windows: dict, dry_run: bool) -> tuple[int, int, int, int]:
+    """Delete readings that can only be pre-fix keepalive drift, plus the
+    verdicts/alerts/work orders derived from them.
+
+    Those downstream rows are not real detections of anything -- they were
+    computed from fabricated values, so leaving them would keep false
+    alarms on the board. Rows are removed in foreign-key order:
+    WorkOrder -> Alert -> AnomalyVerdict -> WeatherReading.
+    """
+    doomed_reading_ids = []
+
+    for station_id, points in windows.items():
+        bounds = _plausible_bounds(points)
+        if not bounds:
+            continue
+
+        readings = (
+            db.query(WeatherReadingModel)
+            .filter(WeatherReadingModel.station_id == station_id)
+            .all()
+        )
+        for reading in readings:
+            for channel, column in PURGE_CHANNELS.items():
+                if channel not in bounds:
+                    continue
+                value = getattr(reading, column)
+                if value is None:
+                    continue
+                low, high = bounds[channel]
+                if value < low or value > high:
+                    doomed_reading_ids.append(reading.id)
+                    break
+
+    if not doomed_reading_ids:
+        return 0, 0, 0, 0
+
+    verdict_ids = [
+        row[0]
+        for row in db.query(AnomalyVerdict.id)
+        .filter(AnomalyVerdict.reading_id.in_(doomed_reading_ids))
+        .all()
+    ]
+    alert_ids = [
+        row[0]
+        for row in db.query(Alert.id)
+        .filter(Alert.reading_id.in_(doomed_reading_ids))
+        .all()
+    ]
+    work_order_count = (
+        db.query(WorkOrder).filter(WorkOrder.alert_id.in_(alert_ids)).count()
+        if alert_ids
+        else 0
+    )
+
+    if not dry_run:
+        if alert_ids:
+            db.query(WorkOrder).filter(WorkOrder.alert_id.in_(alert_ids)).delete(
+                synchronize_session=False
+            )
+            db.query(Alert).filter(Alert.id.in_(alert_ids)).delete(synchronize_session=False)
+        if verdict_ids:
+            db.query(AnomalyVerdict).filter(AnomalyVerdict.id.in_(verdict_ids)).delete(
+                synchronize_session=False
+            )
+        db.query(WeatherReadingModel).filter(
+            WeatherReadingModel.id.in_(doomed_reading_ids)
+        ).delete(synchronize_session=False)
+        db.flush()
+
+    return len(doomed_reading_ids), len(verdict_ids), len(alert_ids), work_order_count
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print what would be written without touching the database.",
+    )
+    parser.add_argument(
+        "--purge-implausible",
+        action="store_true",
+        help=(
+            "Also delete readings that fall more than "
+            f"{PURGE_MARGIN:g} units outside the station's own real observed range, "
+            "along with the verdicts/alerts/work orders derived from them. "
+            "Use this once after deploying the keepalive drift fix to clear "
+            "values the pre-fix feed had already drifted into the database."
+        ),
     )
     args = parser.parse_args()
 
@@ -142,6 +261,18 @@ def main() -> None:
         )
         if short_windows:
             print(f"Shorter-than-usual real windows (used as-is, not padded): {short_windows}")
+
+        if args.purge_implausible:
+            init_db()
+            with SessionLocal() as db:
+                readings, verdicts, alerts, work_orders = _purge_implausible(
+                    db, windows, dry_run=True
+                )
+                db.rollback()
+            print(
+                f"\n--purge-implausible WOULD delete: {readings} reading(s), "
+                f"{verdicts} verdict(s), {alerts} alert(s), {work_orders} work order(s)."
+            )
         return
 
     init_db()
@@ -149,8 +280,15 @@ def main() -> None:
     now = datetime.now(timezone.utc)
     updated, missing, deleted_count, kept_referenced = [], [], 0, {}
 
+    purged = None
+
     with SessionLocal() as db:
         all_station_ids = {row[0] for row in db.query(Station.station_id).all()}
+
+        if args.purge_implausible:
+            # Runs BEFORE the fresh window is inserted, so the new real
+            # readings are never candidates for their own purge.
+            purged = _purge_implausible(db, windows, dry_run=False)
 
         for station_id, points in windows.items():
             station = db.get(Station, station_id)
@@ -202,6 +340,14 @@ def main() -> None:
         already_flagged_unseedable = all_station_ids & KNOWN_UNSEEDABLE_STATIONS
 
         db.commit()
+
+    if purged is not None:
+        readings, verdicts, alerts, work_orders = purged
+        print(
+            f"\nPurged {readings} implausible reading(s) (more than {PURGE_MARGIN:g} units "
+            f"outside the station's own real range), plus {verdicts} verdict(s), "
+            f"{alerts} alert(s) and {work_orders} work order(s) derived from them."
+        )
 
     print(f"\nUpdated {len(updated)} station(s) with a real hourly baseline window.")
     print(f"Deleted {deleted_count} unreferenced old (bad-baseline) reading row(s).")
