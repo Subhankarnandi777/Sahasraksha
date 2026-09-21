@@ -161,6 +161,72 @@ def _plausible_bounds(points: list) -> dict:
     return bounds
 
 
+def _diagnose_implausible(db, windows: dict, sample_limit: int = 8) -> dict:
+    """Read-only characterization of what --purge-implausible would catch.
+
+    _purge_implausible only ever reports a total count, which is not enough
+    to tell "this is a small handful of stations with genuine keepalive
+    drift" apart from "something about the bounds check itself is wrong and
+    it's catching real data everywhere". This walks the same candidate set
+    (recorded_at >= PURGE_NOT_BEFORE, outside the station's own real
+    observed range) and reports, per station, how many readings are
+    flagged and the earliest/latest recorded_at among them, plus a handful
+    of concrete sample rows (value vs. the bound it violated) so a human
+    can eyeball whether the flagged values look like genuine drift (e.g.
+    pinned near the outer clamp) or something more benign.
+
+    Never deletes anything -- this is purely a reporting pass, meant to be
+    run and read before deciding whether the real (non-dry-run) purge is
+    safe to run against a specific production database.
+    """
+    cutoff = _as_db_datetime(PURGE_NOT_BEFORE)
+    per_station: dict[str, dict] = {}
+    samples: list[dict] = []
+
+    for station_id, points in windows.items():
+        bounds = _plausible_bounds(points)
+        if not bounds:
+            continue
+
+        readings = (
+            db.query(WeatherReadingModel)
+            .filter(
+                WeatherReadingModel.station_id == station_id,
+                WeatherReadingModel.recorded_at >= cutoff,
+            )
+            .all()
+        )
+        for reading in readings:
+            for channel, column in PURGE_CHANNELS.items():
+                if channel not in bounds:
+                    continue
+                value = getattr(reading, column)
+                if value is None:
+                    continue
+                low, high = bounds[channel]
+                if value < low or value > high:
+                    entry = per_station.setdefault(
+                        station_id,
+                        {"count": 0, "earliest": reading.recorded_at, "latest": reading.recorded_at},
+                    )
+                    entry["count"] += 1
+                    entry["earliest"] = min(entry["earliest"], reading.recorded_at)
+                    entry["latest"] = max(entry["latest"], reading.recorded_at)
+                    if len(samples) < sample_limit:
+                        samples.append(
+                            {
+                                "station_id": station_id,
+                                "recorded_at": reading.recorded_at,
+                                "channel": channel,
+                                "value": value,
+                                "bounds": (low, high),
+                            }
+                        )
+                    break
+
+    return {"per_station": per_station, "samples": samples}
+
+
 def _purge_implausible(db, windows: dict, dry_run: bool) -> tuple[int, int, int, int]:
     """Delete readings that can only be pre-fix keepalive drift, plus the
     verdicts/alerts/work orders derived from them.
@@ -294,10 +360,37 @@ def main() -> None:
                     db, windows, dry_run=True
                 )
                 db.rollback()
+                diagnosis = _diagnose_implausible(db, windows)
+                db.rollback()
             print(
                 f"\n--purge-implausible WOULD delete: {readings} reading(s), "
                 f"{verdicts} verdict(s), {alerts} alert(s), {work_orders} work order(s)."
             )
+
+            per_station = diagnosis["per_station"]
+            if per_station:
+                print(
+                    f"\nBreakdown across {len(per_station)} station(s) "
+                    f"(top 15 by flagged-reading count):"
+                )
+                ranked = sorted(per_station.items(), key=lambda kv: kv[1]["count"], reverse=True)
+                for station_id, info in ranked[:15]:
+                    print(
+                        f"  {station_id}: {info['count']} flagged, "
+                        f"recorded_at {info['earliest']} -> {info['latest']}"
+                    )
+                if len(ranked) > 15:
+                    remaining = sum(info["count"] for _, info in ranked[15:])
+                    print(f"  ... and {len(ranked) - 15} more station(s), {remaining} more reading(s)")
+
+                print("\nSample flagged rows (value vs. the bound it violated):")
+                for sample in diagnosis["samples"]:
+                    low, high = sample["bounds"]
+                    print(
+                        f"  {sample['station_id']} @ {sample['recorded_at']}: "
+                        f"{sample['channel']}={sample['value']:.2f} "
+                        f"(plausible range [{low:.2f}, {high:.2f}])"
+                    )
         return
 
     init_db()

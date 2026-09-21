@@ -25,7 +25,11 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.db.database import SessionLocal, init_db
 from app.db.models import AnomalyVerdict, Station, WeatherReading
-from app.tools.reseed_september_baseline import PURGE_NOT_BEFORE, _purge_implausible
+from app.tools.reseed_september_baseline import (
+    PURGE_NOT_BEFORE,
+    _diagnose_implausible,
+    _purge_implausible,
+)
 
 
 class PurgeImplausibleDateScopeTests(unittest.TestCase):
@@ -140,6 +144,37 @@ class PurgeImplausibleDateScopeTests(unittest.TestCase):
 
             self.assertEqual(deleted, 1)
             self.assertIsNone(db.get(WeatherReading, reading_id))
+
+    def test_diagnose_reports_station_and_sample_without_deleting(self) -> None:
+        """The read-only diagnostic must characterize a flagged reading
+        (which station, when, by how much) without touching the database,
+        so it's safe to run against production before the real purge."""
+        with SessionLocal() as db:
+            reading = WeatherReading(
+                station_id=self.station_id,
+                recorded_at=PURGE_NOT_BEFORE + timedelta(days=5),
+                temperature_c=0.3,  # drifted value, live era
+                pressure_hpa=950.0,
+                humidity_pct=70.0,
+                flag=0,
+                amp_ratio_p=1.0,
+            )
+            db.add(reading)
+            db.commit()
+
+            report = _diagnose_implausible(db, self._windows())
+
+            self.assertIn(self.station_id, report["per_station"])
+            self.assertEqual(report["per_station"][self.station_id]["count"], 1)
+            self.assertEqual(len(report["samples"]), 1)
+            self.assertEqual(report["samples"][0]["channel"], "T")
+            self.assertAlmostEqual(report["samples"][0]["value"], 0.3)
+
+            # Nothing was deleted by the diagnostic pass.
+            still_there = db.query(WeatherReading).filter(
+                WeatherReading.station_id == self.station_id
+            ).count()
+            self.assertEqual(still_there, 1)
 
     def test_boundary_reading_exactly_at_cutoff_is_in_scope(self) -> None:
         """recorded_at == PURGE_NOT_BEFORE must be treated as live-era
