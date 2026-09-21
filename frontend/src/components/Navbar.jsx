@@ -33,6 +33,9 @@ export default function Navbar({ active = "dashboard", alertCount = 0 }) {
             <div className="brand-title-row">
               <span className="brand-title">SAHASRAKSHA</span>
               <span className="brand-tag">IMD</span>
+              <span className="brand-prototype-tag" title="Student-built submission for Smart India Hackathon 2026 (PS SIH26073) -- not an operational IMD system">
+                SIH 2026 Prototype
+              </span>
             </div>
             <span className="brand-sub">Atmospheric Sentinel • India Network</span>
           </div>
@@ -80,10 +83,11 @@ export default function Navbar({ active = "dashboard", alertCount = 0 }) {
             </span>
           </button>
 
-          {/* Live Sync Satellite Indicator */}
-          <div className="nav-live-indicator" title="Live INSAT-3DR Atmospheric Stream Connected">
+          {/* Live Station Network Indicator -- real IMD/NOAA-ISD station feed,
+              not a satellite integration we don't actually have */}
+          <div className="nav-live-indicator" title="Live automatic weather station network feed connected">
             <span className="live-radar-dot" />
-            <span className="live-indicator-text">LIVE • INSAT-3DR</span>
+            <span className="live-indicator-text">LIVE • Station Network</span>
           </div>
 
           {/* User Profile & Logout */}

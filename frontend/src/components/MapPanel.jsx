@@ -849,7 +849,7 @@ export default function MapPanel({
         <div className="apple-mini-hud">
           <span className="apple-hud-dot" />
           <span className="apple-hud-text">
-            <b>60 Synoptic Nodes</b> • INSAT-3DR Synced • 120 Hz Sentinel QC
+            <b>60 Synoptic Nodes</b> • Live Telemetry • Streaming Sentinel QC
           </span>
         </div>
       )}

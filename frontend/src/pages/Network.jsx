@@ -13,6 +13,14 @@ function markerStatusClass(status) {
 }
 
 export default function Network({ stations = [], selectedStation, selectedStationId, timeseries = [], verdicts = [], openAlerts = [], loading, error }) {
+  // Real network-average health, computed the same way Dashboard does --
+  // not a fixed "99.8%" that never moves regardless of what the network
+  // is actually reporting.
+  const scoredStations = stations.filter((station) => Number.isFinite(Number(station.health)));
+  const networkHealth = scoredStations.length
+    ? scoredStations.reduce((sum, station) => sum + Number(station.health), 0) / scoredStations.length
+    : 0;
+
   const [mode, setMode] = useState("health");
   const [region, setRegion] = useState("all");
   const [focusedId, setFocusedId] = useState(null);
@@ -134,13 +142,13 @@ export default function Network({ stations = [], selectedStation, selectedStatio
             <span className="net-metric-blip green" />
             <span><b>{stations.length}</b> Nodes Online</span>
           </div>
-          <div className="net-metric-pill" title="Subcontinental AI Harmonic QC Pass Rate">
+          <div className="net-metric-pill" title="Network-average station health score">
             <span className="net-metric-blip amber" />
-            <span><b>99.8%</b> QC Health</span>
+            <span><b>{percent(networkHealth, 1)}</b> QC Health</span>
           </div>
-          <div className="net-metric-pill" title="Geostationary Meteorological Satellite Sync">
+          <div className="net-metric-pill" title="Live automatic weather station network feed">
             <span className="net-metric-blip blue" />
-            <span><b>INSAT-3DR</b> Synced</span>
+            <span><b>Station Network</b> Synced</span>
           </div>
           <div className="net-metric-pill" title="RainViewer Live Doppler Cloud Stream Active">
             <span className="net-metric-blip cyan" />

@@ -68,7 +68,7 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
           {/* Real-time Telemetry Sensor Cards */}
           <div className="detail-section-title">
             <h2>Real-Time Meteorological Channels</h2>
-            <span>Synchronized with INSAT-3DR Atmospheric Stream</span>
+            <span>Live Automatic Weather Station Telemetry Channel</span>
           </div>
 
           <div className="telemetry-three-grid">

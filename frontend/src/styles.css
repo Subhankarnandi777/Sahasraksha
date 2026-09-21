@@ -961,6 +961,21 @@ button {
   letter-spacing: 0.04em;
 }
 
+/* Deliberately visible, not hidden fine print -- this is a student
+   competition prototype, not IMD's operational system, and the header is
+   the first place anyone (especially IMD/MoES themselves) will look. */
+.brand-prototype-tag {
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .brand-sub {
   font-size: 11px;
   color: var(--text-muted);
@@ -1327,6 +1342,13 @@ button {
   font-size: 14px;
   color: var(--text-muted);
   margin-top: 4px;
+}
+
+.dashboard-data-as-of {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  opacity: 0.85;
 }
 
 .dashboard-badge-cluster {
@@ -1726,6 +1748,13 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.priority-list-empty-state {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 14px 4px;
+  text-align: center;
 }
 
 .priority-station-row {

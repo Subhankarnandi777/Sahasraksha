@@ -3,7 +3,7 @@ import FilterTabs from "../components/FilterTabs.jsx";
 import MapPanel from "../components/MapPanel.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import Sparkline from "../components/Sparkline.jsx";
-import { isSilent, networkReferenceTime, percent, number, injectDemoAnomaly } from "../services/api.js";
+import { isSilent, networkReferenceTime, percent, number, timeAgo, injectDemoAnomaly } from "../services/api.js";
 import { useTheme } from "../services/theme.js";
 
 function countStatus(stations, status) {
@@ -80,9 +80,21 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
   const chartValues = timeseries.map((row) => row.T).filter((value) => value !== null);
   const hourlyAlerts = hourlyAlertCounts(openAlerts);
 
-  // Top attention stations (highest degradation or alerts)
+  // The dataset this demo replays is real archival IMD/NOAA-ISD station
+  // history, not a live wall-clock feed -- individual readings can (and do)
+  // sit months behind today's date. We show that honestly instead of
+  // implying every number on this page happened "just now": everything is
+  // relative to the network's OWN latest reading, matching the isSilent
+  // staleness check that already works this way elsewhere in the app.
+  const dataAsOf = networkReferenceTime(stations);
+
+  // Top attention stations (real degradation only). Padding this list with
+  // 0%-degradation stations just because we need 5 rows misrepresents a
+  // quiet network as having an active priority queue -- an empty state is
+  // more honest than a fake-looking ranked list.
   const priorityStations = useMemo(() => {
     return [...stations]
+      .filter((station) => Number(station.degradation || 0) > 0)
       .sort((a, b) => (Number(b.degradation || 0) - Number(a.degradation || 0)))
       .slice(0, 5);
   }, [stations]);
@@ -108,11 +120,14 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
           <p className="dashboard-subtitle">
             Autonomous anomaly surveillance across {total} synoptic weather stations
           </p>
+          <p className="dashboard-data-as-of" title="This demo replays real archival IMD/NOAA-ISD station history, timestamped to the network's own most recent reading -- not the browser's wall clock.">
+            Data as of {timeAgo(dataAsOf)} · {new Date(dataAsOf).toLocaleString()}
+          </p>
         </div>
         <div className="dashboard-badge-cluster">
           <div className="telemetry-pill">
             <span className="telemetry-live-dot" />
-            <span>Telemetry Pipeline: <b>Nominal (120 Hz)</b></span>
+            <span>Telemetry Pipeline: <b>Nominal (Real-Time Streaming)</b></span>
           </div>
           <a href="/alerts" className="alert-count-pill">
             <b>{openAlerts.length.toLocaleString()}</b> Active ML Flags
@@ -131,7 +146,7 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
         <div className="kpi-card hero-kpi">
           <div className="kpi-top-row">
             <span className="kpi-label">Network Sensor Synchrony</span>
-            <span className="kpi-tag-good">99.4% Stability</span>
+            <span className="kpi-tag-good">{loading ? "--" : percent(networkHealth, 1)} Stability</span>
           </div>
           <div className="kpi-big-value">
             {loading ? "--" : percent(networkHealth, 1)}
@@ -182,10 +197,10 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
         <div className="kpi-card">
           <div className="kpi-top-row">
             <span className="kpi-label">Field Work Orders</span>
-            <span className="kpi-tag-blue">8 Scheduled</span>
+            <span className="kpi-tag-blue">{health?.active_work_order_count ?? 0} Scheduled</span>
           </div>
           <div className="kpi-big-value text-indigo">
-            8
+            {health?.active_work_order_count ?? 0}
           </div>
           <div className="kpi-meta-text">
             <span>Automated technician calibration queue</span>
@@ -298,6 +313,11 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
               <a href="/stations" className="view-all-link">All Stations →</a>
             </div>
             <div className="priority-station-list">
+              {priorityStations.length === 0 ? (
+                <p className="priority-list-empty-state">
+                  No station is showing elevated degradation right now -- network nominal.
+                </p>
+              ) : null}
               {priorityStations.map((st) => {
                 const degPct = Math.round((Number(st.degradation) || 0) * 100);
                 return (
