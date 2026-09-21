@@ -16,12 +16,14 @@ function countSilent(stations) {
 }
 
 function hourlyAlertCounts(alerts) {
-  let referenceTime = 0;
-  for (const alert of alerts) {
-    const created = new Date(alert.created_at).getTime();
-    if (!Number.isNaN(created)) referenceTime = Math.max(referenceTime, created);
-  }
-  const now = referenceTime ? new Date(referenceTime) : new Date();
+  // Anchored to the real wall clock, not the latest alert's own
+  // created_at. Anchoring to the latest alert let an old batch of
+  // replayed/historical alerts silently relabel themselves as "the last
+  // 6 hours" just because nothing newer had happened yet -- which is
+  // exactly the kind of implied-live claim this dashboard shouldn't make.
+  // A genuinely quiet real last 6 hours should show as empty, not get
+  // backfilled with whenever the last event happened to occur.
+  const now = new Date();
 
   const buckets = Array.from({ length: 6 }, (_, index) => {
     const date = new Date(now);
@@ -120,8 +122,13 @@ export default function Dashboard({ health, stations, openAlerts, timeseries, lo
           <p className="dashboard-subtitle">
             Autonomous anomaly surveillance across {total} synoptic weather stations
           </p>
-          <p className="dashboard-data-as-of" title="This demo replays real archival IMD/NOAA-ISD station history, timestamped to the network's own most recent reading -- not the browser's wall clock.">
+          <p className="dashboard-data-as-of" title="Timestamped to the network's own most recent reading, not assumed to be the browser's wall clock -- this stays accurate whether every station is currently live or the service just woke from an idle period.">
             Data as of {timeAgo(dataAsOf)} · {new Date(dataAsOf).toLocaleString()}
+            {silent > 0 ? (
+              <span className="dashboard-silent-flag">
+                {" "}· {silent} station{silent === 1 ? "" : "s"} silent 6h+
+              </span>
+            ) : null}
           </p>
         </div>
         <div className="dashboard-badge-cluster">

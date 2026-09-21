@@ -1351,6 +1351,12 @@ button {
   opacity: 0.85;
 }
 
+.dashboard-silent-flag {
+  color: var(--warn-color, #b45309);
+  font-weight: 600;
+  opacity: 1;
+}
+
 .dashboard-badge-cluster {
   display: flex;
   align-items: center;

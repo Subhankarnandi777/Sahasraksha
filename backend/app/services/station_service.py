@@ -264,6 +264,14 @@ def update_station_from_verdict(
             return False
 
         contract_degradation = _contract_degradation(degradation)
+        # Degradation represents accumulated sensor/calibration wear, not
+        # "how anomalous is this one instant" -- a single live reading that
+        # happens to look normal (the common case for the keepalive/demo
+        # feed) must not silently erase drift the detector had already
+        # found on an earlier reading. There is currently no explicit
+        # "service completed, reset this station" action anywhere in the
+        # codebase, so until one exists, degradation only ratchets up.
+        contract_degradation = max(contract_degradation, station.degradation or 0.0)
         station.health_score = max(1.0 - contract_degradation, 0.0)
         station.degradation = contract_degradation
         station.status = _status_from_verdict(

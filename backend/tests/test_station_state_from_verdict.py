@@ -37,8 +37,8 @@ class StationStateFromVerdictTests(unittest.TestCase):
                     lon=73.86,
                     health="good",
                     status="online",
-                    health_score=0.99,
-                    degradation=0.01,
+                    health_score=1.0,
+                    degradation=0.0,
                     trend_per_day=0.0,
                     days_to_threshold=None,
                     high_conf_alerts=0,
@@ -50,8 +50,8 @@ class StationStateFromVerdictTests(unittest.TestCase):
             else:
                 station.health = "good"
                 station.status = "online"
-                station.health_score = 0.99
-                station.degradation = 0.01
+                station.health_score = 1.0
+                station.degradation = 0.0
                 station.trend_per_day = 0.0
                 station.days_to_threshold = None
                 station.high_conf_alerts = 0
@@ -194,6 +194,47 @@ class StationStateFromVerdictTests(unittest.TestCase):
         self.assertAlmostEqual(station["health"], 1 - response.json()["degradation"])
         self.assertAlmostEqual(station["degradation"], response.json()["degradation"])
         self.assertEqual(station["last_seen"].replace("+00:00", "Z"), timestamp.isoformat().replace("+00:00", "Z"))
+
+    def test_degradation_does_not_reset_on_a_later_normal_reading(self) -> None:
+        # Degradation represents accumulated sensor/calibration wear, not
+        # "how anomalous is this one instant". A station that a historical
+        # ML pass has already flagged as degraded must not have that drift
+        # silently erased just because the next live reading (e.g. from the
+        # keepalive/demo feed) happens to look normal on its own.
+        station_id, first_reading_time = self._save_verdict(
+            "MONOTONIC",
+            AnomalyVerdict(
+                flag=1,
+                reason=AnomalyReason.DEGRADING,
+                severity=0.6,
+                confidence=0.8,
+                degradation=0.35,
+                evidence=[["spatial_z_P", 3.5]],
+            ),
+        )
+
+        station = self._station_summary(station_id)
+        self.assertAlmostEqual(station["degradation"], 0.35)
+
+        later_reading_time = first_reading_time + timedelta(hours=1)
+        alert_service.save_verdict_and_create_alert(
+            self._reading(station_id, later_reading_time),
+            AnomalyVerdict(
+                flag=0,
+                reason=AnomalyReason.OK,
+                severity=0.0,
+                confidence=0.9,
+                degradation=0.02,
+                evidence=[["spatial_z_P", 0.1]],
+            ),
+        )
+
+        station = self._station_summary(station_id)
+        self.assertAlmostEqual(station["degradation"], 0.35)
+        self.assertEqual(
+            station["last_seen"].replace("+00:00", "Z"),
+            later_reading_time.isoformat().replace("+00:00", "Z"),
+        )
 
 
 if __name__ == "__main__":
