@@ -26,7 +26,23 @@ export default function useSahasrakshaData(routeStationId) {
   const [loading, setLoading] = useState(!memoryCache.stations);
   const [error, setError] = useState("");
 
-  const selectedStationId = routeStationId || stations[0]?.station_id || "";
+  // When nothing specific was requested (no route station id -- this is
+  // the common case for the dashboard's own "ambient" chart), default to
+  // the first currently-healthy (OK) station rather than blindly picking
+  // array index 0. The live feed's keepalive mechanism deliberately
+  // injects an occasional simulated fault into a small rotating set of
+  // stations to demo the anomaly detector actually catching something --
+  // that's the point of that mechanism. But if the very first station
+  // happens to be the one currently mid-fault, every "default" view
+  // (this dashboard chart chief among them) would show that one
+  // station's synthetic anomaly as if it were the whole network's
+  // reading. Falls back to stations[0] only if every station is
+  // currently flagged, so there's always something to show.
+  const selectedStationId =
+    routeStationId ||
+    stations.find((station) => station.status === "OK")?.station_id ||
+    stations[0]?.station_id ||
+    "";
   const selectedStation = useMemo(
     () => stations.find((station) => station.station_id === selectedStationId) || stations[0] || null,
     [selectedStationId, stations]
