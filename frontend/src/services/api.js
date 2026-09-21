@@ -59,8 +59,22 @@ export function getAlerts() {
   return request("/alerts");
 }
 
+// How far back the telemetry sparklines (dashboard "Ambient Network
+// Temperature Oscillation" chart, station-detail channel cards) look.
+// Several stations' reading history goes back years (real replayed
+// archive data), and an unbounded fetch pulled in every old point --
+// including ones a past anomaly detector run already flagged, so they
+// can't simply be deleted without breaking that alert's own record. An
+// unbounded range also isn't what "ambient" or a live channel sparkline
+// should mean anyway: it's a recent-conditions view, not an all-time one.
+// Bounding the request keeps it to what's actually recent regardless of
+// how much older history a station happens to carry.
+const TIMESERIES_LOOKBACK_HOURS = 72;
+
 export function getStationTimeseries(stationId) {
-  return request(`/stations/${encodeURIComponent(stationId)}/timeseries`);
+  const from = new Date(Date.now() - TIMESERIES_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString();
+  const query = new URLSearchParams({ from }).toString();
+  return request(`/stations/${encodeURIComponent(stationId)}/timeseries?${query}`);
 }
 
 export function getStationAlerts(stationId) {
