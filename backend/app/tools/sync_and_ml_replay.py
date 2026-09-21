@@ -183,6 +183,26 @@ def run_ml_detection_and_populate():
                 db.add(db_verdict)
                 db.flush()
 
+                # Feed this real detection back onto the station's own
+                # summary fields, exactly like the live /ingest pipeline
+                # does (see alert_service.save_verdict_and_create_alert).
+                # Without this, sync_stations_from_render()'s demo status
+                # labels and this step's real ML degradation findings stay
+                # permanently disconnected -- the exact bug (a station
+                # reading "SERVICE NOW" status alongside 100% health)
+                # that app/tools/repair_station_status.py exists to fix
+                # after the fact. Doing it here means a future re-run of
+                # this script can't reintroduce it.
+                station_service.update_station_from_verdict(
+                    sid,
+                    ts,
+                    verdict.flag,
+                    verdict.reason,
+                    verdict.severity,
+                    verdict.degradation,
+                    db,
+                )
+
                 # Save Alert if flagged
                 if verdict.flag == 1:
                     alert = AlertModel(
