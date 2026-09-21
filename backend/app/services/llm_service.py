@@ -28,7 +28,15 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 # are their supported replacements (faster + cheaper too).
 NARRATION_MODEL = os.getenv("GROQ_NARRATION_MODEL", "openai/gpt-oss-20b")
 CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b")
-REQUEST_TIMEOUT_S = 8.0
+# chat_reply's system prompt explicitly invites long answers ("expand freely
+# when asked 'explain in detail'"), but the old 8s/700-token budget was
+# cutting those answers off mid-sentence -- observed live, a judge asking
+# about the Ambient Network Temperature Oscillation chart got a
+# multi-section answer that stopped at "If you". Both raised well above
+# what even the longest real answer here needs; Groq's inference speed
+# keeps this well inside the new timeout even at the higher token cap.
+REQUEST_TIMEOUT_S = float(os.getenv("GROQ_TIMEOUT_S", "20"))
+CHAT_MAX_TOKENS = int(os.getenv("GROQ_CHAT_MAX_TOKENS", "1600"))
 
 _client = None
 _client_init_failed = False
@@ -203,6 +211,17 @@ features fall back to deterministic, rule-based text instead of breaking, so a l
 ## What each page shows
 - Dashboard: network-wide command overview -- station grid, anomaly cadence, degradation \
 priority list.
+- The "Ambient Network Temperature Oscillation" chart (dashboard): this is the raw recent \
+temperature history of ONE reference station -- the first currently-healthy station in the list, \
+plotted over roughly the last 72 hours -- shown as a quick "is the network reading sane right now" \
+gut-check, not a network-wide or spatially-pooled metric. It is NOT a residual after baseline \
+removal, does NOT pool multiple neighbouring stations, and has no confidence band -- if asked, be \
+explicit that it's a single station's real recent readings, and point to the actual spatial \
+cross-check (layer 2 above) if asked how multi-station comparison really works in this system. \
+Never describe this chart as doing residual pooling, neighbour-weighted averaging, or anything with \
+a formula -- that is not what it does; if unsure whether a chart or metric does something specific, \
+say what it's confirmed to do from this prompt or the live snapshot, and say plainly that a deeper \
+implementation detail isn't available here rather than inventing a mechanism.
 - Fleet Map (/network): a live geospatial map of every station's location and status.
 - AWS Stations (/stations): a searchable/sortable list of every station with live \
 temperature/pressure/humidity and health score; click one for full detail (real-time channels + \
@@ -261,7 +280,7 @@ def chat_reply(message: str, context_snapshot: str, history: list[dict[str, str]
             model=CHAT_MODEL,
             messages=messages,
             temperature=0.4,
-            max_tokens=700,
+            max_tokens=CHAT_MAX_TOKENS,
         )
         text = (completion.choices[0].message.content or "").strip()
         return text or _fallback_chat_reply(message)

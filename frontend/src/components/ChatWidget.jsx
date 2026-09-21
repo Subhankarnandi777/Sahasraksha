@@ -17,15 +17,59 @@ const MARKDOWN_COMPONENTS = {
   a: ({ node, ...props }) => <a target="_blank" rel="noopener noreferrer" {...props} />
 };
 
-function MessageBubble({ role, content }) {
+// Reveals `content` a few characters at a time rather than all at once, so
+// a fresh reply visibly "types" the way the rest of the widget already
+// implies (the three-dot typing indicator shown while waiting for it).
+// Only ever used for a message that just arrived live -- see `animate`
+// below -- never for history reloaded from localStorage or older turns,
+// so re-opening the widget doesn't replay the whole conversation.
+const TYPEWRITER_CHARS_PER_TICK = 3;
+const TYPEWRITER_TICK_MS = 12;
+
+function TypedMarkdown({ content, animate, onDone, onTick }) {
+  const [shown, setShown] = useState(animate ? "" : content);
+
+  useEffect(() => {
+    if (!animate) {
+      setShown(content);
+      return undefined;
+    }
+
+    let index = 0;
+    let timer;
+    const step = () => {
+      index += TYPEWRITER_CHARS_PER_TICK;
+      setShown(content.slice(0, index));
+      if (onTick) onTick();
+      if (index < content.length) {
+        timer = setTimeout(step, TYPEWRITER_TICK_MS);
+      } else if (onDone) {
+        onDone();
+      }
+    };
+    setShown("");
+    timer = setTimeout(step, TYPEWRITER_TICK_MS);
+    return () => clearTimeout(timer);
+    // Deliberately keyed only on `content`/`animate` (identity of this one
+    // message), not `onDone`/`onTick` -- both are fresh closures every
+    // render and must not restart the animation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, animate]);
+
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+      {shown}
+    </ReactMarkdown>
+  );
+}
+
+function MessageBubble({ role, content, animate, onDone, onTick }) {
   if (role !== "assistant") {
     return <div className={`chat-bubble ${role}`}>{content}</div>;
   }
   return (
     <div className="chat-bubble assistant chat-markdown">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
-        {content}
-      </ReactMarkdown>
+      <TypedMarkdown content={content} animate={animate} onDone={onDone} onTick={onTick} />
     </div>
   );
 }
@@ -88,6 +132,11 @@ export default function ChatWidget() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [showHint, setShowHint] = useState(false);
+  // Index of the one message currently allowed to type itself out --
+  // set right after a live reply arrives, cleared once its typewriter
+  // finishes. Never set for the initial greeting or for history restored
+  // from localStorage, so only genuinely-new replies animate.
+  const [liveIndex, setLiveIndex] = useState(null);
   const scrollRef = useRef(null);
   const loadedForUser = useRef(userId);
 
@@ -98,6 +147,7 @@ export default function ChatWidget() {
     if (loadedForUser.current !== userId) {
       loadedForUser.current = userId;
       setMessages(loadHistory(userId) || [GREETING]);
+      setLiveIndex(null);
     }
   }, [userId]);
 
@@ -187,6 +237,9 @@ export default function ChatWidget() {
 
     try {
       const response = await sendChatMessage(text, history);
+      // The reply lands at this index -- nextMessages already has the
+      // user's turn appended, so the assistant turn goes right after it.
+      setLiveIndex(nextMessages.length);
       setMessages((prev) => [...prev, { role: "assistant", content: response.reply }]);
     } catch (err) {
       setError(err.message || "Couldn't reach the guide right now.");
@@ -206,6 +259,7 @@ export default function ChatWidget() {
 
   function handleClear() {
     setMessages([GREETING]);
+    setLiveIndex(null);
     setError(null);
   }
 
@@ -261,7 +315,18 @@ export default function ChatWidget() {
 
           <div className="chat-widget-messages" ref={scrollRef}>
             {messages.map((msg, index) => (
-              <MessageBubble key={index} role={msg.role} content={msg.content} />
+              <MessageBubble
+                key={index}
+                role={msg.role}
+                content={msg.content}
+                animate={index === liveIndex}
+                onDone={() => setLiveIndex((current) => (current === index ? null : current))}
+                onTick={() => {
+                  if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                  }
+                }}
+              />
             ))}
             {sending ? (
               <div className="chat-bubble assistant chat-bubble-typing">
