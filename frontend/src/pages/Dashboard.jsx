@@ -10,8 +10,7 @@ function countStatus(stations, status) {
   return stations.filter((station) => station.status === status).length;
 }
 
-function countSilent(stations) {
-  const referenceTime = networkReferenceTime(stations);
+function countSilent(stations, referenceTime) {
   return stations.filter((station) => isSilent(station, referenceTime)).length;
 }
 
@@ -78,10 +77,25 @@ export default function Dashboard({
   const { isDark } = useTheme();
 
   const total = health?.station_count ?? stations.length;
-  const healthy = countStatus(stations, "OK");
-  const monitoring = countStatus(stations, "MONITOR") + countStatus(stations, "SCHEDULE");
+  const referenceTime = networkReferenceTime(stations);
+  // A station's persisted status is only recomputed when a new reading
+  // arrives -- it never gets revisited just because time passed with no
+  // reading at all. So an "OK" station that has gone silent for hours
+  // keeps reading "OK" forever, and would otherwise get counted as
+  // Healthy right next to this page's own "N stations silent" banner.
+  // Folded into Monitoring instead (a station that stopped reporting
+  // needs attention same as one showing active drift), which keeps
+  // Healthy + Monitoring + Service summing to the real total rather than
+  // just dropping silent-but-nominally-OK stations from the count
+  // entirely.
+  const silentButNominallyOk = stations.filter(
+    (station) => station.status === "OK" && isSilent(station, referenceTime)
+  ).length;
+  const healthy = countStatus(stations, "OK") - silentButNominallyOk;
+  const monitoring =
+    countStatus(stations, "MONITOR") + countStatus(stations, "SCHEDULE") + silentButNominallyOk;
   const serviceNow = countStatus(stations, "SERVICE NOW");
-  const silent = countSilent(stations);
+  const silent = countSilent(stations, referenceTime);
   const scoredStations = stations.filter((station) => Number.isFinite(Number(station.health)));
   const networkHealth = scoredStations.length
     ? scoredStations.reduce((sum, station) => sum + Number(station.health), 0) / scoredStations.length
@@ -103,9 +117,10 @@ export default function Dashboard({
   // history, not a live wall-clock feed -- individual readings can (and do)
   // sit months behind today's date. We show that honestly instead of
   // implying every number on this page happened "just now": everything is
-  // relative to the network's OWN latest reading, matching the isSilent
-  // staleness check that already works this way elsewhere in the app.
-  const dataAsOf = networkReferenceTime(stations);
+  // relative to the network's OWN latest reading (referenceTime, computed
+  // above), matching the isSilent staleness check that already works this
+  // way elsewhere in the app.
+  const dataAsOf = referenceTime;
 
   // Top attention stations (real degradation only). Padding this list with
   // 0%-degradation stations just because we need 5 rows misrepresents a
@@ -129,6 +144,21 @@ export default function Dashboard({
     );
   }
 
+  // Was a hardcoded "Nominal (Real-Time Streaming)" regardless of what
+  // actually happened on the last fetch -- it would keep reading Nominal
+  // even if the backend were unreachable (error set, showing stale
+  // cached data) or if most of the fleet had gone silent. Tied to the
+  // same signals this page already surfaces elsewhere (the error banner
+  // below, the "N stations silent" flag above) rather than a fixed string.
+  const pipelineDown = Boolean(error);
+  const pipelineDegraded = !pipelineDown && total > 0 && silent >= Math.ceil(total / 2);
+  const pipelineStatusClass = pipelineDown ? "is-down" : pipelineDegraded ? "is-degraded" : "";
+  const pipelineLabel = pipelineDown
+    ? "Offline (Fetch Failed)"
+    : pipelineDegraded
+    ? `Degraded (${silent} station${silent === 1 ? "" : "s"} silent)`
+    : "Nominal (Real-Time Streaming)";
+
   return (
     <main className="screen dashboard-screen">
       {/* Top Header Row with Status */}
@@ -149,9 +179,9 @@ export default function Dashboard({
           </p>
         </div>
         <div className="dashboard-badge-cluster">
-          <div className="telemetry-pill">
-            <span className="telemetry-live-dot" />
-            <span>Telemetry Pipeline: <b>Nominal (Real-Time Streaming)</b></span>
+          <div className={`telemetry-pill ${pipelineStatusClass}`}>
+            <span className={`telemetry-live-dot ${pipelineStatusClass}`} />
+            <span>Telemetry Pipeline: <b>{pipelineLabel}</b></span>
           </div>
           <a href="/alerts" className="alert-count-pill">
             <b>{openAlerts.length.toLocaleString()}</b> Active ML Flags
@@ -181,7 +211,13 @@ export default function Dashboard({
           <div className="kpi-progress-bar">
             <div
               className="kpi-progress-fill"
-              style={{ width: `${Math.min(100, (networkHealth || 0.94) * 100)}%` }}
+              // networkHealth is already a real computed number, defaulting to
+              // 0 (not null/undefined) when no station has a scorable health
+              // value -- so `networkHealth || 0.94` was replacing a
+              // legitimate, real 0% with a fabricated 94% every time (0 is
+              // falsy in JS). A genuine 0% must render as an empty bar, not
+              // a fake near-full one.
+              style={{ width: `${Math.min(100, networkHealth * 100)}%` }}
             />
           </div>
         </div>

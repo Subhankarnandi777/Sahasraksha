@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Circle, MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
-import { daysToThreshold, number, percent, timeAgo } from "../services/api.js";
+import { daysToThreshold, isSilent, networkReferenceTime, number, percent, timeAgo } from "../services/api.js";
 import { getStationImage } from "../services/stationImages.js";
 
 const INDIA_CENTER = [21.8, 80.5];
@@ -76,9 +76,21 @@ function stationStatusClass(status) {
   return "ok";
 }
 
-function markerClass(station) {
+// A station's persisted `status` is only ever recomputed when a NEW
+// reading arrives -- nothing ever revisits it just because time passed
+// with no reading at all. So a station that stopped reporting hours ago
+// keeps showing whatever status it last earned, "OK" included. This is
+// the same staleness isSilent() already exists to catch (used for the
+// "N stations silent" banner); applying it here too means a silent
+// station can no longer render as if it were currently healthy.
+function effectiveStatus(station, referenceTime) {
+  if (station.status === "OK" && isSilent(station, referenceTime)) return "MONITOR";
+  return station.status;
+}
+
+function markerClass(station, referenceTime) {
   if (station.data_quality === "low_confidence") return "low-confidence";
-  return stationStatusClass(station.status);
+  return stationStatusClass(effectiveStatus(station, referenceTime));
 }
 
 function markerLabel(station, mode) {
@@ -111,15 +123,15 @@ function markerLabel(station, mode) {
 }
 
 // Clean Animated Radar Beacon Dot Marker (User's preferred clean animation)
-function createRadarDotMarkerIcon(station, mode, isSelected) {
+function createRadarDotMarkerIcon(station, mode, isSelected, referenceTime) {
   const label = markerLabel(station, mode);
-  const statusCls = markerClass(station);
+  const statusCls = markerClass(station, referenceTime);
   const selectedClass = isSelected ? "selected-ping" : "";
 
   return L.divIcon({
     className: "radar-marker-anchor",
     html: `
-      <div class="custom-station-pin ${statusCls} ${selectedClass}" data-id="${station.station_id}" title="${station.name}: ${label || station.status}">
+      <div class="custom-station-pin ${statusCls} ${selectedClass}" data-id="${station.station_id}" title="${station.name}: ${label || effectiveStatus(station, referenceTime)}">
         <span class="pin-radar-wave"></span>
         <span class="pin-dot"></span>
         ${label ? `<span class="pin-badge">${label}</span>` : ""}
@@ -236,6 +248,12 @@ export default function MapPanel({
   }, [selectedId, mapInstance, stations]);
 
   const mappableStations = useMemo(() => stations.filter(isMappable), [stations]);
+
+  // Same network-clock reference the dashboard's own "N stations silent"
+  // banner uses -- so a station is judged silent relative to how recently
+  // its peers reported, not the browser's wall clock (which would be
+  // wrong for a replayed historical dataset).
+  const referenceTime = useMemo(() => networkReferenceTime(stations), [stations]);
 
   // Selected station object
   const activeStation = useMemo(
@@ -398,7 +416,7 @@ export default function MapPanel({
                     className="apple-dropdown-item"
                     onClick={() => handleSelectStation(st)}
                   >
-                    <span className={`apple-dropdown-dot ${markerClass(st)}`} />
+                    <span className={`apple-dropdown-dot ${markerClass(st, referenceTime)}`} />
                     <div className="apple-dropdown-info">
                       <strong>{st.name}</strong>
                       <small>{st.station_id}</small>
@@ -569,8 +587,20 @@ export default function MapPanel({
           )}
 
           {/* 🌡️ Dynamic Thermal Heat Surface Field */}
+          {/* A station with no temperature reading (SWAMI VIVEKANANDA /
+              42875099999 has no archived data at all) has nothing to
+              plot here -- getThermalColor(null) used to fall back to the
+              SAME amber as a genuine 22-28C reading, painting an 85km
+              "warm" blob for a station that has never reported a
+              temperature. Omitted entirely rather than given an
+              invented color. */}
           {thermalEnabled &&
-            mappableStations.map((station) => {
+            mappableStations
+              .filter(
+                (station) =>
+                  station.latest_temperature !== null && station.latest_temperature !== undefined
+              )
+              .map((station) => {
               const temp = station.latest_temperature;
               const color = getThermalColor(temp);
               return (
@@ -614,7 +644,7 @@ export default function MapPanel({
               <Marker
                 key={station.station_id}
                 position={[Number(station.lat), Number(station.lon)]}
-                icon={createRadarDotMarkerIcon(station, activeMode, isSelected)}
+                icon={createRadarDotMarkerIcon(station, activeMode, isSelected, referenceTime)}
                 eventHandlers={{
                   click: () => {
                     handleSelectStation(station);
@@ -638,7 +668,7 @@ export default function MapPanel({
           {/* Minimized Pill View */}
           {cardMinimized ? (
             <div className="sheet-minimized-pill">
-              <span className={`sheet-status-dot ${markerClass(activeStation)}`} />
+              <span className={`sheet-status-dot ${markerClass(activeStation, referenceTime)}`} />
               <strong className="minimized-title">{activeStation.name}</strong>
               <span className="minimized-temp">
                 {activeStation.latest_temperature !== null &&
@@ -715,8 +745,8 @@ export default function MapPanel({
 
                 <div className="sheet-image-content">
                   <div className="sheet-pill-badge">
-                    <span className={`sheet-status-dot ${markerClass(activeStation)}`} />
-                    <span>{activeStation.status || "NOMINAL"}</span>
+                    <span className={`sheet-status-dot ${markerClass(activeStation, referenceTime)}`} />
+                    <span>{effectiveStatus(activeStation, referenceTime) || "NOMINAL"}</span>
                     <span>•</span>
                     <span>{percent(activeStation.health, 0)}</span>
                   </div>
@@ -739,7 +769,10 @@ export default function MapPanel({
                   </div>
                   <div className="sheet-hero-details">
                     <div className="sheet-condition-text">
-                      {activeStation.latest_temperature > 30
+                      {activeStation.latest_temperature === null ||
+                      activeStation.latest_temperature === undefined
+                        ? "📡 Awaiting Telemetry"
+                        : activeStation.latest_temperature > 30
                         ? "☀️ High Solar Radiation"
                         : activeStation.latest_temperature < 15
                         ? "❄️ Montane Cold Airflow"
@@ -778,7 +811,9 @@ export default function MapPanel({
                     <strong className="tile-value status-good">
                       {activeStation.data_quality === "low_confidence"
                         ? "Review"
-                        : "120 Hz Live"}
+                        : isSilent(activeStation, referenceTime)
+                        ? "Silent"
+                        : "Live"}
                     </strong>
                     <span className="tile-sub">Harmonic QC</span>
                   </div>

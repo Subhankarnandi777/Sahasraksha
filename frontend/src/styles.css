@@ -1380,11 +1380,31 @@ button {
   color: var(--status-ok);
 }
 
+/* Degraded/down states: the pipeline pill used to say "Nominal
+   (Real-Time Streaming)" unconditionally, even when the last fetch
+   failed or most of the fleet had gone silent. These mirror that back
+   into the pill's own color instead of a permanently-green claim. */
+.telemetry-pill.is-degraded b {
+  color: var(--status-warn);
+}
+
+.telemetry-pill.is-down b {
+  color: var(--status-danger);
+}
+
 .telemetry-live-dot {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-pill);
   background: var(--status-ok);
+}
+
+.telemetry-live-dot.is-degraded {
+  background: var(--status-warn);
+}
+
+.telemetry-live-dot.is-down {
+  background: var(--status-danger);
 }
 
 .alert-count-pill {
