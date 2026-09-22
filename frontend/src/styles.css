@@ -2836,6 +2836,10 @@ button {
   animation: pulse-dot 1.4s infinite;
 }
 
+.apple-hud-dot.is-degraded {
+  background: var(--status-warn);
+}
+
 .apple-hud-text b {
   color: #0f172a;
 }
@@ -3086,6 +3090,18 @@ button {
 .net-metric-blip.cyan {
   background: #06b6d4;
   box-shadow: 0 0 6px #06b6d4;
+}
+
+.net-metric-blip.red {
+  background: var(--status-danger, #ef4444);
+  box-shadow: 0 0 6px var(--status-danger, #ef4444);
+}
+
+/* No modifier class: feed/overlay is neither live nor down, just not
+   established yet (e.g. the radar pill before RainViewer's first
+   response comes back) -- a dim neutral dot, not a colored "live" one. */
+.net-metric-blip:not(.green):not(.amber):not(.blue):not(.cyan):not(.red) {
+  background: #94a3b8;
 }
 
 /* Theme Mode Switcher Pill */

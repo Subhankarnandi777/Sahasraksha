@@ -78,6 +78,7 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
               unit="°C"
               status={channelStatus(latestVerdict, "T", "Normal")}
               values={timeseries.map((row) => row.T)}
+              timestamps={timeseries.map((row) => row.timestamp)}
             />
             <TelemetryCard
               label="Barometric Pressure"
@@ -85,6 +86,7 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
               unit=" hPa"
               status={latestVerdict?.degradation ? `Harmonic Loss ${percent(latestVerdict.degradation, 0)}` : "Stable"}
               values={timeseries.map((row) => row.P)}
+              timestamps={timeseries.map((row) => row.timestamp)}
               tone="amber"
             />
             <TelemetryCard
@@ -93,6 +95,7 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
               unit="%"
               status={channelStatus(latestVerdict, "RH", "Nominal")}
               values={timeseries.map((row) => row.RH)}
+              timestamps={timeseries.map((row) => row.timestamp)}
               tone="blue"
             />
           </div>

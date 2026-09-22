@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import MapPanel from "../components/MapPanel.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
-import { number, percent, channelStatus, getStationTimeseries, getStationVerdicts } from "../services/api.js";
+import { number, percent, channelStatus, effectiveStatus, isSilent, networkReferenceTime, getStationTimeseries, getStationVerdicts } from "../services/api.js";
 import { useTheme } from "../services/theme.js";
 
 function markerStatusClass(status) {
@@ -21,6 +21,13 @@ export default function Network({ stations = [], selectedStation, selectedStatio
     ? scoredStations.reduce((sum, station) => sum + Number(station.health), 0) / scoredStations.length
     : 0;
 
+  // Same staleness check the Dashboard's own tallies use -- "Nodes Online"
+  // was a raw stations.length with no regard for whether a station had
+  // actually reported anything recently.
+  const referenceTime = networkReferenceTime(stations);
+  const silentCount = stations.filter((s) => isSilent(s, referenceTime)).length;
+  const onlineCount = stations.length - silentCount;
+
   const [mode, setMode] = useState("health");
   const [region, setRegion] = useState("all");
   const [focusedId, setFocusedId] = useState(null);
@@ -32,6 +39,11 @@ export default function Network({ stations = [], selectedStation, selectedStatio
   // Map layer controls
   const [basemap, setBasemap] = useState(isDark ? "dark" : "apple");
   const [radarEnabled, setRadarEnabled] = useState(false);
+  // Set by MapPanel once its RainViewer fetch actually succeeds -- so the
+  // "Doppler Radar Live" pill can say Live only when a real frame is in
+  // hand, not just because the toggle happens to be on (it's off by
+  // default) or before the fetch has even resolved.
+  const [radarAvailable, setRadarAvailable] = useState(false);
   const [thermalEnabled, setThermalEnabled] = useState(false);
 
   // Search state
@@ -124,6 +136,16 @@ export default function Network({ stations = [], selectedStation, selectedStatio
       </main>
     );
   }
+
+  // "Station Network Synced" was a fixed string with no condition
+  // attached -- same fabricated-nominal pattern the Dashboard's telemetry
+  // pill had. Tied to this page's own error state and silent-station
+  // count instead.
+  const pipelineDown = Boolean(error);
+  const pipelineDegraded = !pipelineDown && stations.length > 0 && silentCount >= Math.ceil(stations.length / 2);
+  const pipelineLabel = pipelineDown ? "Offline" : pipelineDegraded ? "Degraded" : "Synced";
+  const radarLive = radarEnabled && radarAvailable;
+
   return (
     <main className="screen network-screen">
       {/* 1. Page Header Strip: Title + Telemetry Vitals */}
@@ -132,27 +154,45 @@ export default function Network({ stations = [], selectedStation, selectedStatio
           <span className="section-eyebrow">GEOSPATIAL FLEET SURVEILLANCE</span>
           <h1 className="page-main-heading">Station Network Map</h1>
           <p className="page-sub-heading">
-            {loading ? "Loading station telemetry..." : `${stations.length} Synoptic AWS Nodes Active across Indian Subcontinent`}
+            {loading
+              ? "Loading station telemetry..."
+              : silentCount > 0
+              ? `${onlineCount} of ${stations.length} Synoptic AWS Nodes Active across Indian Subcontinent`
+              : `${stations.length} Synoptic AWS Nodes Active across Indian Subcontinent`}
           </p>
         </div>
 
         {/* Real-time Atmospheric Fleet Vitals */}
         <div className="network-header-metrics">
-          <div className="net-metric-pill" title="Total Synoptic AWS Nodes Reporting">
-            <span className="net-metric-blip green" />
-            <span><b>{stations.length}</b> Nodes Online</span>
+          <div className="net-metric-pill" title="Synoptic AWS nodes that have reported within the last 6 hours">
+            <span className={`net-metric-blip ${silentCount > 0 ? "amber" : "green"}`} />
+            <span>
+              <b>{onlineCount}</b> Nodes Online
+              {silentCount > 0 ? ` (${silentCount} Silent)` : ""}
+            </span>
           </div>
           <div className="net-metric-pill" title="Network-average station health score">
             <span className="net-metric-blip amber" />
             <span><b>{percent(networkHealth, 1)}</b> QC Health</span>
           </div>
           <div className="net-metric-pill" title="Live automatic weather station network feed">
-            <span className="net-metric-blip blue" />
-            <span><b>Station Network</b> Synced</span>
+            <span className={`net-metric-blip ${pipelineDown ? "red" : pipelineDegraded ? "amber" : "blue"}`} />
+            <span><b>Station Network</b> {pipelineLabel}</span>
           </div>
-          <div className="net-metric-pill" title="RainViewer Live Doppler Cloud Stream Active">
-            <span className="net-metric-blip cyan" />
-            <span><b>Doppler</b> Radar Live</span>
+          <div
+            className="net-metric-pill"
+            title={
+              radarLive
+                ? "RainViewer live Doppler cloud stream active"
+                : radarEnabled
+                ? "Waiting on RainViewer's public radar feed"
+                : "Doppler radar overlay is switched off"
+            }
+          >
+            <span className={`net-metric-blip ${radarLive ? "cyan" : ""}`} />
+            <span>
+              <b>Doppler</b> Radar {radarLive ? "Live" : radarEnabled ? "Connecting" : "Off"}
+            </span>
           </div>
         </div>
       </div>
@@ -167,7 +207,7 @@ export default function Network({ stations = [], selectedStation, selectedStatio
               ref={searchInputRef}
               type="text"
               className="deck-search-input"
-              placeholder="Search 60 AWS stations, cities..."
+              placeholder={`Search ${stations.length} AWS stations, cities...`}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -214,7 +254,7 @@ export default function Network({ stations = [], selectedStation, selectedStatio
                   className="deck-dropdown-item"
                   onClick={() => handleSearchSelect(st)}
                 >
-                  <span className={`deck-dropdown-dot ${markerStatusClass(st.status)}`} />
+                  <span className={`deck-dropdown-dot ${markerStatusClass(effectiveStatus(st, referenceTime))}`} />
                   <div className="deck-dropdown-info">
                     <strong>{st.name}</strong>
                     <small>{st.station_id}</small>
@@ -404,6 +444,7 @@ export default function Network({ stations = [], selectedStation, selectedStatio
             radarEnabledProp={radarEnabled}
             thermalEnabledProp={thermalEnabled}
             hideFloatingTopControls={true}
+            onRadarStatusChange={setRadarAvailable}
           />
         </div>
 
@@ -417,8 +458,8 @@ export default function Network({ stations = [], selectedStation, selectedStatio
                   <h2 className="focus-title">{selected.name}</h2>
                   <span className="focus-id-tag">{selected.station_id}</span>
                 </div>
-                <StatusBadge status={selected.status}>
-                  {selected.status} • {percent(selected.health, 1)}
+                <StatusBadge status={effectiveStatus(selected, referenceTime)}>
+                  {effectiveStatus(selected, referenceTime)} • {percent(selected.health, 1)}
                 </StatusBadge>
               </div>
 
@@ -435,6 +476,7 @@ export default function Network({ stations = [], selectedStation, selectedStatio
                   unit="°C"
                   status={channelStatus(latestVerdict, "T", "Normal")}
                   values={activeTimeseries.map((row) => row.T)}
+                  timestamps={activeTimeseries.map((row) => row.timestamp)}
                 />
                 <TelemetryCard
                   label="Atmospheric Pressure"
@@ -442,21 +484,33 @@ export default function Network({ stations = [], selectedStation, selectedStatio
                   unit="hPa"
                   status={channelStatus(latestVerdict, "P", "Normal")}
                   values={activeTimeseries.map((row) => row.P)}
+                  timestamps={activeTimeseries.map((row) => row.timestamp)}
                 />
+                {/* Was `latest.U` / channelStatus(..., "U", ...) -- the API
+                    serializes humidity as RH (TimeSeriesRow's real fields
+                    are T/P/RH), never U. `U` is undefined for every
+                    station, always, which is why this card only ever
+                    showed "-" and "Awaiting telemetry frames..." even for
+                    stations with real, live humidity data one field over
+                    on StationDetail. `U`/`F` are NOAA-ISD's raw archive
+                    column codes, not this app's own API contract. */}
                 <TelemetryCard
                   label="Relative Humidity"
-                  value={latest.U}
+                  value={latest.RH}
                   unit="%"
-                  status={channelStatus(latestVerdict, "U", "Normal")}
-                  values={activeTimeseries.map((row) => row.U)}
+                  status={channelStatus(latestVerdict, "RH", "Normal")}
+                  values={activeTimeseries.map((row) => row.RH)}
+                  timestamps={activeTimeseries.map((row) => row.timestamp)}
                 />
-                <TelemetryCard
-                  label="Wind Velocity"
-                  value={latest.F}
-                  unit="m/s"
-                  status={channelStatus(latestVerdict, "F", "Normal")}
-                  values={activeTimeseries.map((row) => row.F)}
-                />
+                {/* "Wind Velocity" removed: no wind channel exists anywhere
+                    in this pipeline. The DB has wind_speed_mps/
+                    wind_direction_deg columns, but nothing ever ingests or
+                    serializes them -- the timeseries API never returns a
+                    wind field, the ML detector never evaluates one, and
+                    the only wind values in the whole codebase are on a
+                    hardcoded dev seed fixture. This card showed "-" and
+                    "Normal" for every station, forever -- a sensor
+                    reading marked Normal when it never existed. */}
               </div>
 
               <div className="focus-actions">

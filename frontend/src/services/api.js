@@ -199,6 +199,20 @@ export function isSilent(station, referenceTime) {
   return hoursSinceLastSeen(station?.last_seen, referenceTime) > SILENT_HOURS_THRESHOLD;
 }
 
+// A station's persisted `status` is only ever recomputed when a NEW
+// reading arrives -- nothing ever revisits it just because time passed
+// with no reading at all. So a station that stopped reporting hours ago
+// keeps showing whatever status it last earned, "OK" included. Every
+// place that displays a station's status (map markers, detail sheets,
+// the Network page's focus card and search dropdown, Dashboard's tallies)
+// should go through this instead of reading station.status directly, so
+// a silent station can't render as if it were currently healthy anywhere
+// in the app.
+export function effectiveStatus(station, referenceTime) {
+  if (station?.status === "OK" && isSilent(station, referenceTime)) return "MONITOR";
+  return station?.status;
+}
+
 // Evidence keys are channel-suffixed (spatial_z_T, runlen_RH, cusum_fast_P)
 // except pressure's tide_loss, which has no suffix but is pressure-specific.
 export function channelStatus(verdict, channel, fallback) {

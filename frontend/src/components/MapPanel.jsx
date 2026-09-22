@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Circle, MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
-import { daysToThreshold, isSilent, networkReferenceTime, number, percent, timeAgo } from "../services/api.js";
+import { daysToThreshold, effectiveStatus, isSilent, networkReferenceTime, number, percent, timeAgo } from "../services/api.js";
 import { getStationImage } from "../services/stationImages.js";
 
 const INDIA_CENTER = [21.8, 80.5];
@@ -74,18 +74,6 @@ function stationStatusClass(status) {
   if (status === "SCHEDULE") return "schedule";
   if (status === "MONITOR") return "monitor";
   return "ok";
-}
-
-// A station's persisted `status` is only ever recomputed when a NEW
-// reading arrives -- nothing ever revisits it just because time passed
-// with no reading at all. So a station that stopped reporting hours ago
-// keeps showing whatever status it last earned, "OK" included. This is
-// the same staleness isSilent() already exists to catch (used for the
-// "N stations silent" banner); applying it here too means a silent
-// station can no longer render as if it were currently healthy.
-function effectiveStatus(station, referenceTime) {
-  if (station.status === "OK" && isSilent(station, referenceTime)) return "MONITOR";
-  return station.status;
 }
 
 function markerClass(station, referenceTime) {
@@ -169,7 +157,8 @@ export default function MapPanel({
   basemapProp,
   radarEnabledProp,
   thermalEnabledProp,
-  hideFloatingTopControls = false
+  hideFloatingTopControls = false,
+  onRadarStatusChange
 }) {
   // 'apple': Clean unwatermarked Esri World Topo (Pastel relief terrain)
   // 'satellite': High-resolution Esri Imagery with places
@@ -255,6 +244,13 @@ export default function MapPanel({
   // wrong for a replayed historical dataset).
   const referenceTime = useMemo(() => networkReferenceTime(stations), [stations]);
 
+  // For the bottom-left mini-HUD's "Live Telemetry" claim -- shown only
+  // when nothing is selected, so it's the map's own ambient status line.
+  const silentCount = useMemo(
+    () => stations.filter((s) => isSilent(s, referenceTime)).length,
+    [stations, referenceTime]
+  );
+
   // Selected station object
   const activeStation = useMemo(
     () => stations.find((s) => s.station_id === selectedId) || null,
@@ -291,15 +287,23 @@ export default function MapPanel({
               minute: "2-digit"
             })
           );
+          // Told the caller so a page-level pill can honestly say "Radar
+          // Live" only once a real frame is actually in hand -- not just
+          // because the toggle is on (see onRadarStatusChange(false) in
+          // the catch below for the failure case).
+          onRadarStatusChange?.(true);
+        } else {
+          onRadarStatusChange?.(false);
         }
       })
       .catch((err) => {
         console.warn("RainViewer radar notice:", err.message);
+        onRadarStatusChange?.(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onRadarStatusChange]);
 
   // Handle station selection from search or marker
   const handleSelectStation = (station) => {
@@ -882,9 +886,12 @@ export default function MapPanel({
           ========================================================================= */}
       {!showDetailCard && (
         <div className="apple-mini-hud">
-          <span className="apple-hud-dot" />
+          <span className={`apple-hud-dot ${silentCount > 0 ? "is-degraded" : ""}`} />
           <span className="apple-hud-text">
-            <b>60 Synoptic Nodes</b> • Live Telemetry • Streaming Sentinel QC
+            <b>{stations.length} Synoptic Nodes</b>
+            {silentCount > 0
+              ? ` • ${silentCount} Silent 6h+`
+              : " • Live Telemetry • Streaming Sentinel QC"}
           </span>
         </div>
       )}
