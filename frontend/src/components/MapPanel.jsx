@@ -772,15 +772,23 @@ export default function MapPanel({
                     <span className="sheet-temp-unit">C</span>
                   </div>
                   <div className="sheet-hero-details">
+                    {/* Plain temperature-band description -- was "High Solar
+                        Radiation" / "Montane Cold Airflow", which asserted a
+                        cause (sunlight intensity, mountain terrain) this
+                        pipeline has no sensor for. There's no solar_radiation
+                        channel anywhere in the API response, and plenty of
+                        sea-level stations get cold nights without being in
+                        mountains. This describes what was actually measured
+                        (temperature), not why. */}
                     <div className="sheet-condition-text">
                       {activeStation.latest_temperature === null ||
                       activeStation.latest_temperature === undefined
                         ? "📡 Awaiting Telemetry"
                         : activeStation.latest_temperature > 30
-                        ? "☀️ High Solar Radiation"
+                        ? "🌡️ Warm Conditions"
                         : activeStation.latest_temperature < 15
-                        ? "❄️ Montane Cold Airflow"
-                        : "🌤️ Nominal Atmosphere"}
+                        ? "🥶 Cool Conditions"
+                        : "🌤️ Nominal Conditions"}
                     </div>
                     <div className="sheet-coords-text">
                       📍 {number(activeStation.lat, 2)}°N, {number(activeStation.lon, 2)}°E •{" "}
@@ -803,23 +811,43 @@ export default function MapPanel({
                     <strong className="tile-value">
                       {number(activeStation.latest_humidity, 0)}%
                     </strong>
-                    <span className="tile-sub">Relative Dew</span>
+                    {/* Was "Relative Dew" -- this channel IS relative
+                        humidity, not dew point (a different, derived
+                        quantity this pipeline doesn't compute). */}
+                    <span className="tile-sub">Relative Humidity</span>
                   </div>
                   <div className="sheet-tile">
                     <span className="tile-label">STATION ID</span>
                     <strong className="tile-value mono">{activeStation.station_id}</strong>
-                    <span className="tile-sub">WMO Synoptic</span>
+                    {/* Was "WMO Synoptic" -- this ID (e.g. 42809099999) is
+                        NOAA-ISD's own composite key, USAF (6-digit) +
+                        WBAN (5-digit) concatenated. A real WMO synoptic
+                        index is 5 digits (this station's is 42809); calling
+                        an 11-digit ISD key "WMO Synoptic" is a format claim
+                        an IMD-familiar reader would catch immediately. */}
+                    <span className="tile-sub">NOAA-ISD Composite ID</span>
                   </div>
                   <div className="sheet-tile">
                     <span className="tile-label">SIGNAL</span>
-                    <strong className="tile-value status-good">
+                    <strong
+                      className={`tile-value ${
+                        activeStation.data_quality === "low_confidence"
+                          ? "status-warn"
+                          : isSilent(activeStation, referenceTime)
+                          ? "status-danger"
+                          : "status-good"
+                      }`}
+                    >
                       {activeStation.data_quality === "low_confidence"
                         ? "Review"
                         : isSilent(activeStation, referenceTime)
                         ? "Silent"
                         : "Live"}
                     </strong>
-                    <span className="tile-sub">Harmonic QC</span>
+                    {/* Was "Harmonic QC" -- harmonic (S2 tidal) analysis is
+                        pressure-specific and lives on its own dedicated
+                        page; this tile reports telemetry freshness. */}
+                    <span className="tile-sub">Telemetry Status</span>
                   </div>
                 </div>
 

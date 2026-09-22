@@ -1,19 +1,25 @@
 import { useMemo, useState } from "react";
 import FilterTabs from "../components/FilterTabs.jsx";
 import StationCard from "../components/StationCard.jsx";
-import { percent } from "../services/api.js";
+import { effectiveStatus, networkReferenceTime, percent } from "../services/api.js";
 
 export default function Stations({ stations, openAlerts, loading, error }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("risk");
 
+  // Same staleness-aware status every other page now uses -- a station
+  // silent for hours no longer counts as "healthy" here just because it
+  // hasn't reported a new reading since it last earned an OK.
+  const referenceTime = networkReferenceTime(stations);
+
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return stations
       .filter((station) => {
-        if (filter === "healthy" && station.status !== "OK") return false;
-        if (filter === "monitor" && !["MONITOR", "SCHEDULE", "SERVICE NOW"].includes(station.status)) return false;
+        const status = effectiveStatus(station, referenceTime);
+        if (filter === "healthy" && status !== "OK") return false;
+        if (filter === "monitor" && !["MONITOR", "SCHEDULE", "SERVICE NOW"].includes(status)) return false;
         if (!normalizedQuery) return true;
         return `${station.station_id} ${station.name}`.toLowerCase().includes(normalizedQuery);
       })
@@ -26,10 +32,10 @@ export default function Stations({ stations, openAlerts, loading, error }) {
         if (sort === "health") return bHealth - aHealth;
         return aHealth - bHealth;
       });
-  }, [filter, query, sort, stations]);
+  }, [filter, query, sort, stations, referenceTime]);
 
   const activePercent = stations.length
-    ? stations.filter((station) => station.status !== "SERVICE NOW").length / stations.length
+    ? stations.filter((station) => effectiveStatus(station, referenceTime) !== "SERVICE NOW").length / stations.length
     : 0;
 
   function stationAlert(stationId) {
@@ -100,8 +106,8 @@ export default function Stations({ stations, openAlerts, loading, error }) {
           onChange={setFilter}
           tabs={[
             { value: "all", label: `All (${stations.length})` },
-            { value: "healthy", label: `Healthy (${stations.filter((s) => s.status === "OK").length})` },
-            { value: "monitor", label: `Requires Attention (${stations.filter((s) => s.status !== "OK").length})` }
+            { value: "healthy", label: `Healthy (${stations.filter((s) => effectiveStatus(s, referenceTime) === "OK").length})` },
+            { value: "monitor", label: `Requires Attention (${stations.filter((s) => effectiveStatus(s, referenceTime) !== "OK").length})` }
           ]}
         />
 
@@ -131,6 +137,7 @@ export default function Stations({ stations, openAlerts, loading, error }) {
               station={station}
               alert={stationAlert(station.station_id)}
               onOpen={openStation}
+              referenceTime={referenceTime}
             />
           ))
         ) : (

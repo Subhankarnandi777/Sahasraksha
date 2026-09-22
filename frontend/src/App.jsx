@@ -57,7 +57,13 @@ function DataRoute({ current }) {
 
   return (
     <div className="app-layout">
-      <Navbar active={current.name} alertCount={data.openAlerts?.length || 0} />
+      <Navbar
+        active={current.name}
+        alertCount={data.openAlerts?.length || 0}
+        stations={data.stations}
+        error={data.error}
+        loading={data.loading}
+      />
       <div className="main-content-viewport">
         <Suspense fallback={<RouteLoading />}>
           {current.name === "network" ? <Network {...commonProps} /> : null}

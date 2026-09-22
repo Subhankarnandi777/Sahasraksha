@@ -146,6 +146,22 @@
   color: #f8fafc !important;
 }
 
+/* The blanket dark-mode rule above (!important) otherwise wins over the
+   status-good/warn/danger colors on the SIGNAL tile, so Live/Review/Silent
+   would go back to being visually identical white text in dark mode --
+   the same "no differentiation" bug, just theme-gated. */
+[data-theme="dark"] .tile-value.status-good {
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] .tile-value.status-warn {
+  color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .tile-value.status-danger {
+  color: #f87171 !important;
+}
+
 [data-theme="dark"] .apple-search-pill,
 [data-theme="dark"] .apple-mode-segmented-capsule,
 [data-theme="dark"] .apple-segmented-capsule,
@@ -357,6 +373,28 @@
 
 [data-theme="dark"] .live-indicator-text {
   color: #34d399 !important;
+}
+
+/* Same reasoning as the tile-value dark-mode overrides above: the
+   blanket dark-mode rules just above (!important) otherwise erase the
+   degraded/down colors and repaint the indicator green regardless of
+   actual feed state. */
+[data-theme="dark"] .nav-live-indicator.is-degraded {
+  background: rgba(217, 119, 6, 0.12) !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+[data-theme="dark"] .nav-live-indicator.is-down {
+  background: rgba(220, 38, 38, 0.12) !important;
+  border-color: rgba(220, 38, 38, 0.35) !important;
+}
+
+[data-theme="dark"] .nav-live-indicator.is-degraded .live-indicator-text {
+  color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .nav-live-indicator.is-down .live-indicator-text {
+  color: #f87171 !important;
 }
 
 [data-theme="dark"] .btn-logout {
@@ -1116,6 +1154,38 @@ button {
   font-weight: 800;
   color: var(--status-ok);
   letter-spacing: 0.04em;
+}
+
+/* Degraded/down states for the navbar feed indicator -- was fixed-green
+   "LIVE" regardless of actual fetch state. */
+.nav-live-indicator.is-degraded {
+  background: var(--status-warn-bg);
+  border-color: var(--status-warn-border);
+}
+
+.nav-live-indicator.is-down {
+  background: var(--status-danger-bg);
+  border-color: var(--status-danger-border);
+}
+
+.live-radar-dot.is-degraded {
+  background: var(--status-warn);
+  box-shadow: 0 0 6px rgba(217, 119, 6, 0.4);
+  animation: none;
+}
+
+.live-radar-dot.is-down {
+  background: var(--status-danger);
+  box-shadow: 0 0 6px rgba(220, 38, 38, 0.4);
+  animation: none;
+}
+
+.nav-live-indicator.is-degraded .live-indicator-text {
+  color: var(--status-warn);
+}
+
+.nav-live-indicator.is-down .live-indicator-text {
+  color: var(--status-danger);
 }
 
 .nav-user-cluster {
@@ -2677,6 +2747,21 @@ button {
 .tile-value.mono {
   font-family: var(--font-mono);
   font-size: 10.5px;
+}
+
+/* SIGNAL tile status coloring -- was referencing a "status-good" class
+   that was never defined anywhere, so Live/Review/Silent all rendered in
+   the exact same near-black text with no visual differentiation. */
+.tile-value.status-good {
+  color: #059669;
+}
+
+.tile-value.status-warn {
+  color: var(--status-warn);
+}
+
+.tile-value.status-danger {
+  color: var(--status-danger);
 }
 
 .tile-sub {

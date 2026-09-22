@@ -213,13 +213,28 @@ export function effectiveStatus(station, referenceTime) {
   return station?.status;
 }
 
-// Evidence keys are channel-suffixed (spatial_z_T, runlen_RH, cusum_fast_P)
-// except pressure's tide_loss, which has no suffix but is pressure-specific.
+// Evidence keys are channel-suffixed (z_T, runlen_RH, cusum_fast_P) except
+// pressure's tide_loss, which has no suffix but is pressure-specific.
+//
+// spatial_z_* is deliberately excluded from "this channel is implicated"
+// below. It's a cross-check the backend computes for every channel that
+// has a valid nearby-station reading in the time window (anomaly_detector.py's
+// _spatial_evidence) -- present whenever neighbours exist, independent of
+// which channel actually triggered the anomaly. Treating it as fault
+// evidence (the original bug) meant Temperature, Pressure and Humidity all
+// showed "relevant" evidence -- and therefore the exact same verdict-level
+// severity percentage -- on almost every flagged reading, regardless of
+// which single channel (step_T, cusum_P, runlen_RH, tide_loss...) actually
+// caused the flag. Only the channel-specific fault evidence below now
+// counts, so an anomaly on one channel no longer paints all three as
+// independently, identically anomalous.
 export function channelStatus(verdict, channel, fallback) {
   const evidence = verdict?.evidence || [];
   const relevant = evidence.filter(([key]) => {
+    if (typeof key !== "string") return false;
     if (channel === "P" && key === "tide_loss") return true;
-    return typeof key === "string" && key.endsWith(`_${channel}`);
+    if (key.startsWith("spatial_z_")) return false;
+    return key.endsWith(`_${channel}`);
   });
   if (!relevant.length) return fallback;
   const severity = Number(verdict?.severity || 0);

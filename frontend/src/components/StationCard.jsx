@@ -1,11 +1,17 @@
-import { daysToThreshold, number, percent, statusTone, timeAgo } from "../services/api.js";
+import { daysToThreshold, effectiveStatus, number, percent, statusTone, timeAgo } from "../services/api.js";
 import { getStationImage } from "../services/stationImages.js";
 import StatusBadge from "./StatusBadge.jsx";
 
-export default function StationCard({ station, alert, onOpen }) {
-  const tone = statusTone(station.status);
+// Was reading station.status directly -- a station that stopped reporting
+// hours ago keeps whatever status it last earned ("OK" included), so this
+// card could show a healthy badge for a station the Fleet Map already
+// marks MONITOR for going silent. Routes through the same effectiveStatus
+// helper every other status display in the app uses.
+export default function StationCard({ station, alert, onOpen, referenceTime }) {
+  const status = effectiveStatus(station, referenceTime);
+  const tone = statusTone(status);
   const days = daysToThreshold(station.days_to_threshold);
-  const anomaly = alert?.explanation || alert?.message || (station.status === "OK" ? "Nominal physical bounds" : "Requires attention");
+  const anomaly = alert?.explanation || alert?.message || (status === "OK" ? "Nominal physical bounds" : "Requires attention");
   const photo = getStationImage(station.name);
   const healthVal = station.health === null || station.health === undefined ? null : Number(station.health);
 
@@ -16,7 +22,7 @@ export default function StationCard({ station, alert, onOpen }) {
         <div className="station-card-content">
           <div className="station-card-header">
             <span className="station-id">{station.station_id}</span>
-            <StatusBadge status={station.status}>{station.status}</StatusBadge>
+            <StatusBadge status={status}>{status}</StatusBadge>
           </div>
 
           <h3 className="station-name-title">{station.name}</h3>

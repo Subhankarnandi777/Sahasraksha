@@ -1,11 +1,16 @@
 import StatusBadge from "../components/StatusBadge.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
-import { channelStatus, daysToThreshold, percent, timeAgo, number } from "../services/api.js";
+import { channelStatus, daysToThreshold, effectiveStatus, networkReferenceTime, percent, timeAgo, number } from "../services/api.js";
 
-export default function StationDetail({ selectedStation, timeseries, verdicts, openAlerts, loading, error }) {
+export default function StationDetail({ selectedStation, stations = [], timeseries, verdicts, openAlerts, loading, error }) {
   const station = selectedStation;
   const latest = timeseries[timeseries.length - 1] || {};
   const latestVerdict = verdicts[verdicts.length - 1];
+  // Same fleet-wide reference time every other page uses, so a station
+  // that's gone quiet doesn't get to look "OK" here while Fleet Map and
+  // the Stations list both already call it MONITOR.
+  const referenceTime = networkReferenceTime(stations);
+  const status = station ? effectiveStatus(station, referenceTime) : null;
 
   if (!station && !loading) {
     return (
@@ -43,8 +48,8 @@ export default function StationDetail({ selectedStation, timeseries, verdicts, o
             <div className="hero-main-details">
               <div className="hero-id-row">
                 <span className="station-code-badge">{station.station_id}</span>
-                <StatusBadge status={station.status}>
-                  {station.status} • {percent(station.health, 1)} Health
+                <StatusBadge status={status}>
+                  {status} • {percent(station.health, 1)} Health
                 </StatusBadge>
               </div>
               <h1 className="hero-station-name">{station.name}</h1>
