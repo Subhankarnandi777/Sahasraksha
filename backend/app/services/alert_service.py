@@ -11,7 +11,14 @@ from app.db.models import Alert as AlertModel
 from app.db.models import AnomalyVerdict as AnomalyVerdictModel
 from app.db.models import WeatherReading as WeatherReadingModel
 from app.schemas import Alert, AlertStatus, AnomalyReason, AnomalyVerdict, WeatherReading
-from app.services import llm_service, station_service
+from app.services import llm_service, station_service, work_order_service
+
+# Alerts at or above this severity get a work order created for them
+# automatically -- matching _recommended_action_for_alert's own HIGH/
+# CRITICAL "priority service" line in work_order_service.py. Below this,
+# a station just showing early/moderate drift doesn't need a technician
+# dispatched on its own; a human still triages it from the alerts list.
+AUTO_WORK_ORDER_SEVERITY = 0.7
 
 
 _REASON_VALUES = {reason.value for reason in AnomalyReason}
@@ -145,6 +152,37 @@ def _find_matching_reading(
     ).first()
 
 
+def _resolve_open_alerts(db: Session, station_id: str, resolved_at: datetime) -> None:
+    """Close any standing open alert(s) for a station once a fresh
+    detector verdict reports it clean (flag=0) again.
+
+    Without this, the FIRST alert a station ever received stayed open
+    forever -- nothing in the app auto-resolves alerts, only a manual
+    PATCH /alerts/{id}/status does. The open-alert dedup in
+    save_verdict_and_create_alert (a new alert is only created when none
+    is already open for that station) then silently swallowed every
+    later, possibly more severe, real detection for that same station.
+    Confirmed live: 60 of 60 stations held an open alert and the "Real-
+    Time Anomaly Cadence" chart showed zero new alerts for 6 straight
+    hours despite the live keepalive feed actively ticking every station.
+
+    This does not touch station.degradation/status -- accumulated wear is
+    a separate, intentionally non-self-healing signal (see
+    station_service.update_station_from_verdict's monotonic-degradation
+    contract). A standing work order, not an open alert, is what tracks
+    "this station still needs a technician" once its live readings have
+    returned to normal.
+    """
+    open_alerts = db.scalars(
+        select(AlertModel)
+        .where(AlertModel.station_id == station_id)
+        .where(AlertModel.status == AlertStatus.OPEN.value)
+    ).all()
+    for alert in open_alerts:
+        alert.status = AlertStatus.RESOLVED.value
+        alert.resolved_at = _as_db_datetime(resolved_at)
+
+
 def _get_or_create_reading(db: Session, reading: WeatherReading) -> WeatherReadingModel:
     db_reading = _find_matching_reading(db, reading)
     if db_reading is not None:
@@ -167,7 +205,16 @@ def _get_or_create_reading(db: Session, reading: WeatherReading) -> WeatherReadi
 def save_verdict_and_create_alert(
     reading: WeatherReading,
     verdict: AnomalyVerdict,
+    force_new_alert: bool = False,
 ) -> AnomalyVerdict:
+    """force_new_alert bypasses the open-alert dedup below, always
+    creating a fresh alert (after resolving any alert already open for
+    this station) regardless of what's currently open. This exists for
+    the /demo/inject-anomaly endpoint: a judge explicitly triggering a
+    demo injection should always visibly produce a new alert, not
+    silently do nothing because that station already had one open from
+    hours or days ago (which, before this option existed, was the normal
+    case for effectively the whole fleet -- see _resolve_open_alerts)."""
     signature = _reading_signature(reading)
 
     with SessionLocal() as db:
@@ -178,6 +225,8 @@ def save_verdict_and_create_alert(
         )
         if existing_verdict is not None:
             existing_contract_verdict = _to_anomaly_verdict(existing_verdict)
+            if existing_contract_verdict.flag == 0:
+                _resolve_open_alerts(db, reading.station_id, reading.timestamp)
             station_service.update_station_from_verdict(
                 reading.station_id,
                 reading.timestamp,
@@ -205,12 +254,18 @@ def save_verdict_and_create_alert(
         db.add(db_verdict)
         db.flush()
 
+        created_alert_id: int | None = None
+
         if verdict.flag == 1:
-            existing_open_alert = db.scalar(
-                select(AlertModel)
-                .where(AlertModel.station_id == reading.station_id)
-                .where(AlertModel.status == AlertStatus.OPEN.value)
-            )
+            if force_new_alert:
+                _resolve_open_alerts(db, reading.station_id, reading.timestamp)
+                existing_open_alert = None
+            else:
+                existing_open_alert = db.scalar(
+                    select(AlertModel)
+                    .where(AlertModel.station_id == reading.station_id)
+                    .where(AlertModel.status == AlertStatus.OPEN.value)
+                )
             if existing_open_alert is None:
                 explanation = llm_service.narrate_evidence(
                     station_name=_station_display_name(reading.station_id),
@@ -219,17 +274,20 @@ def save_verdict_and_create_alert(
                     degradation=verdict.degradation,
                     evidence=verdict.evidence,
                 )
-                db.add(
-                    AlertModel(
-                        station_id=reading.station_id,
-                        reading_id=db_reading.id,
-                        anomaly_verdict_id=db_verdict.id,
-                        severity=str(verdict.severity),
-                        message=verdict.reason.value,
-                        explanation=explanation,
-                        status=AlertStatus.OPEN.value,
-                    )
+                new_alert = AlertModel(
+                    station_id=reading.station_id,
+                    reading_id=db_reading.id,
+                    anomaly_verdict_id=db_verdict.id,
+                    severity=str(verdict.severity),
+                    message=verdict.reason.value,
+                    explanation=explanation,
+                    status=AlertStatus.OPEN.value,
                 )
+                db.add(new_alert)
+                db.flush()
+                created_alert_id = new_alert.id
+        else:
+            _resolve_open_alerts(db, reading.station_id, reading.timestamp)
 
         station_service.update_station_from_verdict(
             reading.station_id,
@@ -242,7 +300,19 @@ def save_verdict_and_create_alert(
         )
         db.commit()
         db.refresh(db_verdict)
-        return _to_anomaly_verdict(db_verdict)
+        result = _to_anomaly_verdict(db_verdict)
+
+    # Runs in its own session, after the alert above is committed and
+    # visible -- work_order_service.create_work_order_for_alert opens a
+    # fresh SessionLocal() internally, which would not see an
+    # uncommitted row from the transaction above.
+    if created_alert_id is not None and _severity(verdict.severity) >= AUTO_WORK_ORDER_SEVERITY:
+        try:
+            work_order_service.create_work_order_for_alert(created_alert_id)
+        except work_order_service.WorkOrderAlreadyExistsError:
+            pass
+
+    return result
 
 
 def count_open_alerts() -> int:

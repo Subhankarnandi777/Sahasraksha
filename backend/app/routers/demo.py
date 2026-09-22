@@ -58,4 +58,7 @@ def inject_demo_anomaly(
     )
 
     verdict = detector.evaluate(reading)
-    return alert_service.save_verdict_and_create_alert(reading, verdict)
+    # force_new_alert=True: a judge explicitly clicking this button should
+    # always see a fresh alert appear, regardless of whether the target
+    # station already has one open from earlier real detection.
+    return alert_service.save_verdict_and_create_alert(reading, verdict, force_new_alert=True)
