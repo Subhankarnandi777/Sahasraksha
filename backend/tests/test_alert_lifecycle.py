@@ -280,6 +280,69 @@ class AlertLifecycleTests(unittest.TestCase):
             work_orders = db.query(WorkOrderModel).filter(WorkOrderModel.alert_id == alert.id).all()
         self.assertEqual(len(work_orders), 0)
 
+    def test_auto_resolve_completes_the_work_order_for_a_transient_spike(self) -> None:
+        """A station with a high-severity alert (so it got an automatic
+        work order) but negligible accumulated degradation was almost
+        certainly a transient spike, not real wear. Once its alert
+        auto-resolves, the work order should close with it rather than
+        sit open forever for a problem that already went away on its
+        own."""
+        station_id = self._station_id("WOTRANSIENT")
+        self._create_station(station_id)
+
+        alert_service.save_verdict_and_create_alert(
+            self._reading(station_id, datetime(2026, 9, 4, 10, 0, tzinfo=timezone.utc)),
+            self._anomalous_verdict(severity=0.95, degradation=0.03),
+        )
+        with SessionLocal() as db:
+            alert = db.query(AlertModel).filter(AlertModel.station_id == station_id).one()
+            work_order = (
+                db.query(WorkOrderModel).filter(WorkOrderModel.alert_id == alert.id).one()
+            )
+            self.assertEqual(work_order.status, "OPEN")
+
+        alert_service.save_verdict_and_create_alert(
+            self._reading(station_id, datetime(2026, 9, 4, 10, 5, tzinfo=timezone.utc), value=29.0),
+            self._clean_verdict(),
+        )
+
+        with SessionLocal() as db:
+            work_order = db.get(WorkOrderModel, work_order.id)
+            self.assertEqual(work_order.status, "COMPLETED")
+            self.assertIsNotNone(work_order.completed_at)
+
+    def test_auto_resolve_leaves_the_work_order_open_for_a_chronically_worn_station(self) -> None:
+        """The opposite case: a station with real accumulated degradation
+        (e.g. one repaired to its true ~97% by repair_station_status.py)
+        must keep its work order open even after one particular alert
+        resolves -- the technician need is real and didn't go away just
+        because a single later reading happened to look normal."""
+        station_id = self._station_id("WOCHRONIC")
+        self._create_station(station_id)
+
+        alert_service.save_verdict_and_create_alert(
+            self._reading(station_id, datetime(2026, 9, 4, 10, 0, tzinfo=timezone.utc)),
+            self._anomalous_verdict(severity=0.95, degradation=0.6),
+        )
+        with SessionLocal() as db:
+            alert = db.query(AlertModel).filter(AlertModel.station_id == station_id).one()
+            work_order = (
+                db.query(WorkOrderModel).filter(WorkOrderModel.alert_id == alert.id).one()
+            )
+
+        alert_service.save_verdict_and_create_alert(
+            self._reading(station_id, datetime(2026, 9, 4, 10, 5, tzinfo=timezone.utc), value=29.0),
+            self._clean_verdict(),
+        )
+
+        # The alert itself still resolves -- only the work order's fate
+        # differs based on degradation.
+        self.assertEqual(len(self._open_alerts(station_id)), 0)
+        with SessionLocal() as db:
+            work_order = db.get(WorkOrderModel, work_order.id)
+            self.assertEqual(work_order.status, "OPEN")
+            self.assertIsNone(work_order.completed_at)
+
 
 if __name__ == "__main__":
     unittest.main()

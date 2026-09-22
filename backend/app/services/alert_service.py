@@ -9,8 +9,17 @@ from sqlalchemy.orm import Session, joinedload
 from app.db.database import IS_SQLITE, SessionLocal
 from app.db.models import Alert as AlertModel
 from app.db.models import AnomalyVerdict as AnomalyVerdictModel
+from app.db.models import Station
 from app.db.models import WeatherReading as WeatherReadingModel
-from app.schemas import Alert, AlertStatus, AnomalyReason, AnomalyVerdict, WeatherReading
+from app.db.models import WorkOrder as WorkOrderModel
+from app.schemas import (
+    Alert,
+    AlertStatus,
+    AnomalyReason,
+    AnomalyVerdict,
+    WeatherReading,
+    WorkOrderStatus,
+)
 from app.services import llm_service, station_service, work_order_service
 
 # Alerts at or above this severity get a work order created for them
@@ -19,6 +28,17 @@ from app.services import llm_service, station_service, work_order_service
 # a station just showing early/moderate drift doesn't need a technician
 # dispatched on its own; a human still triages it from the alerts list.
 AUTO_WORK_ORDER_SEVERITY = 0.7
+
+# Below this, a station's accumulated degradation (see
+# station_service._status_from_verdict's own SCHEDULE-or-worse floor,
+# which uses the same number) is negligible -- whatever alert/work order
+# was open for it almost certainly came from a transient severity spike
+# (the anomaly detector's degradation signal is a slow pressure-tide
+# amplitude EMA, completely separate from the momentary z-score/CUSUM/
+# physics-gate signals that drive severity -- see
+# sahasraksha/stream.py's evaluate()), not real accumulated wear. See
+# _resolve_open_alerts.
+STANDING_WORK_ORDER_DEGRADATION_FLOOR = 0.2
 
 
 _REASON_VALUES = {reason.value for reason in AnomalyReason}
@@ -171,16 +191,38 @@ def _resolve_open_alerts(db: Session, station_id: str, resolved_at: datetime) ->
     station_service.update_station_from_verdict's monotonic-degradation
     contract). A standing work order, not an open alert, is what tracks
     "this station still needs a technician" once its live readings have
-    returned to normal.
+    returned to normal -- which is also why any work order tied to these
+    alerts is only auto-completed below when the station's own
+    accumulated degradation is negligible (STANDING_WORK_ORDER_
+    DEGRADATION_FLOOR). A chronically worn station (e.g. one repaired to
+    its real ~97% degradation by repair_station_status.py) keeps its work
+    order open even though this particular alert just cleared -- the
+    technician need didn't go away because one reading looked normal.
     """
     open_alerts = db.scalars(
         select(AlertModel)
         .where(AlertModel.station_id == station_id)
         .where(AlertModel.status == AlertStatus.OPEN.value)
     ).all()
+    if not open_alerts:
+        return
+
+    alert_ids = [alert.id for alert in open_alerts]
     for alert in open_alerts:
         alert.status = AlertStatus.RESOLVED.value
         alert.resolved_at = _as_db_datetime(resolved_at)
+
+    station = db.get(Station, station_id)
+    station_degradation = station.degradation if station is not None else 0.0
+    if station_degradation < STANDING_WORK_ORDER_DEGRADATION_FLOOR:
+        stale_work_orders = db.scalars(
+            select(WorkOrderModel)
+            .where(WorkOrderModel.alert_id.in_(alert_ids))
+            .where(WorkOrderModel.status != WorkOrderStatus.COMPLETED.value)
+        ).all()
+        for work_order in stale_work_orders:
+            work_order.status = WorkOrderStatus.COMPLETED.value
+            work_order.completed_at = _as_db_datetime(resolved_at)
 
 
 def _get_or_create_reading(db: Session, reading: WeatherReading) -> WeatherReadingModel:
