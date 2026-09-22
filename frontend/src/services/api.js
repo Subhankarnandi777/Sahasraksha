@@ -213,31 +213,85 @@ export function effectiveStatus(station, referenceTime) {
   return station?.status;
 }
 
-// Evidence keys are channel-suffixed (z_T, runlen_RH, cusum_fast_P) except
-// pressure's tide_loss, which has no suffix but is pressure-specific.
+// The detector's own cutoff for "this channel's standardised residual is
+// anomalous" -- StreamingSahasraksha(z_cut=4.0) in ml/sahasraksha/stream.py,
+// used there as `ml_like = any(abs(v) > self.z_cut for v in z.values())`.
+// Below it, the detector does not consider the channel anomalous at all.
+const CHANNEL_Z_CUT = 4.0;
+
+// The detector scores severity as max|z|/8 (+ physics/missing/degradation
+// terms) in stream.py's `sev = clip(max(|z|)/8 + ...)`. Dividing a single
+// channel's own z by the same 8 puts it on exactly the scale the verdict's
+// own severity already uses, rather than inventing a second one.
+const Z_SEVERITY_DIVISOR = 8.0;
+
+// Per-channel QC label for a telemetry card.
 //
-// spatial_z_* is deliberately excluded from "this channel is implicated"
-// below. It's a cross-check the backend computes for every channel that
-// has a valid nearby-station reading in the time window (anomaly_detector.py's
-// _spatial_evidence) -- present whenever neighbours exist, independent of
-// which channel actually triggered the anomaly. Treating it as fault
-// evidence (the original bug) meant Temperature, Pressure and Humidity all
-// showed "relevant" evidence -- and therefore the exact same verdict-level
-// severity percentage -- on almost every flagged reading, regardless of
-// which single channel (step_T, cusum_P, runlen_RH, tide_loss...) actually
-// caused the flag. Only the channel-specific fault evidence below now
-// counts, so an anomaly on one channel no longer paints all three as
-// independently, identically anomalous.
+// Three things about the verdict feed make the obvious implementation wrong,
+// all of them verified against the detector rather than assumed:
+//
+//  1. A verdict exists for EVERY reading, including `reason: "ok", flag: 0`.
+//     The pages here just take verdicts[verdicts.length - 1], so the latest
+//     verdict is usually a perfectly nominal one. Reading a severity off it
+//     and rendering "Watch 15%" claims a QC concern on a station the
+//     detector never flagged.
+//
+//  2. `z_{channel}` is written unconditionally for every channel on every
+//     reading (stream.py: `evidence[f"z_{ch}"] = abs(z[ch])`, outside any
+//     gate). When nothing fires, the top-3 evidence the verdict carries is
+//     exactly z_T, z_P, z_RH -- so "does this channel appear in evidence?"
+//     is always true for all three, and every card lit up together.
+//
+//  3. `severity` is driven by the WORST channel (max|z|), so attributing it
+//     to each channel individually reports one channel's deviation three
+//     times over, as if the three had scored that independently.
+//
+// So: an unflagged verdict yields no channel badge at all; a channel is only
+// implicated by evidence that actually fired for it (range_/step_/runlen_/
+// cusum_, or tide_loss for pressure) or by its own z clearing the detector's
+// z_cut; and a z-driven badge is scored from that channel's own z, not from
+// the network-wide worst. spatial_z_* stays excluded throughout -- it is a
+// neighbour cross-check computed for every channel that has a nearby reading
+// (anomaly_detector.py's _spatial_evidence), not a fault signal for the
+// channel it names.
 export function channelStatus(verdict, channel, fallback) {
-  const evidence = verdict?.evidence || [];
-  const relevant = evidence.filter(([key]) => {
-    if (typeof key !== "string") return false;
-    if (channel === "P" && key === "tide_loss") return true;
-    if (key.startsWith("spatial_z_")) return false;
-    return key.endsWith(`_${channel}`);
-  });
-  if (!relevant.length) return fallback;
-  const severity = Number(verdict?.severity || 0);
+  if (!verdict) return fallback;
+
+  // Nothing was flagged -- the detector is reporting a normal reading.
+  const reason = String(verdict.reason || "").toLowerCase();
+  if (Number(verdict.flag || 0) === 0 || reason === "ok") return fallback;
+
+  let ownZ = null;
+  let firedForThisChannel = false;
+
+  for (const pair of verdict.evidence || []) {
+    if (!Array.isArray(pair) || pair.length !== 2) continue;
+    const [key, value] = pair;
+    if (typeof key !== "string") continue;
+
+    if (key.startsWith("spatial_z_")) continue;
+    if (key === `z_${channel}`) {
+      ownZ = Math.abs(Number(value));
+      continue;
+    }
+    if (key === "tide_loss") {
+      if (channel === "P") firedForThisChannel = true;
+      continue;
+    }
+    if (key.endsWith(`_${channel}`)) firedForThisChannel = true;
+  }
+
+  const zIsAnomalous = ownZ !== null && ownZ > CHANNEL_Z_CUT;
+  if (!firedForThisChannel && !zIsAnomalous) return fallback;
+
+  // A hard gate (frozen, step, range, dewpoint) is a physics violation that
+  // z does not measure -- a frozen sensor sits at z ~ 0 -- so those keep the
+  // verdict's own severity. A purely z-driven flag is scored from this
+  // channel's own residual instead.
+  const severity = firedForThisChannel
+    ? Number(verdict.severity || 0)
+    : Math.min(ownZ / Z_SEVERITY_DIVISOR, 1);
+
   return severity >= 0.5 ? `Attention ${percent(severity, 0)}` : `Watch ${percent(severity, 0)}`;
 }
 
@@ -262,7 +316,18 @@ export function evidenceText(pair) {
     const ch = key.replace("step_", "").toUpperCase();
     return `${ch} channel: abrupt step jump ${value ? `(${displayValue})` : "detected"}`;
   }
-  if (key === "gate_dewpoint") {
+  if (key.startsWith("range_")) {
+    return `${key.replace("range_", "")}: outside gross physical limits`;
+  }
+  // The detector's own per-channel standardised residual. Rendered raw as
+  // "z_T: 1.23" before this, because only spatial_z_ had a branch.
+  if (key.startsWith("z_")) {
+    return `${key.replace("z_", "")}: ${displayValue}σ from its own baseline`;
+  }
+  // stream.py emits this as "dewpoint_violation"; the "gate_dewpoint" spelling
+  // checked here never matched anything the backend actually sends, so a real
+  // dewpoint violation fell through to the raw key/value fallback below.
+  if (key === "dewpoint_violation" || key === "gate_dewpoint") {
     return "Dewpoint above air temperature";
   }
 
