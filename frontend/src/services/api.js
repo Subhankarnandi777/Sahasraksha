@@ -209,8 +209,33 @@ export function isSilent(station, referenceTime) {
 // a silent station can't render as if it were currently healthy anywhere
 // in the app.
 export function effectiveStatus(station, referenceTime) {
+  // The backend marks a station low_confidence when it does not trust its
+  // data, and deliberately withholds both its health score and its latest
+  // readings (station_service.py). The map has always rendered that as its
+  // own category, but the stations list read the raw status, so a station
+  // reporting nothing at all still showed a green "OK" and counted towards
+  // the healthy tally.
+  if (station?.data_quality === "low_confidence") return "MONITOR";
   if (station?.status === "OK" && isSilent(station, referenceTime)) return "MONITOR";
   return station?.status;
+}
+
+// One wording for each detector reason, shared so the station list, the
+// detail page and anything else describe the same fault the same way.
+// Without this the list fell back to printing the raw enum -- Sagar's card
+// read simply "step" -- which is the same bare-value leak that put the word
+// "ok" under a warning icon on the detail page.
+export function anomalyReasonText(reason) {
+  const r = String(reason || "").trim().toLowerCase();
+  if (r === "step") return "Abrupt step displacement detected across telemetry channels.";
+  if (r === "drift" || r === "cusum") return "Continuous cumulative sum (CUSUM) calibration drift detected.";
+  if (r === "tide_loss" || r === "degrading") return "Significant S₂ harmonic tidal resonance loss: diaphragm fatigue or port obstruction.";
+  if (r === "range") return "Reading outside gross physical limits for this channel.";
+  if (r === "impossible") return "Physically impossible combination: dewpoint above air temperature.";
+  if (r === "missing") return "Expected telemetry channel absent from this reading.";
+  if (r === "flatline" || r === "frozen") return "Persistent static sensor reading (flatline) detected.";
+  if (r === "spike" || r === "noise") return "High-frequency non-physical impulse spikes detected.";
+  return "Autonomous QC anomaly flag active.";
 }
 
 // The detector's own cutoff for "this channel's standardised residual is

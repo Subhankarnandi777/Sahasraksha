@@ -5,7 +5,7 @@ import TelemetryCard from "../components/TelemetryCard.jsx";
 // actionable -- StreamingSahasraksha(deg_cut=0.45) in stream.py, which is
 // also the only point at which it emits tide_loss evidence at all.
 const TIDE_DEGRADATION_CUT = 0.45;
-import { channelStatus, daysToThreshold, effectiveStatus, evidenceText, networkReferenceTime, percent, timeAgo, number } from "../services/api.js";
+import { anomalyReasonText, channelStatus, daysToThreshold, effectiveStatus, evidenceText, networkReferenceTime, percent, timeAgo, number } from "../services/api.js";
 
 export default function StationDetail({ selectedStation, stations = [], timeseries, verdicts, openAlerts, loading, error }) {
   const station = selectedStation;
@@ -197,20 +197,7 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                 <div className="verdict-status-banner">
                   <span className="verdict-icon">⚠️</span>
                   <p className="verdict-text">
-                    {activeAlert?.explanation || (() => {
-                      const r = diagnosticReason;
-                      if (r === "step") return "Abrupt step displacement detected across telemetry channels.";
-                      if (r === "drift" || r === "cusum") return "Continuous cumulative sum (CUSUM) calibration drift detected.";
-                      if (r === "tide_loss" || r === "degrading") return "Significant S₂ harmonic tidal resonance loss: diaphragm fatigue or port obstruction.";
-                      if (r === "range") return "Reading outside gross physical limits for this channel.";
-                      if (r === "impossible") return "Physically impossible combination: dewpoint above air temperature.";
-                      if (r === "missing") return "Expected telemetry channel absent from this reading.";
-                      if (r === "flatline" || r === "frozen") return "Persistent static sensor reading (flatline) detected.";
-                      if (r === "spike" || r === "noise") return "High-frequency non-physical impulse spikes detected.";
-                      // Never print the bare enum value -- that is how the
-                      // word "ok" ended up rendered as a diagnosis.
-                      return "Autonomous QC anomaly flag active.";
-                    })()}
+                    {activeAlert?.explanation || anomalyReasonText(diagnosticReason)}
                   </p>
                 </div>
                 {/* Evidence has to come from whichever record the diagnosis

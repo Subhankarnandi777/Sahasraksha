@@ -3,6 +3,14 @@ import FilterTabs from "../components/FilterTabs.jsx";
 import StationCard from "../components/StationCard.jsx";
 import { effectiveStatus, networkReferenceTime, percent } from "../services/api.js";
 
+// null and "" both coerce to a perfectly finite 0, so they have to be
+// rejected before Number() ever sees them.
+function healthOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export default function Stations({ stations, openAlerts, loading, error }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
@@ -24,8 +32,13 @@ export default function Stations({ stations, openAlerts, loading, error }) {
         return `${station.station_id} ${station.name}`.toLowerCase().includes(normalizedQuery);
       })
       .sort((a, b) => {
-        const aHealth = Number.isFinite(Number(a.health)) ? Number(a.health) : null;
-        const bHealth = Number.isFinite(Number(b.health)) ? Number(b.health) : null;
+        // Number(null) is 0, and 0 is finite, so a station with no health
+        // score at all was scoring as 0.0 -- the most critical value there
+        // is. The three stations reporting nothing were sorting above
+        // Purnea on a genuine 2.9%, and the null branches below could never
+        // fire for null at all. Only undefined ever reached them.
+        const aHealth = healthOrNull(a.health);
+        const bHealth = healthOrNull(b.health);
         if (aHealth === null && bHealth === null) return 0;
         if (aHealth === null) return 1;
         if (bHealth === null) return -1;
@@ -34,8 +47,14 @@ export default function Stations({ stations, openAlerts, loading, error }) {
       });
   }, [filter, query, sort, stations, referenceTime]);
 
+  // A station whose data the pipeline does not trust cannot be counted as
+  // demonstrably operational -- there are no readings behind it to say so.
   const activePercent = stations.length
-    ? stations.filter((station) => effectiveStatus(station, referenceTime) !== "SERVICE NOW").length / stations.length
+    ? stations.filter(
+        (station) =>
+          station.data_quality !== "low_confidence" &&
+          effectiveStatus(station, referenceTime) !== "SERVICE NOW"
+      ).length / stations.length
     : 0;
 
   function stationAlert(stationId) {
@@ -91,7 +110,9 @@ export default function Stations({ stations, openAlerts, loading, error }) {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by station code (e.g. AWS-DEL-01) or city..."
+            // Was "e.g. AWS-DEL-01", a format no station in this network
+            // uses -- the IDs are NOAA-ISD composites like 42182099999.
+            placeholder={`Search ${stations.length} stations by code (e.g. ${stations[0]?.station_id || "42182099999"}) or name...`}
             aria-label="Search station"
           />
           {query && (

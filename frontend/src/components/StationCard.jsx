@@ -1,4 +1,4 @@
-import { daysToThreshold, effectiveStatus, number, percent, statusTone, timeAgo } from "../services/api.js";
+import { anomalyReasonText, daysToThreshold, effectiveStatus, number, percent, statusTone, timeAgo } from "../services/api.js";
 import { getStationImage } from "../services/stationImages.js";
 import StatusBadge from "./StatusBadge.jsx";
 
@@ -11,7 +11,17 @@ export default function StationCard({ station, alert, onOpen, referenceTime }) {
   const status = effectiveStatus(station, referenceTime);
   const tone = statusTone(status);
   const days = daysToThreshold(station.days_to_threshold);
-  const anomaly = alert?.explanation || alert?.message || (status === "OK" ? "Nominal physical bounds" : "Requires attention");
+  const lowConfidence = station.data_quality === "low_confidence";
+  const needsService = status === "SERVICE NOW" || status === "SCHEDULE";
+  // `alert.message` is the bare detector reason, so this used to print the
+  // single word "step" on Sagar's card whenever an alert carried no
+  // explanation text. And a station the pipeline does not trust cannot
+  // claim "Nominal physical bounds" -- it has no readings to be nominal.
+  const anomaly = lowConfidence
+    ? "Data quality too low to assess this station."
+    : alert?.explanation ||
+      (alert?.message ? anomalyReasonText(alert.message) : null) ||
+      (status === "OK" ? "Nominal physical bounds" : "Requires attention");
   const photo = getStationImage(station.name);
   const healthVal = station.health === null || station.health === undefined ? null : Number(station.health);
 
@@ -70,8 +80,16 @@ export default function StationCard({ station, alert, onOpen, referenceTime }) {
           </div>
 
           <div className="station-card-footer">
+            {/* "No maintenance due" on a SERVICE NOW station at 2.9% health
+                read as reassurance. No projection exists there because the
+                threshold has already been crossed. Matches the wording the
+                detail page uses for the same case. */}
             <span className="service-text">
-              {days === "-" ? "No maintenance due" : `~${days}d to service window`}
+              {days !== "-"
+                ? `~${days}d to service window`
+                : needsService
+                ? "Service required now"
+                : "No maintenance due"}
             </span>
             <span className="card-cta-link">Inspect Telemetry →</span>
           </div>
