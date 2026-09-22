@@ -119,26 +119,42 @@ export function sendChatMessage(message, history = []) {
   });
 }
 
+// Number("") is 0 and Number.isNaN(0) is false, so an empty field used to
+// render as a confident "0%" rather than "no data" -- the same coercion
+// that had the station list ranking no-data stations as the fleet's worst.
+// Infinity slipped through the NaN check too, and printed as "Infinity%".
 export function percent(value, digits = 0) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
     return "-";
   }
 
-  return `${(Number(value) * 100).toFixed(digits)}%`;
+  return `${(parsed * 100).toFixed(digits)}%`;
 }
 
 export function number(value, digits = 1) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
     return "-";
   }
 
-  return Number(value).toFixed(digits);
+  return parsed.toFixed(digits);
 }
 
 export function daysToThreshold(value) {
   return value === null || value === undefined ? "-" : String(value);
 }
 
+// Buckets on the severity number alone -- it says nothing about which
+// mechanism fired. The alerts page used to label these bands "Drift
+// Monitoring (CUSUM / Tide decay)" and "Sensor Advisory (minor variance)",
+// which put three flatline faults and a step fault under a drift heading.
 export function severityLevel(score) {
   const value = Number(score || 0);
   if (value >= 0.8) return "critical";
@@ -354,6 +370,17 @@ export function evidenceText(pair) {
   // dewpoint violation fell through to the raw key/value fallback below.
   if (key === "dewpoint_violation" || key === "gate_dewpoint") {
     return "Dewpoint above air temperature";
+  }
+  // anomaly_detector.py appends these two after the detector's own top-3,
+  // and neither had a branch, so they rendered as raw snake_case keys with
+  // a number stuck on the end. The second one is the pipeline admitting it
+  // had too little history to fit a real harmonic for this station -- that
+  // is worth saying in words rather than leaking as a variable name.
+  if (key === "spatial_agreement") {
+    return `Neighbour stations agree: ${Math.round(Number(value) * 100)}% of channels`;
+  }
+  if (key === "insufficient_history_for_real_fit") {
+    return "Too little history to fit this station's own baseline";
   }
 
   return `${key}: ${displayValue}`;

@@ -21,7 +21,7 @@ export default function Alerts({ openAlerts, loading, error }) {
       <main className="screen alerts-screen">
         <div className="loading-state-card">
           <div className="loading-spinner" />
-          <p>Running conformal inference across station stream...</p>
+          <p>Scoring live station telemetry against fitted baselines...</p>
         </div>
       </main>
     );
@@ -36,7 +36,7 @@ export default function Alerts({ openAlerts, loading, error }) {
           <h1 className="page-main-heading">Telemetry Anomaly Center</h1>
           <p className="page-sub-heading">
             {loading
-              ? "Running conformal inference across station stream..."
+              ? "Scoring live station telemetry against fitted baselines..."
               : `${openAlerts.length} explainable anomalies detected via 4-layer physics & ML verification`}
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function Alerts({ openAlerts, loading, error }) {
         >
           <span className="alert-kpi-label">Critical Priority</span>
           <strong className="alert-kpi-val text-rose">{counts.critical.toLocaleString()}</strong>
-          <small className="alert-kpi-hint">Urgent field service</small>
+          <small className="alert-kpi-hint">Severity 80% and above</small>
         </div>
 
         <div
@@ -74,9 +74,9 @@ export default function Alerts({ openAlerts, loading, error }) {
           role="button"
           tabIndex={0}
         >
-          <span className="alert-kpi-label">Drift Monitoring</span>
+          <span className="alert-kpi-label">Elevated Priority</span>
           <strong className="alert-kpi-val text-amber">{counts.monitoring.toLocaleString()}</strong>
-          <small className="alert-kpi-hint">CUSUM / Tide decay</small>
+          <small className="alert-kpi-hint">Severity 50-79%</small>
         </div>
 
         <div
@@ -85,9 +85,9 @@ export default function Alerts({ openAlerts, loading, error }) {
           role="button"
           tabIndex={0}
         >
-          <span className="alert-kpi-label">Sensor Advisory</span>
+          <span className="alert-kpi-label">Low Priority</span>
           <strong className="alert-kpi-val text-cyan">{counts.nodata.toLocaleString()}</strong>
-          <small className="alert-kpi-hint">Minor variance / transient</small>
+          <small className="alert-kpi-hint">Severity below 50%</small>
         </div>
       </div>
 
@@ -99,8 +99,8 @@ export default function Alerts({ openAlerts, loading, error }) {
           tabs={[
             { value: "all", label: `All Alerts (${openAlerts.length})` },
             { value: "critical", label: `Critical Priority (${counts.critical})` },
-            { value: "monitoring", label: `Drift Monitoring (${counts.monitoring})` },
-            { value: "nodata", label: `Advisory (${counts.nodata})` }
+            { value: "monitoring", label: `Elevated Priority (${counts.monitoring})` },
+            { value: "nodata", label: `Low Priority (${counts.nodata})` }
           ]}
         />
         <span className="alert-filter-count">
