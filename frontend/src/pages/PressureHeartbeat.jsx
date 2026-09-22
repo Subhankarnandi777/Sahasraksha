@@ -149,7 +149,10 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
                     <span className="legend-color degraded" /> Measured (trend and S₁ removed)
                   </span>
                   <span className="legend-item">
-                    <span className="legend-color nominal" /> Fitted S₂ harmonic ({number(tideFit.s2Amplitude, 2)} hPa amplitude)
+                    <span className="legend-color nominal" /> Fitted S₂ harmonic
+                    {tideFit.reliable
+                      ? ` (${number(tideFit.s2Amplitude, 2)} hPa amplitude)`
+                      : " (amplitude not resolved this window)"}
                   </span>
                 </div>
                 <div className="chart-svg-container">
@@ -162,12 +165,31 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
                   />
                 </div>
                 <p className="chart-footer-note">
-                  Least-squares fit of the S₁ (24 h) and S₂ (12 h) solar tides, in local solar
-                  time, to this station's own {Math.round(tideFit.spanHours)} h barometric record
-                  ({tideFit.sampleCount} readings), with a linear trend fitted jointly so synoptic
-                  drift is not absorbed into the harmonic. S₂ peaks at{" "}
-                  {number(tideFit.s2PhaseHours, 1)} h local solar time; residual RMS{" "}
-                  {number(tideFit.rmseHpa, 2)} hPa.
+                  Robust (IRLS) least-squares fit of the S₁ (24 h) and S₂ (12 h) solar tides, in
+                  local solar time, to this station's own {Math.round(tideFit.spanHours)} h
+                  barometric record ({tideFit.sampleCount} readings), with a linear trend fitted
+                  jointly so synoptic drift is not absorbed into the harmonic.{" "}
+                  {tideFit.reliable ? (
+                    <>
+                      S₂ peaks at {number(tideFit.s2PhaseHours, 1)} h local solar time; typical
+                      misfit {number(tideFit.robustScaleHpa, 2)} hPa.
+                    </>
+                  ) : (
+                    <>
+                      The amplitude is not quoted for this window: the typical misfit is{" "}
+                      {number(tideFit.robustScaleHpa, 2)} hPa against a fitted S₂ of only{" "}
+                      {number(tideFit.s2Amplitude, 2)} hPa, so the tide is not resolved above the
+                      disturbance in the record and any figure read off it would be meaningless.
+                    </>
+                  )}
+                  {tideFit.outlierFraction > 0.02 && (
+                    <>
+                      {" "}
+                      {percent(tideFit.outlierFraction, 0)} of readings in this window sit far
+                      outside the fit — the robust pass downweights them so they do not drag the
+                      harmonic, which is what the evidence markers below are flagging.
+                    </>
+                  )}
                 </p>
               </>
             ) : (

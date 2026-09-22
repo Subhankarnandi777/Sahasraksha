@@ -30,11 +30,34 @@
 const S1_PERIOD_HOURS = 24;
 const S2_PERIOD_HOURS = 12;
 
+// Iteratively reweighted least squares, matching what this project's own
+// offline fit already does (fit_coeffs in ml/sahasraksha/stream.py): MAD
+// scale, Cauchy weights, six passes. Plain OLS was the wrong tool here --
+// the live feed injects step faults of 10 hPa and more, which is an order
+// of magnitude above the roughly 1 hPa tide being measured, so a handful
+// of contaminated readings drags the harmonic badly off. Sagar fitted at
+// 0.77 hPa amplitude with a 5.18 hPa residual: the estimate was being
+// reported as a measurement while the fit explained almost nothing.
+const IRLS_PASSES = 6;
+const IRLS_TUNING = 2.5;
+
 // Below these there is not enough of the record to constrain a 12-hour
 // harmonic, and the honest answer is to say so rather than draw something.
 // Two full S2 cycles is the bare minimum for the phase to mean anything.
 const MIN_SAMPLES = 12;
 const MIN_SPAN_HOURS = 24;
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function medianAbsoluteDeviation(values) {
+  const center = median(values);
+  return median(values.map((v) => Math.abs(v - center)));
+}
 
 // Solve A x = b by Gaussian elimination with partial pivoting. A is small
 // and fixed (6x6 normal equations), so this needs no library.
@@ -106,22 +129,43 @@ export function fitSolarTides(rows, lon = 0) {
     return [1, tHours, Math.cos(w1), Math.sin(w1), Math.cos(w2), Math.sin(w2)];
   });
 
-  // Normal equations: (X'X) c = X'y
+  // Weighted normal equations: (X'WX) c = X'Wy, with W = diag(w^2).
   const n = 6;
-  const XtX = Array.from({ length: n }, () => new Array(n).fill(0));
-  const Xty = new Array(n).fill(0);
-  for (let i = 0; i < design.length; i++) {
-    const x = design[i];
-    const y = samples[i].value;
-    for (let a = 0; a < n; a++) {
-      Xty[a] += x[a] * y;
-      for (let b = a; b < n; b++) XtX[a][b] += x[a] * x[b];
+  const fitWith = (weights) => {
+    const XtX = Array.from({ length: n }, () => new Array(n).fill(0));
+    const Xty = new Array(n).fill(0);
+    for (let i = 0; i < design.length; i++) {
+      const x = design[i];
+      const y = samples[i].value;
+      const w = weights ? weights[i] * weights[i] : 1;
+      if (!w) continue;
+      for (let a = 0; a < n; a++) {
+        Xty[a] += w * x[a] * y;
+        for (let b = a; b < n; b++) XtX[a][b] += w * x[a] * x[b];
+      }
     }
-  }
-  for (let a = 0; a < n; a++) for (let b = 0; b < a; b++) XtX[a][b] = XtX[b][a];
+    for (let a = 0; a < n; a++) for (let b = 0; b < a; b++) XtX[a][b] = XtX[b][a];
+    return solve(XtX, Xty);
+  };
 
-  const c = solve(XtX, Xty);
+  const predict = (coef, i) => {
+    const x = design[i];
+    let sum = 0;
+    for (let a = 0; a < n; a++) sum += coef[a] * x[a];
+    return sum;
+  };
+
+  let c = fitWith(null);
   if (!c || c.some((v) => !Number.isFinite(v))) return null;
+
+  for (let pass = 0; pass < IRLS_PASSES; pass++) {
+    const residuals = design.map((_, i) => samples[i].value - predict(c, i));
+    const scale = 1.4826 * medianAbsoluteDeviation(residuals) + 1e-6;
+    const weights = residuals.map((r) => Math.sqrt(1 / (1 + (r / (IRLS_TUNING * scale)) ** 2)));
+    const next = fitWith(weights);
+    if (!next || next.some((v) => !Number.isFinite(v))) break;
+    c = next;
+  }
 
   const [c0, c1, c2, c3, c4, c5] = c;
   const s1Amplitude = Math.hypot(c2, c3);
@@ -137,6 +181,7 @@ export function fitSolarTides(rows, lon = 0) {
   // would compare two different things and make a good fit look terrible.
   const observed = [];
   const fitted = [];
+  const misfits = [];
   let sumSq = 0;
   for (let i = 0; i < design.length; i++) {
     const x = design[i];
@@ -145,8 +190,25 @@ export function fitSolarTides(rows, lon = 0) {
     const residual = samples[i].value - slow;
     observed.push(residual);
     fitted.push(s2);
+    misfits.push(residual - s2);
     sumSq += (residual - s2) ** 2;
   }
+
+  // Plain RMS is itself wrecked by the same contaminated readings the IRLS
+  // pass is there to survive, so the typical misfit is reported with a
+  // robust scale instead. `outlierFraction` is what share of the record sits
+  // far enough out to be an injected fault or a genuine sensor event rather
+  // than ordinary weather noise.
+  const robustScale = 1.4826 * medianAbsoluteDeviation(misfits);
+  const outlierFraction =
+    misfits.filter((r) => Math.abs(r) > Math.max(4 * robustScale, 2)).length / misfits.length;
+
+  // The harmonic is only resolved if the typical misfit is smaller than the
+  // signal being measured. When a station is mid-fault the record carries
+  // 10 hPa steps against a ~1 hPa tide, and an amplitude read off that is
+  // not a measurement of anything -- so say so rather than print a number
+  // that looks authoritative.
+  const reliable = robustScale > 0 && s2Amplitude > robustScale;
 
   return {
     s2Amplitude,
@@ -156,7 +218,10 @@ export function fitSolarTides(rows, lon = 0) {
     spanHours,
     observed,
     fitted,
-    rmseHpa: Math.sqrt(sumSq / design.length)
+    rmseHpa: Math.sqrt(sumSq / design.length),
+    robustScaleHpa: robustScale,
+    outlierFraction,
+    reliable
   };
 }
 

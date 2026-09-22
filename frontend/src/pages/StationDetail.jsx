@@ -24,6 +24,22 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
       String(latestVerdict.reason || "").trim().toLowerCase() !== "ok"
   );
 
+  // openAlerts was passed into this page and then never read, so the
+  // diagnostics card only ever looked at the single most recent verdict.
+  // A station can sit at SERVICE NOW with an open step-fault alert while
+  // its newest reading comes back clean -- and the card then announced
+  // "operating within nominal bounds" on a station the fleet map had just
+  // marked critical. An outstanding alert is the station's actual state;
+  // the newest verdict is only the last thing it happened to report.
+  const activeAlert =
+    (openAlerts || []).find((alert) => alert.station_id === station?.station_id) || null;
+  const showDiagnostics = Boolean(activeAlert) || verdictIsAnomalous;
+  const diagnosticSource = activeAlert || latestVerdict;
+  const diagnosticReason = String(
+    (activeAlert ? activeAlert.message : latestVerdict?.reason) || ""
+  ).trim().toLowerCase();
+  const needsService = status === "SERVICE NOW" || status === "SCHEDULE";
+
   if (!station && !loading) {
     return (
       <main className="screen station-detail-screen">
@@ -78,13 +94,19 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
               {/* Rendered as a bare "- days" when there was no estimate.
                   StationCard already words this case properly. */}
               <div className="health-service-estimate">
-                {daysToThreshold(station.days_to_threshold) === "-" ? (
-                  <span>No maintenance currently projected</span>
-                ) : (
+                {daysToThreshold(station.days_to_threshold) !== "-" ? (
                   <>
                     <span>Estimated Service Window:</span>
                     <b>{daysToThreshold(station.days_to_threshold)} days</b>
                   </>
+                ) : needsService ? (
+                  // "No maintenance currently projected" on a SERVICE NOW
+                  // station read as reassurance. No projection exists because
+                  // the threshold has already been crossed, not because the
+                  // station is fine.
+                  <span>Service required now</span>
+                ) : (
+                  <span>No maintenance currently projected</span>
                 )}
               </div>
             </div>
@@ -146,10 +168,10 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
               </div>
               {/* Severity/confidence describe an anomaly, so they only
                   belong here when one was actually raised. */}
-              {verdictIsAnomalous && (
+              {showDiagnostics && (
                 <div className="verdict-metrics-pill">
-                  <span>Confidence: <b>{percent(latestVerdict.confidence, 0)}</b></span>
-                  <span>Severity: <b>{percent(latestVerdict.severity, 0)}</b></span>
+                  <span>Confidence: <b>{percent(diagnosticSource.confidence, 0)}</b></span>
+                  <span>Severity: <b>{percent(diagnosticSource.severity, 0)}</b></span>
                 </div>
               )}
             </div>
@@ -160,14 +182,23 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                 warning banner whose text fell through to printing the raw
                 reason string -- the live site showed a warning triangle
                 followed by the word "ok" under "Conformal Anomaly
-                Diagnostics". Same root cause as the channel cards. */}
-            {verdictIsAnomalous ? (
+                Diagnostics". Same root cause as the channel cards. An open
+                alert now takes precedence over the newest verdict, so a
+                station that is still carrying a fault cannot report itself
+                nominal just because its last reading looked fine. */}
+            {showDiagnostics ? (
               <div className="verdict-body">
+                {activeAlert && !verdictIsAnomalous && (
+                  <p className="state">
+                    Latest reading is within nominal bounds, but this station has an open alert
+                    outstanding.
+                  </p>
+                )}
                 <div className="verdict-status-banner">
                   <span className="verdict-icon">⚠️</span>
                   <p className="verdict-text">
-                    {(() => {
-                      const r = String(latestVerdict.reason || "").trim().toLowerCase();
+                    {activeAlert?.explanation || (() => {
+                      const r = diagnosticReason;
                       if (r === "step") return "Abrupt step displacement detected across telemetry channels.";
                       if (r === "drift" || r === "cusum") return "Continuous cumulative sum (CUSUM) calibration drift detected.";
                       if (r === "tide_loss" || r === "degrading") return "Significant S₂ harmonic tidal resonance loss: diaphragm fatigue or port obstruction.";
@@ -182,14 +213,17 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                     })()}
                   </p>
                 </div>
-                {latestVerdict.evidence && latestVerdict.evidence.length > 0 && (
+                {/* Evidence has to come from whichever record the diagnosis
+                    above is describing, or the markers would belong to a
+                    different reading than the headline. */}
+                {diagnosticSource?.evidence?.length > 0 && (
                   <div className="verdict-evidence-strip">
                     <span className="evidence-title">Physics Evidence Markers:</span>
                     <div className="evidence-pills">
                       {/* Was printing raw keys and values ("z_RH: 2.28").
                           evidenceText already renders these in words, and
                           the pressure page has used it all along. */}
-                      {latestVerdict.evidence.map((pair) => (
+                      {diagnosticSource.evidence.map((pair) => (
                         <span key={pair[0]} className="evidence-pill">
                           {evidenceText(pair)}
                         </span>
