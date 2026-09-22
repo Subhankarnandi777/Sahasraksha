@@ -133,6 +133,90 @@ class KeepaliveLiveFeedTests(unittest.TestCase):
         # and is deliberately excluded from the windows file.
         self.assertNotIn("42875099999", windows)
 
+    def _is_faulty(self, state, station, before_anomaly, before_frozen):
+        after_anomaly = state.anomaly_left.get(station, 0)
+        after_frozen = state.frozen_left.get(station, 0)
+        return bool(before_anomaly or before_frozen or after_anomaly or after_frozen)
+
+    def test_fault_fraction_stays_a_small_minority_of_the_fleet(self) -> None:
+        """A single station's own long-run fault fraction --
+        average_fault_duration / ANOMALY_EVERY -- is what the fleet-wide
+        *average* simultaneous-fault fraction converges to once stations
+        are desynchronised (see the other test below for the
+        synchronisation half of this).
+
+        ANOMALY_EVERY=12 (tuned for the original 4-station demo) gave each
+        station an average fault duration of ~7 ticks
+        (0.5*(ANOMALY_TICKS+1) + 0.5*(FROZEN_TICKS+1)), for a fault
+        fraction of ~58% -- a majority of the time, not an occasional demo
+        blip. This must be a small minority for a 60-station fleet to read
+        as mostly nominal.
+        """
+        window = self._window()
+        state = LiveFeedState()
+        station = "TEST-STATION-FRACTION"
+        warmup = keepalive_service.WARMUP_TICKS
+        cycles_to_sample = 300
+        total_ticks = warmup + cycles_to_sample * keepalive_service.ANOMALY_EVERY
+
+        faulty = 0
+        measured = 0
+        for tick in range(1, total_ticks + 1):
+            before_anomaly = state.anomaly_left.get(station, 0)
+            before_frozen = state.frozen_left.get(station, 0)
+            state.next_values(station, window, tick)
+            if tick > warmup:
+                measured += 1
+                if self._is_faulty(state, station, before_anomaly, before_frozen):
+                    faulty += 1
+
+        fraction = faulty / measured
+        self.assertLess(
+            fraction, 0.25,
+            f"expected a small minority of ticks to be faulty, got {fraction:.0%} -- "
+            "ANOMALY_EVERY is too small relative to the average fault duration",
+        )
+        self.assertGreater(
+            fraction, 0.02,
+            f"fault fraction {fraction:.0%} is too low to demonstrate live detection at all",
+        )
+
+    def test_stations_are_not_all_faulty_at_once(self) -> None:
+        """The keepalive loop ticks every focus station from the SAME
+        shared `tick` counter once per pass (see _keepalive_loop). The
+        original trigger, `tick % ANOMALY_EVERY == 0`, always started a
+        fault when it fired (the 50/50 coin only picked anomaly-vs-frozen,
+        it never skipped the tick) -- so every warmed station flipped to
+        faulty on the exact same tick, and the whole fleet read as faulty
+        simultaneously before partially recovering together.
+
+        Each station must now get its own staggered phase offset so
+        faults land on different ticks for different stations, and the
+        fleet-wide simultaneous-fault fraction must stay a small minority
+        at every tick, not just on average.
+        """
+        window = self._window()
+        state = LiveFeedState()
+        station_ids = [f"FLEET-STN-{i:03d}" for i in range(60)]
+        warmup = keepalive_service.WARMUP_TICKS
+
+        max_simultaneous_fraction = 0.0
+        for tick in range(1, 2000 + 1):
+            faulty_now = 0
+            for station in station_ids:
+                state.next_values(station, window, tick)
+                if state.anomaly_left.get(station, 0) > 0 or state.frozen_left.get(station, 0) > 0:
+                    faulty_now += 1
+            if tick > warmup + 5:
+                fraction = faulty_now / len(station_ids)
+                max_simultaneous_fraction = max(max_simultaneous_fraction, fraction)
+
+        self.assertLess(
+            max_simultaneous_fraction, 0.5,
+            f"at some tick {max_simultaneous_fraction:.0%} of the fleet was faulty at once -- "
+            "stations are triggering their faults in lockstep instead of staggered",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

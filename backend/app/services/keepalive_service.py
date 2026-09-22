@@ -53,12 +53,49 @@ demonstration (detection AND recovery) and a bounded one.
 Same warmup + anomaly logic already verified in live_feed_simulator.py,
 condensed to run as a background thread inside the deployed backend
 itself rather than a separate local script.
+
+Fault frequency and fleet-wide synchronisation
+-----------------------------------------------
+Every station in the focus set is ticked from the SAME shared `tick`
+counter (the loop below increments it once per pass over the whole
+focus set, not once per station). ANOMALY_EVERY/ANOMALY_TICKS/
+FROZEN_TICKS were originally tuned when FOCUS_COUNT defaulted to 4
+stations; at FOCUS_COUNT=60 (the real Render value, LIVE_KEEPALIVE_
+STATIONS=60) two problems compounded:
+
+1. The old trigger, `tick % ANOMALY_EVERY == 0`, always started SOME
+   fault when it fired -- the `random.random() < 0.5` only chose
+   between a step anomaly and a frozen sensor, it never skipped the
+   tick entirely. So every warmed, eligible station entered a fault
+   at the exact same tick -- the whole fleet flipped to "faulty"
+   simultaneously, then partially recovered over the following ~10
+   ticks, then sat quiet until the next shared trigger tick. Observed
+   live on 2026-09-22: dashboard readings like "28 Healthy / 30
+   Monitoring / 2 Service" and "25 Healthy / 33 Monitoring / 2
+   Service" -- roughly half the 60-station fleet reading as faulty at
+   once, which contradicts the dashboard's own "Stability: Nominal"
+   framing.
+2. ANOMALY_EVERY=12 with an average fault duration of ~7 ticks
+   (0.5*(ANOMALY_TICKS+1) + 0.5*(FROZEN_TICKS+1) = 0.5*4 + 0.5*10 = 7)
+   meant each individual station was faulty ~58% of the time it was
+   eligible (7/12) -- a majority, not an occasional demo blip.
+
+Both are fixed together: each station is given a stable per-station
+phase offset (deterministic hash of its station_id, so it survives
+across ticks without needing extra persisted state), and the trigger
+becomes `(tick - phase) % ANOMALY_EVERY == 0`. That staggers which
+tick each station rolls its fault on, so the fleet no longer flips in
+lockstep. ANOMALY_EVERY is also raised so a single station's own
+long-run fault fraction (average_duration / ANOMALY_EVERY) drops from
+~58% to roughly 12% -- comfortably a small minority of a 60-station
+fleet at any instant, tested in tests/test_keepalive_live_feed.py.
 """
 import json
 import os
 import random
 import threading
 import time
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib import request as urllib_request
@@ -69,7 +106,15 @@ ENABLED = os.getenv("ENABLE_LIVE_KEEPALIVE", "true").lower() == "true"
 TICK_SECONDS = int(os.getenv("LIVE_KEEPALIVE_INTERVAL", "300"))  # 5 min, safe under Render's 15-min sleep
 FOCUS_COUNT = int(os.getenv("LIVE_KEEPALIVE_STATIONS", "4"))
 WARMUP_TICKS = 6
-ANOMALY_EVERY = int(os.getenv("LIVE_KEEPALIVE_ANOMALY_EVERY", "12"))
+# Was 12 -- tuned for a 4-station demo, where a mean fault fraction of
+# ~58% per eligible station was still just one or two stations. At
+# FOCUS_COUNT=60 that same fraction meant roughly half the fleet
+# reading as faulty at once. 60 brings each station's own long-run
+# fault fraction down to ~12% (see module docstring), and combined
+# with the per-station phase offset below, keeps simultaneous faults
+# to a small, staggered minority of the fleet instead of a fleet-wide
+# synchronised burst.
+ANOMALY_EVERY = int(os.getenv("LIVE_KEEPALIVE_ANOMALY_EVERY", "60"))
 
 # How many ticks an injected step anomaly stays applied before the station
 # recovers to its real value. Long enough for the detector to see it and
@@ -144,6 +189,20 @@ class LiveFeedState:
         self.anomaly_left = {}
         self.anomaly_offset = {}
         self.last_sent = {}
+        self.phase = {}
+
+    def _phase_for(self, station_id):
+        """A stable per-station offset in [0, ANOMALY_EVERY), so each
+        station's fault-trigger tick is staggered rather than shared.
+
+        Derived from a deterministic hash (crc32, not the builtin hash()
+        -- which is salted per-process by PYTHONHASHSEED) so it is the
+        same every time for a given station_id, including across test
+        runs and process restarts.
+        """
+        return self.phase.setdefault(
+            station_id, zlib.crc32(station_id.encode()) % ANOMALY_EVERY
+        )
 
     def next_values(self, station_id, window, tick):
         self.ticks_seen[station_id] = self.ticks_seen.get(station_id, 0) + 1
@@ -176,7 +235,7 @@ class LiveFeedState:
             if self.anomaly_left[station_id] == 0:
                 self.anomaly_offset.pop(station_id, None)
                 print(f"[keepalive] station {station_id} anomaly released, back to real values")
-        elif warmed and tick % ANOMALY_EVERY == 0:
+        elif warmed and (tick - self._phase_for(station_id)) % ANOMALY_EVERY == 0:
             if random.random() < 0.5:
                 channel = random.choice(list(CHANNELS))
                 magnitude = random.choice([-1, 1]) * random.uniform(9, 14)
