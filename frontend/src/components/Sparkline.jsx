@@ -24,6 +24,11 @@ function bezierPath(points) {
 
 export default function Sparkline({
   values = [],
+  // Optional second series drawn dashed behind the main one, on the SAME
+  // scale. Added so the S2 heartbeat chart can show the station's measured
+  // signal against its fitted harmonic -- its legend used to name two
+  // traces while this component could only ever draw one.
+  comparison = [],
   tone = "orange", // 'orange' | 'blue' | 'amber' | 'red'
   height = 80,
   showArea = true,
@@ -32,6 +37,7 @@ export default function Sparkline({
 }) {
   const gradientId = useId();
   const cleanValues = values.filter((v) => Number.isFinite(Number(v))).map(Number);
+  const cleanComparison = comparison.filter((v) => Number.isFinite(Number(v))).map(Number);
   const width = 320;
   const padTop = 10;
   const padBottom = 10;
@@ -45,8 +51,12 @@ export default function Sparkline({
     );
   }
 
-  const min = Math.min(...cleanValues);
-  const max = Math.max(...cleanValues);
+  // Both series share one scale, otherwise a visual "comparison" of two
+  // independently normalised lines would be meaningless.
+  const hasComparison = cleanComparison.length >= 2;
+  const scalePool = hasComparison ? [...cleanValues, ...cleanComparison] : cleanValues;
+  const min = Math.min(...scalePool);
+  const max = Math.max(...scalePool);
   const span = max - min || 1;
   const step = width / (cleanValues.length - 1);
 
@@ -55,7 +65,14 @@ export default function Sparkline({
     y: padTop + chartHeight - ((val - min) / span) * chartHeight
   }));
 
+  const comparisonStep = hasComparison ? width / (cleanComparison.length - 1) : 0;
+  const comparisonPoints = cleanComparison.map((val, idx) => ({
+    x: idx * comparisonStep,
+    y: padTop + chartHeight - ((val - min) / span) * chartHeight
+  }));
+
   const splineD = bezierPath(points);
+  const comparisonD = hasComparison ? bezierPath(comparisonPoints) : "";
   const lastPoint = points[points.length - 1];
   const areaD = `${splineD} L ${width} ${height} L 0 ${height} Z`;
 
@@ -90,6 +107,20 @@ export default function Sparkline({
 
         {/* Translucent Gradient Area Fill */}
         {showArea && <path d={areaD} fill={`url(#grad-${gradientId})`} />}
+
+        {/* Optional comparison series -- dashed, behind the main trace */}
+        {hasComparison && (
+          <path
+            d={comparisonD}
+            fill="none"
+            stroke="#64748b"
+            strokeWidth="2"
+            strokeDasharray="5 4"
+            strokeLinecap="round"
+            opacity="0.85"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
 
         {/* Ambient Soft Blur Shadow Stroke */}
         <path

@@ -1,6 +1,11 @@
 import StatusBadge from "../components/StatusBadge.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
-import { channelStatus, daysToThreshold, effectiveStatus, networkReferenceTime, percent, timeAgo, number } from "../services/api.js";
+
+// The detector's own threshold for treating tidal amplitude decay as
+// actionable -- StreamingSahasraksha(deg_cut=0.45) in stream.py, which is
+// also the only point at which it emits tide_loss evidence at all.
+const TIDE_DEGRADATION_CUT = 0.45;
+import { channelStatus, daysToThreshold, effectiveStatus, evidenceText, networkReferenceTime, percent, timeAgo, number } from "../services/api.js";
 
 export default function StationDetail({ selectedStation, stations = [], timeseries, verdicts, openAlerts, loading, error }) {
   const station = selectedStation;
@@ -11,6 +16,13 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
   // the Stations list both already call it MONITOR.
   const referenceTime = networkReferenceTime(stations);
   const status = station ? effectiveStatus(station, referenceTime) : null;
+
+  // A verdict exists for every reading; only a flagged one is an anomaly.
+  const verdictIsAnomalous = Boolean(
+    latestVerdict &&
+      Number(latestVerdict.flag || 0) === 1 &&
+      String(latestVerdict.reason || "").trim().toLowerCase() !== "ok"
+  );
 
   if (!station && !loading) {
     return (
@@ -63,9 +75,17 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                 <span className="score-value">{percent(station.health, 1)}</span>
                 <span className="score-label">Station Health Score</span>
               </div>
+              {/* Rendered as a bare "- days" when there was no estimate.
+                  StationCard already words this case properly. */}
               <div className="health-service-estimate">
-                <span>Estimated Service Window:</span>
-                <b>{daysToThreshold(station.days_to_threshold)} days</b>
+                {daysToThreshold(station.days_to_threshold) === "-" ? (
+                  <span>No maintenance currently projected</span>
+                ) : (
+                  <>
+                    <span>Estimated Service Window:</span>
+                    <b>{daysToThreshold(station.days_to_threshold)} days</b>
+                  </>
+                )}
               </div>
             </div>
           </section>
@@ -89,7 +109,17 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
               label="Barometric Pressure"
               value={latest.P}
               unit=" hPa"
-              status={latestVerdict?.degradation ? `Harmonic Loss ${percent(latestVerdict.degradation, 0)}` : "Stable"}
+              // Any non-zero degradation used to print "Harmonic Loss X%",
+              // so a routine 7% reading on an unflagged station announced a
+              // failing diaphragm. The detector only treats tidal decay as
+              // actionable past its own deg_cut, and only emits tide_loss
+              // evidence then; below that this falls through to the same
+              // per-channel check the other two cards use.
+              status={
+                Number(latestVerdict?.degradation || 0) > TIDE_DEGRADATION_CUT
+                  ? `Harmonic Loss ${percent(latestVerdict.degradation, 0)}`
+                  : channelStatus(latestVerdict, "P", "Normal")
+              }
               values={timeseries.map((row) => row.P)}
               timestamps={timeseries.map((row) => row.timestamp)}
               tone="amber"
@@ -98,7 +128,9 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
               label="Relative Humidity"
               value={latest.RH}
               unit="%"
-              status={channelStatus(latestVerdict, "RH", "Nominal")}
+              // Was "Nominal" here and "Stable" on pressure while temperature
+              // said "Normal" -- three words for one state, side by side.
+              status={channelStatus(latestVerdict, "RH", "Normal")}
               values={timeseries.map((row) => row.RH)}
               timestamps={timeseries.map((row) => row.timestamp)}
               tone="blue"
@@ -112,7 +144,9 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                 <span className="card-tag">EXPLAINABLE ML VERDICT</span>
                 <h2>Conformal Anomaly Diagnostics</h2>
               </div>
-              {latestVerdict && (
+              {/* Severity/confidence describe an anomaly, so they only
+                  belong here when one was actually raised. */}
+              {verdictIsAnomalous && (
                 <div className="verdict-metrics-pill">
                   <span>Confidence: <b>{percent(latestVerdict.confidence, 0)}</b></span>
                   <span>Severity: <b>{percent(latestVerdict.severity, 0)}</b></span>
@@ -120,7 +154,14 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
               )}
             </div>
 
-            {latestVerdict ? (
+            {/* The detector writes a verdict for EVERY reading, including
+                reason "ok" with flag 0, and this page reads the latest one.
+                Nothing here checked flag, so a nominal reading rendered as a
+                warning banner whose text fell through to printing the raw
+                reason string -- the live site showed a warning triangle
+                followed by the word "ok" under "Conformal Anomaly
+                Diagnostics". Same root cause as the channel cards. */}
+            {verdictIsAnomalous ? (
               <div className="verdict-body">
                 <div className="verdict-status-banner">
                   <span className="verdict-icon">⚠️</span>
@@ -129,10 +170,15 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                       const r = String(latestVerdict.reason || "").trim().toLowerCase();
                       if (r === "step") return "Abrupt step displacement detected across telemetry channels.";
                       if (r === "drift" || r === "cusum") return "Continuous cumulative sum (CUSUM) calibration drift detected.";
-                      if (r === "tide_loss") return "Significant S₂ harmonic tidal resonance loss: diaphragm fatigue or port obstruction.";
+                      if (r === "tide_loss" || r === "degrading") return "Significant S₂ harmonic tidal resonance loss: diaphragm fatigue or port obstruction.";
+                      if (r === "range") return "Reading outside gross physical limits for this channel.";
+                      if (r === "impossible") return "Physically impossible combination: dewpoint above air temperature.";
+                      if (r === "missing") return "Expected telemetry channel absent from this reading.";
                       if (r === "flatline" || r === "frozen") return "Persistent static sensor reading (flatline) detected.";
                       if (r === "spike" || r === "noise") return "High-frequency non-physical impulse spikes detected.";
-                      return latestVerdict.reason || "Autonomous QC anomaly flag active.";
+                      // Never print the bare enum value -- that is how the
+                      // word "ok" ended up rendered as a diagnosis.
+                      return "Autonomous QC anomaly flag active.";
                     })()}
                   </p>
                 </div>
@@ -140,16 +186,14 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                   <div className="verdict-evidence-strip">
                     <span className="evidence-title">Physics Evidence Markers:</span>
                     <div className="evidence-pills">
-                      {latestVerdict.evidence.map(([k, v]) => {
-                        const valDisplay = v !== null && v !== undefined && v !== ""
-                          ? (typeof v === "number" ? v.toFixed(2) : String(v))
-                          : "Detected";
-                        return (
-                          <span key={k} className="evidence-pill">
-                            <b>{k}:</b> {valDisplay}
-                          </span>
-                        );
-                      })}
+                      {/* Was printing raw keys and values ("z_RH: 2.28").
+                          evidenceText already renders these in words, and
+                          the pressure page has used it all along. */}
+                      {latestVerdict.evidence.map((pair) => (
+                        <span key={pair[0]} className="evidence-pill">
+                          {evidenceText(pair)}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
