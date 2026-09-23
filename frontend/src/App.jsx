@@ -30,7 +30,11 @@ function RouteLoading() {
     </main>
   );
 }
-
+// Judges hitting the deployed link don't have time to sign up, so the
+// login/signup gate is off by default -- every route lands straight on its
+// page. Flip VITE_REQUIRE_AUTH=true (and redeploy) to turn the gate back on;
+// /login and /signup still work if visited directly either way.
+const AUTH_REQUIRED = import.meta.env.VITE_REQUIRE_AUTH === "true";
 function route() {
   const path = window.location.pathname.replace(/\/$/, "") || "/dashboard";
   const parts = path.split("/").filter(Boolean);
@@ -121,21 +125,24 @@ export default function App() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="auth-shell">
-        <main className="screen auth-screen">
-          <div className="loading-state-card">
-            <div className="loading-spinner" />
-            <p>Checking secure telemetry access...</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  if (AUTH_REQUIRED) {
+    if (loading) {
+      return (
+        <div className="phone-shell">
+          <main className="screen auth-screen">
+            <section className="auth-card">
+              <span>SAHASRAKSHA</span>
+              <h1>Loading Session</h1>
+              <p>Checking secure access.</p>
+            </section>
+          </main>
+        </div>
+      );
+    }
 
-  if (!session) {
-    return <div className="auth-shell"><RedirectToLogin /></div>;
+    if (!session) {
+      return <div className="phone-shell"><RedirectToLogin /></div>;
+    }
   }
 
   return <DataRoute current={current} />;
