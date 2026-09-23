@@ -1,4 +1,7 @@
-// Curated high-resolution scenic photography of Indian station regions & landmarks
+// Illustrative stock photography for each station's region. The images are
+// shared between stations (62 entries, 21 photos) and are NOT pictures of the
+// named landmark or of the station itself, so every caption that shows one
+// says "Near <landmark> · illustrative" rather than labelling the photo.
 const DEFAULT_IMAGE = {
   url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
   landmark: "Indian Meteorological Observatory"
@@ -251,7 +254,7 @@ const CITY_IMAGES = {
   },
   THIRUVANANTHAPURAM: {
     url: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=600&q=80",
-    landmark: "Kovalam Coast & Kerala Palm Palms"
+    landmark: "Kovalam Coast & Kerala Palms"
   }
 };
 

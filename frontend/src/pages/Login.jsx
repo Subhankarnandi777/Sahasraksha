@@ -57,7 +57,7 @@ export default function Login() {
           </div>
           <div className="auth-brand-text">
             <h2>SAHASRAKSHA</h2>
-            <span>IMD Atmospheric Anomaly Detection System</span>
+            <span>AWS Anomaly Detection for IMD · SIH 2026 Prototype</span>
           </div>
         </div>
 

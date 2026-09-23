@@ -117,3 +117,37 @@ class SkyGuardAdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LocalSolarTimeTests(unittest.TestCase):
+    """fit_coeffs() fits in local solar time (UTC + lon/15); evaluation has
+    to use the same clock or every station is scored against a baseline
+    shifted by about five hours."""
+
+    def test_adds_longitude_offset(self) -> None:
+        from datetime import datetime, timezone
+        from app.schemas import WeatherReading
+        from app.services.anomaly_detector import SahasrakshaAnomalyDetector
+
+        reading = WeatherReading(
+            station_id="X", timestamp=datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc),
+            T=25.0, P=1000.0, RH=70.0, flag=0,
+        )
+        lst = SahasrakshaAnomalyDetector._local_solar_time(reading, 75.0)
+        self.assertAlmostEqual(lst, 8.0)
+        # Wraps past midnight.
+        late = reading.model_copy(update={"timestamp": datetime(2026, 9, 23, 22, 0, tzinfo=timezone.utc)})
+        self.assertAlmostEqual(SahasrakshaAnomalyDetector._local_solar_time(late, 75.0), 3.0)
+
+    def test_non_utc_timestamp_is_normalised(self) -> None:
+        from datetime import datetime, timedelta, timezone
+        from app.schemas import WeatherReading
+        from app.services.anomaly_detector import SahasrakshaAnomalyDetector
+
+        ist = timezone(timedelta(hours=5, minutes=30))
+        reading = WeatherReading(
+            station_id="X", timestamp=datetime(2026, 9, 23, 8, 30, tzinfo=ist),
+            T=25.0, P=1000.0, RH=70.0, flag=0,
+        )
+        # 08:30 IST is 03:00 UTC; at 75 E that is 08:00 local solar time.
+        self.assertAlmostEqual(SahasrakshaAnomalyDetector._local_solar_time(reading, 75.0), 8.0)

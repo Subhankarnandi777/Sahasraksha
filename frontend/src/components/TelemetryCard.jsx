@@ -25,7 +25,7 @@ function traceSpanLabel(timestamps) {
   return `Last ${Math.round(hours / 24)}d trace`;
 }
 
-export default function TelemetryCard({ label, value, unit, status, values = [], timestamps = [], tone = "blue" }) {
+export default function TelemetryCard({ label, value, unit, status, values = [], timestamps = [], tone = "blue", emptyLabel }) {
   const formatted = value === null || value === undefined ? "-" : `${number(value, label === "Humidity" ? 0 : 1)}${unit}`;
   const slicedValues = values.slice(-TRACE_POINTS);
   const slicedTimestamps = timestamps.slice(-TRACE_POINTS);
@@ -38,7 +38,7 @@ export default function TelemetryCard({ label, value, unit, status, values = [],
       </div>
       <strong>{formatted}</strong>
       <small>{traceSpanLabel(slicedTimestamps)}</small>
-      <Sparkline values={slicedValues} tone={tone === "blue" ? "orange" : tone} height={72} showLabels={true} />
+      <Sparkline values={slicedValues} tone={tone === "blue" ? "orange" : tone} height={72} showLabels={true} emptyLabel={emptyLabel} />
     </article>
   );
 }

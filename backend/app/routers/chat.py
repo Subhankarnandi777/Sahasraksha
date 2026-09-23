@@ -27,14 +27,42 @@ def _relative_time(value: datetime | None) -> str:
     return f"{hours / 24:.1f}d ago"
 
 
+SILENT_HOURS = 6
+
+
 def _severity_tier(value: float) -> str:
-    """Same buckets the frontend's severityLevel() uses, so the bot's
-    words match what a judge sees on screen."""
+    """Same buckets the frontend's severityLevel() uses, named the way the
+    Alerts page names them (Critical / Elevated / Low), so the bot's words
+    match what a judge sees on screen."""
     if value >= 0.8:
         return "critical"
     if value >= 0.5:
-        return "monitoring"
+        return "elevated"
     return "low"
+
+
+def _as_aware(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+def _effective_status(station, reference: datetime | None) -> str:
+    """The status the site actually displays -- frontend api.js
+    effectiveStatus(). The raw column keeps whatever a station last
+    earned, so the bot was counting a station that went silent a day ago,
+    and the low-confidence stations whose data is withheld, as "OK" while
+    every page showed them under Monitor."""
+    if station.data_quality == "low_confidence":
+        return "MONITOR"
+    seen = _as_aware(station.last_seen)
+    if (
+        station.status.value == "OK"
+        and reference is not None
+        and (seen is None or (reference - seen).total_seconds() > SILENT_HOURS * 3600)
+    ):
+        return "MONITOR"
+    return station.status.value
 
 
 def _fmt(value: float | None, unit: str, digits: int = 1) -> str:
@@ -53,9 +81,13 @@ def _build_context_snapshot() -> str:
     if total == 0:
         return "No stations are currently loaded."
 
+    seen_times = [_as_aware(s.last_seen) for s in stations if s.last_seen is not None]
+    reference = max(seen_times) if seen_times else None
+    shown_status = {s.station_id: _effective_status(s, reference) for s in stations}
+
     by_status: dict[str, int] = {}
-    for s in stations:
-        by_status[s.status.value] = by_status.get(s.status.value, 0) + 1
+    for status_value in shown_status.values():
+        by_status[status_value] = by_status.get(status_value, 0) + 1
 
     healths = [s.health for s in stations if s.health is not None]
     avg_health = sum(healths) / len(healths) if healths else None
@@ -68,7 +100,7 @@ def _build_context_snapshot() -> str:
 
     name_by_id = {s.station_id: s.name for s in stations}
     open_alerts = alert_service.list_open_alerts()
-    tier_counts = {"critical": 0, "monitoring": 0, "low": 0}
+    tier_counts = {"critical": 0, "elevated": 0, "low": 0}
     reason_counts: dict[str, int] = {}
     for a in open_alerts:
         tier_counts[_severity_tier(a.severity)] += 1
@@ -79,7 +111,7 @@ def _build_context_snapshot() -> str:
     lines = [
         f"Snapshot time (UTC): {datetime.now(timezone.utc).isoformat(timespec='seconds')}",
         f"Total stations: {total}",
-        f"Station status breakdown: {by_status}",
+        f"Station status breakdown, as displayed on the site (silent 6h+ and low-confidence stations count as MONITOR): {by_status}",
         f"Average health score (0-1) across stations reporting one: {avg_health:.3f}" if avg_health is not None else "Average health score: unavailable",
         f"Stations flagged as low-confidence data source (health/live readings intentionally hidden, not a live fault): {len(low_conf_stations)}"
         + (f" -- {', '.join(s.station_id for s in low_conf_stations[:10])}" if low_conf_stations else ""),
@@ -95,7 +127,7 @@ def _build_context_snapshot() -> str:
             name = name_by_id.get(a.station_id, a.station_id)
             lines.append(
                 f"- {name} ({a.station_id}): reason={a.message}, severity_tier={_severity_tier(a.severity)} "
-                f"(raw={a.severity:.2f}), confidence={a.confidence * 100:.0f}%, "
+                f"(raw={a.severity:.2f}), heuristic_confidence={a.confidence * 100:.0f}% (not calibrated), "
                 f"opened {_relative_time(a.created_at)} -- \"{a.explanation or 'no narrated explanation yet'}\""
             )
 
@@ -115,7 +147,7 @@ def _build_context_snapshot() -> str:
             reading_str = f"T={_fmt(s.latest_temperature, 'C')} P={_fmt(s.latest_pressure, 'hPa', 0)} RH={_fmt(s.latest_humidity, '%', 0)}"
         health_str = f"{s.health:.2f}" if s.health is not None else "n/a"
         lines.append(
-            f"- {s.station_id} ({s.name}): status={s.status.value}, health={health_str}, "
+            f"- {s.station_id} ({s.name}): status={shown_status[s.station_id]}, health={health_str}, "
             f"{reading_str}, last_seen={_relative_time(s.last_seen)}, "
             f"days_to_service_threshold={s.days_to_threshold if s.days_to_threshold is not None else 'n/a'}"
         )

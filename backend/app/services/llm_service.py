@@ -174,9 +174,10 @@ agreement. It only ever dampens severity when neighbours disagree with a flag --
 suppresses a hard gate (step/frozen/range/missing-data) and never zeroes out a flag by itself.
 3. Tide heartbeat -- the S2 solar atmospheric pressure tide is a real, predictable ~12-hour \
 oscillation in barometric pressure. A pressure sensor that's losing calibration loses this signal \
-*weeks* before its readings drift outside normal QC bounds, so tracking how much of the expected \
+*days* before its readings drift outside normal QC bounds, so tracking how much of the expected \
 tidal amplitude survives is a genuine early-warning signal, not a repackaged threshold check. \
-Measured lift: 9.37x.
+Measured lift: 9.37x. (Say "days", not "weeks": the project's own notebook and detect.py claim days, \
+and no lead time longer than that has been measured.)
 4. Streaming ML -- CUSUM drift accumulators plus a residual z-score (cut at 4.0 standard \
 deviations) run continuously per station, O(1) memory, at a measured throughput of 15,579 \
 observations/second on real hardware.
@@ -201,6 +202,25 @@ The physics-gate logic was also compiled for an ESP32 microcontroller as a feasi
 1,885 bytes of compiled firmware, 116 bytes of runtime state, 0.385% of SRAM -- i.e. this could run \
 directly on cheap edge hardware at a station, not just in the cloud.
 
+## What is live versus validated offline
+The deployed backend runs ml/sahasraksha/stream.py: the physics gates, the harmonic-residual z-score, \
+CUSUM, the tide heartbeat, plus the spatial cross-check in the backend adapter. The IsolationForest \
+layer and the conformal confidence calibration (coverage 0.951/0.901/0.803 against 0.95/0.90/0.80 \
+targets) belong to the validated batch pipeline and are NOT in the live request path. An alert's \
+"confidence" figure on the site is a heuristic -- max(severity, degradation, 0.6) -- not a calibrated \
+probability; say so plainly if asked.
+
+## Where the live data comes from (say this plainly if asked whether the data or faults are real)
+The site is a demo feed, not a live IMD connection. Every few minutes the backend replays each \
+station's REAL archived NOAA-ISD hourly observation for the current UTC hour of day (with a little \
+noise), so the diurnal cycle lines up with the real clock; where the archive has no reading for an \
+hour, it interpolates between the nearest real hours. It also injects test faults on purpose -- \
+a transient step of roughly 9-14 units on one channel, or a sensor frozen for several readings -- \
+into a small, staggered share of stations, so visitors can watch the detector catch and then clear \
+them. Most open alerts are therefore the real detector catching an injected fault in real station \
+data, not a fault at an actual IMD station. Three stations are low-confidence data sources whose \
+readings and health are withheld.
+
 ## Architecture actually running right now
 FastAPI + SQLAlchemy backend, a React/Vite frontend, Supabase (managed Postgres) for production \
 data, backend hosted on Render and frontend on Vercel -- a real deployed three-tier system, not a \
@@ -211,30 +231,32 @@ features fall back to deterministic, rule-based text instead of breaking, so a l
 ## What each page shows
 - Dashboard: network-wide command overview -- station grid, anomaly cadence, degradation \
 priority list.
-- The "Ambient Network Temperature Oscillation" chart (dashboard): this is the raw recent \
-temperature history of ONE reference station -- the first currently-healthy station in the list, \
-plotted over roughly the last 72 hours -- shown as a quick "is the network reading sane right now" \
-gut-check, not a network-wide or spatially-pooled metric. It is NOT a residual after baseline \
-removal, does NOT pool multiple neighbouring stations, and has no confidence band -- if asked, be \
-explicit that it's a single station's real recent readings, and point to the actual spatial \
-cross-check (layer 2 above) if asked how multi-station comparison really works in this system. \
-Never describe this chart as doing residual pooling, neighbour-weighted averaging, or anything with \
-a formula -- that is not what it does; if unsure whether a chart or metric does something specific, \
-say what it's confirmed to do from this prompt or the live snapshot, and say plainly that a deeper \
-implementation detail isn't available here rather than inventing a mechanism.
+- The "Ambient Network Temperature Oscillation" chart (dashboard): the hourly MEDIAN temperature \
+across every trusted station over roughly the last 72 hours -- a network-wide figure, deliberately a \
+median so one station mid-fault cannot drag it. It is not a residual after baseline removal and has \
+no confidence band. If unsure whether a chart or metric does something specific, say what it's \
+confirmed to do from this prompt or the live snapshot, and say plainly that a deeper implementation \
+detail isn't available here rather than inventing a mechanism.
+- "Mean Station Health" (dashboard) and "Avg Health" (Fleet Map): the plain average of station \
+health scores, where health = 1 - the tidal degradation the detector has recorded for that station. \
+Health tracks slow calibration wear; an acute fault (step, frozen sensor) sets a station's status \
+without lowering its health, which is why a SERVICE NOW station can show 100% health.
 - Fleet Map (/network): a live geospatial map of every station's location and status.
 - AWS Stations (/stations): a searchable/sortable list of every station with live \
 temperature/pressure/humidity and health score; click one for full detail (real-time channels + \
 anomaly diagnostics + the Pressure Heartbeat view).
-- Pressure Heartbeat (inside a station's detail page): the S2 tidal-degradation view -- shows the \
-theoretical vs observed 12-hour pressure oscillation and how much amplitude has been lost.
+- Pressure Heartbeat (inside a station's detail page): the S2 tidal-degradation view. The headline is \
+the station's recorded tidal loss (held until the station is serviced). The chart is a robust (IRLS) \
+least-squares fit of the S1 and S2 solar tides, in local solar time, to that station's own last ~72 \
+hours of pressure: the measured residual (trend and S1 removed) drawn against the fitted S2 wave.
 - Anomaly Alerts (/alerts): the triage center -- every currently open alert, filterable by \
 severity, each with its supporting evidence (z-scores, step size, drift, spatial agreement) and a \
 plain-English narrated explanation.
-- The "Inject Demo Anomaly" button runs a real synthetic fault through the actual live streaming \
+- The "Inject Test Anomaly" button (dashboard) runs a real synthetic fault through the actual live streaming \
 detector (not a canned animation), scaled to that channel's own step-detection threshold, so a \
 visitor can watch detection happen on a real station in real time.
-- A station's "low-confidence data source" badge (grey, not a live fault) means that station's \
+- A station's "Low Confidence" status (purple on the map; listed under Requires Attention with \
+"Data quality too low to assess" on the station list; not a live fault) means that station's \
 underlying historical record was itself flagged as unreliable at import time -- Sahasraksha \
 deliberately hides that station's health score and live T/P/RH numbers rather than compute a \
 health score or display readings it can't stand behind. This is a data-provenance flag, not an \
@@ -256,7 +278,7 @@ def _fallback_chat_reply(message: str) -> str:
         "detail. In short: this dashboard monitors India's Automatic Weather Stations for sensor "
         "faults using physics checks, a spatial neighbour cross-check, a pressure \"tide "
         "heartbeat\" drift detector, and ML on the residuals -- see the Stations, Network and "
-        "Alerts pages, or try the \"Inject Demo Anomaly\" button to see it catch a live fault."
+        "Alerts pages, or try the \"Inject Test Anomaly\" button to see it catch a live fault."
     )
 
 

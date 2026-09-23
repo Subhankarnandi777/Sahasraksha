@@ -33,11 +33,16 @@ export default function Sparkline({
   height = 80,
   showArea = true,
   showGrid = true,
-  showLabels = false
+  showLabels = false,
+  emptyLabel = "Awaiting telemetry frames..."
 }) {
   const gradientId = useId();
-  const cleanValues = values.filter((v) => Number.isFinite(Number(v))).map(Number);
-  const cleanComparison = comparison.filter((v) => Number.isFinite(Number(v))).map(Number);
+  // Number(null) is 0 and 0 is finite, so a missing reading used to be
+  // plotted as a real 0 -- a pressure trace would dive to "Min: 0.0" at
+  // every gap. Missing values are dropped before anything is drawn.
+  const usable = (v) => v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
+  const cleanValues = values.filter(usable).map(Number);
+  const cleanComparison = comparison.filter(usable).map(Number);
   const width = 320;
   const padTop = 10;
   const padBottom = 10;
@@ -46,7 +51,7 @@ export default function Sparkline({
   if (cleanValues.length < 2) {
     return (
       <div className="sparkline-empty" style={{ height }}>
-        <span className="empty-spark-label">Awaiting telemetry frames...</span>
+        <span className="empty-spark-label">{emptyLabel}</span>
       </div>
     );
   }

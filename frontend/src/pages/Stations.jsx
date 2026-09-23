@@ -1,19 +1,24 @@
 import { useMemo, useState } from "react";
 import FilterTabs from "../components/FilterTabs.jsx";
 import StationCard from "../components/StationCard.jsx";
-import { effectiveStatus, networkReferenceTime, percent } from "../services/api.js";
+import { effectiveStatus, healthOrNull, networkReferenceTime, percent, statusRank } from "../services/api.js";
 
-// null and "" both coerce to a perfectly finite 0, so they have to be
-// rejected before Number() ever sees them.
-function healthOrNull(value) {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+const FILTERS = ["all", "healthy", "monitor"];
+
+// Lets another page link straight to a filtered list (the Dashboard's work
+// order card links to /stations?filter=monitor).
+function initialFilter() {
+  try {
+    const requested = new URLSearchParams(window.location.search).get("filter");
+    return FILTERS.includes(requested) ? requested : "all";
+  } catch {
+    return "all";
+  }
 }
 
 export default function Stations({ stations, openAlerts, loading, error }) {
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(initialFilter);
   const [sort, setSort] = useState("risk");
 
   // Same staleness-aware status every other page now uses -- a station
@@ -34,15 +39,26 @@ export default function Stations({ stations, openAlerts, loading, error }) {
       .sort((a, b) => {
         // Number(null) is 0, and 0 is finite, so a station with no health
         // score at all was scoring as 0.0 -- the most critical value there
-        // is. The three stations reporting nothing were sorting above
-        // Purnea on a genuine 2.9%, and the null branches below could never
-        // fire for null at all. Only undefined ever reached them.
+        // is. healthOrNull keeps "no score" out of the ranking entirely.
         const aHealth = healthOrNull(a.health);
         const bHealth = healthOrNull(b.health);
+
+        // "Risk Priority" used to rank on health alone. Health tracks slow
+        // calibration wear, so a station with an acute step fault -- SERVICE
+        // NOW at 100% health -- sat 51st of 60, below every healthy
+        // station. Status is what says how urgently a person is needed, so
+        // it leads, and health orders stations within each status.
+        if (sort === "risk") {
+          const byStatus =
+            statusRank(effectiveStatus(b, referenceTime)) - statusRank(effectiveStatus(a, referenceTime));
+          if (byStatus !== 0) return byStatus;
+        }
+
         if (aHealth === null && bHealth === null) return 0;
         if (aHealth === null) return 1;
         if (bHealth === null) return -1;
-        if (sort === "health") return bHealth - aHealth;
+        // "Sensor Health (Lowest First)" sorted HIGHEST first: the two
+        // branches were the wrong way round. Both orders are ascending now.
         return aHealth - bHealth;
       });
   }, [filter, query, sort, stations, referenceTime]);

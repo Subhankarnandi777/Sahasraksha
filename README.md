@@ -26,14 +26,18 @@ At runtime, the backend accepts an observation through `/ingest` or `/readings/v
 
 The CSV replay tool imports station metadata and replays chronological observations through the same streaming detector and persistence services. Replay is explicit; it is not run automatically when the API starts.
 
+### The live demo feed
+
+The deployed backend also runs a built-in live feed (`backend/app/services/keepalive_service.py`). Every few minutes it posts each station's real archived NOAA-ISD observation for the current UTC hour of day, from `backend/app/tools/data/september_baseline_windows.json`, through `/ingest`, with a little noise. Hours the archive has no reading for are interpolated between the nearest real hours. It also injects test faults on purpose, a transient step of roughly 9-14 units on one channel or a sensor frozen for several readings, into a small, staggered share of stations so the detector has something to catch and clear. Most alerts on the deployed site are the detector catching one of those injected faults in replayed real data; the dashboard and alerts pages say so.
+
 ## Key Features
 
 ### Currently implemented
 
 - Vite/React single-page dashboard with routes for dashboard, network, stations, station detail, pressure heartbeat, and alerts.
-- OpenStreetMap tiles rendered with Leaflet and React Leaflet.
+- Esri World Topographic, World Imagery and Dark Gray basemap tiles rendered with Leaflet and React Leaflet, with an optional RainViewer radar overlay.
 - Station markers based on backend coordinates and backend status values.
-- Network map modes for health, temperature, pressure, and reporting data.
+- Network map modes for health, temperature, pressure, humidity, and reporting data.
 - Station summary data, latest compact telemetry, time series, verdicts, and alert evidence.
 - FastAPI endpoints for health, stations, readings, ingestion, alerts, verdicts, and work orders.
 - SQLAlchemy persistence with Supabase PostgreSQL configured through `DATABASE_URL`.
@@ -45,7 +49,7 @@ The CSV replay tool imports station metadata and replays chronological observati
 ### Planned or future work
 
 - A formal database migration workflow; the backend currently initializes missing tables through SQLAlchemy metadata and does not use Alembic.
-- Production deployment configuration and operational observability are not included in this repository.
+- The app is deployed (backend on Render, frontend on Vercel, database on Supabase), but only the Vercel SPA rewrite (`frontend/vercel.json`) is in this repository; the Render service settings and operational monitoring are not.
 - The frontend currently has no application-level API authentication flow; Supabase Auth is optional and configured independently of the FastAPI API calls.
 
 ## Architecture
@@ -54,7 +58,11 @@ The CSV replay tool imports station metadata and replays chronological observati
 
 `frontend/` contains the primary application. React pages consume the shared API client in `frontend/src/services/api.js`. `useSahasrakshaData.js` loads network health, stations, alerts, selected-station time series, and selected-station verdicts. Components such as `MapPanel`, `StationCard`, `AlertCard`, and `TelemetryCard` present the returned data.
 
-The frontend does not calculate station health or anomaly status. It displays backend-provided health, degradation, status, telemetry, data quality, and timestamps.
+The frontend does not calculate station health or the detector's verdicts. It does derive what it displays from them in a few places, all in `frontend/src/services/`:
+
+- `effectiveStatus()` shows a station as MONITOR when it has been silent for 6 hours or more relative to the network's latest reading, or when the backend marks its data low-confidence, because a station's stored status is only recomputed when a new reading arrives.
+- `channelStatus()` decides which telemetry channel a flagged verdict implicates.
+- `harmonics.js` fits the S1 and S2 solar tides (robust IRLS least squares, in local solar time) to a station's own last 72 hours of pressure for the Pressure Heartbeat chart.
 
 ### Backend
 
@@ -66,11 +74,13 @@ The backend uses SQLAlchemy with PostgreSQL as the normal configured database. I
 
 ### ML and anomaly detection
 
-`ml/sahasraksha/stream.py` provides the online detector used by the backend adapter. `backend/app/services/anomaly_detector.py` creates one streaming detector state per station, maps the detector result into the API verdict schema, and preserves evidence pairs such as spatial, CUSUM, and tide signals. The `MockAnomalyDetector` remains available for tests or fallback scenarios, but the normal adapter is the streaming implementation.
+`ml/sahasraksha/stream.py` provides the online detector used by the backend adapter. `backend/app/services/anomaly_detector.py` runs one shared streaming engine that holds a state per station, fits each station's harmonic baseline from its own stored history, adds a spatial cross-check against up to six neighbours, maps the detector result into the API verdict schema, and preserves evidence pairs such as spatial, CUSUM, and tide signals. The `MockAnomalyDetector` remains available for tests or fallback scenarios, but the normal adapter is the streaming implementation.
+
+What runs live is the physics gates, the harmonic-residual z-score, CUSUM, the tide heartbeat and the spatial cross-check. The IsolationForest layer and the conformal confidence calibration described in `ml/README.md` belong to the validated batch pipeline and are not in the live request path. A live verdict's `confidence` is a heuristic, `max(severity, degradation, 0.6)`, not a calibrated probability.
 
 ### Data replay
 
-`backend/app/tools/csv_replay.py` invokes `backend/app/services/csv_replay_service.py`. The service reads station coordinates from `data/sahasraksha_all_stations_coords.csv`, reads observations from `data/sahasraksha_big_export.csv.gz`, checks chronological order per station, skips configured low-confidence stations, evaluates usable rows, and persists the latest replay verdict for each station.
+`backend/app/tools/csv_replay.py` invokes `backend/app/services/csv_replay_service.py`. The service reads station coordinates from `ml/data/sahasraksha_all_stations_coords.csv`, reads observations from `ml/data/sahasraksha_big_export.csv.gz`, checks chronological order per station, skips configured low-confidence stations, evaluates usable rows, and persists the latest replay verdict for each station.
 
 ## Repository Structure
 
@@ -86,18 +96,17 @@ Sahasraksha/
 │   ├── tests/               Backend unittest modules
 │   ├── requirements.txt
 │   └── README.md
-├── data/                    Station coordinates and telemetry CSV files
 ├── frontend/
 │   ├── src/
 │   │   ├── auth/            React authentication context
 │   │   ├── components/      Shared React UI components
-│   │   ├── pages/            React route views
-│   │   └── services/        API, data-loading, and Supabase clients
+│   │   ├── pages/           React route views
+│   │   └── services/        API, data-loading, harmonic-fit, and Supabase clients
 │   ├── package.json
-│   ├── vite.config.js
-│   └── README.md
+│   └── vite.config.js
 ├── ml/
-│   ├── sahasraksha/            Batch, streaming, validation, and analysis modules
+│   ├── data/                Station coordinates and telemetry CSV files
+│   ├── sahasraksha/         Batch, streaming, validation, and analysis modules
 │   ├── notebooks/           Research and reproducibility notebook
 │   ├── docs/                ML/API contract documentation
 │   └── requirements.txt
@@ -205,7 +214,7 @@ The backend also exposes global alert, verdict, reading, and work-order routes d
 
 ### `GET /health`
 
-Returns `status`, `station_count`, `open_alert_count`, and `active_work_order_count`.
+Returns `status`, `station_count`, `open_alert_count`, `active_work_order_count`, and `stations_with_open_work_orders`.
 
 ### `GET /stations`
 
@@ -276,10 +285,10 @@ Useful options:
 ```powershell
 python -m app.tools.csv_replay --stations-only
 python -m app.tools.csv_replay --max-observations 1000
-python -m app.tools.csv_replay --coords ..\data\sahasraksha_all_stations_coords.csv --observations ..\data\sahasraksha_big_export.csv.gz
+python -m app.tools.csv_replay --coords ..\ml\data\sahasraksha_all_stations_coords.csv --observations ..\ml\data\sahasraksha_big_export.csv.gz
 ```
 
-The default inputs are `data/sahasraksha_all_stations_coords.csv` and `data/sahasraksha_big_export.csv.gz`. Replay expects observations to be chronological for each station. Coordinate metadata identifies low-confidence stations; those stations remain importable but are skipped for meaningful scoring.
+The default inputs are `ml/data/sahasraksha_all_stations_coords.csv` and `ml/data/sahasraksha_big_export.csv.gz`. Replay expects observations to be chronological for each station. Coordinate metadata identifies low-confidence stations; those stations remain importable but are skipped for meaningful scoring.
 
 ## Environment Variables and Configuration
 

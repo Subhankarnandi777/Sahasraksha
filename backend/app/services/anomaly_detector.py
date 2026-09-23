@@ -17,10 +17,13 @@ never actually ran the validated detector:
     was absent; stream.py itself never implemented it, only the batch
     detect.py did.
   - "confidence" was max(severity, degradation, 0.6) -- a heuristic floor,
-    not a calibrated probability.
+    not a calibrated probability. This one is NOT fixed: _confidence() below
+    still computes exactly that, and the conformal calibration in
+    ml/sahasraksha/gapfill.py is not wired into this path. The site labels it
+    as a heuristic rather than as calibrated confidence.
 
 Found by an independent audit, verified line-by-line against this repository
-before being trusted. Fixed below; the dewpoint gate fix lives in
+before being trusted. The others are fixed below; the dewpoint gate fix lives in
 ml/sahasraksha/stream.py itself since detection logic belongs in the shared
 package, not the adapter, and both repos consuming it benefit.
 
@@ -42,7 +45,7 @@ Design, honestly stated:
   - Evidence keys are only ever labelled spatial_ when a real spatial
     computation produced them.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 from threading import Lock
@@ -134,7 +137,7 @@ class SahasrakshaAnomalyDetector:
 
             raw = self._engine.update(
                 sid,
-                self._local_solar_time(reading),
+                self._local_solar_time(reading, self._get_lon(sid, reading)),
                 float(reading.timestamp.timetuple().tm_yday),
                 {"T": reading.T, "P": reading.P, "RH": reading.RH},
             )
@@ -220,9 +223,20 @@ class SahasrakshaAnomalyDetector:
         return 0.0
 
     @staticmethod
-    def _local_solar_time(reading: WeatherReading) -> float:
+    def _local_solar_time(reading: WeatherReading, lon: float = 0.0) -> float:
+        """Local solar time in hours: UTC clock time + longitude/15.
+
+        This returned the bare UTC clock time, while fit_coeffs() fits each
+        station's harmonic baseline in true local solar time (UTC + lon/15)
+        and _spatial_consensus() below already evaluates neighbours that
+        way. Every Indian station was therefore scored against a baseline
+        shifted by about five hours, and a neighbour's residual was
+        standardised with statistics accumulated on the shifted one."""
         ts = reading.timestamp
-        return ts.hour + ts.minute / 60.0 + ts.second / 3600.0
+        if ts.tzinfo is not None:
+            ts = ts.astimezone(timezone.utc)
+        utc_hours = ts.hour + ts.minute / 60.0 + ts.second / 3600.0
+        return (utc_hours + (lon or 0.0) / 15.0) % 24.0
 
     def _own_z_scores(self, reading: WeatherReading) -> dict:
         """This station's own residual z-scores, computed directly here
@@ -231,7 +245,7 @@ class SahasrakshaAnomalyDetector:
         state = self._engine.states.get(reading.station_id)
         if state is None:
             return {}
-        lst = self._local_solar_time(reading)
+        lst = self._local_solar_time(reading, self._get_lon(reading.station_id, reading))
         doy = float(reading.timestamp.timetuple().tm_yday)
         x = design_row(lst, doy)
         out = {}

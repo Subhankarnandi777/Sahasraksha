@@ -3,12 +3,9 @@ import FilterTabs from "../components/FilterTabs.jsx";
 import MapPanel from "../components/MapPanel.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import Sparkline from "../components/Sparkline.jsx";
-import { isSilent, networkReferenceTime, percent, number, timeAgo, injectDemoAnomaly } from "../services/api.js";
+import StatusLegend from "../components/StatusLegend.jsx";
+import { anomalyReasonText, effectiveStatus, healthOrNull, isSilent, networkReferenceTime, percent, number, severityLevel, timeAgo, injectDemoAnomaly } from "../services/api.js";
 import { useTheme } from "../services/theme.js";
-
-function countStatus(stations, status) {
-  return stations.filter((station) => station.status === status).length;
-}
 
 function countSilent(stations, referenceTime) {
   return stations.filter((station) => isSilent(station, referenceTime)).length;
@@ -22,13 +19,20 @@ function hourlyAlertCounts(alerts) {
   // exactly the kind of implied-live claim this dashboard shouldn't make.
   // A genuinely quiet real last 6 hours should show as empty, not get
   // backfilled with whenever the last event happened to occur.
+  //
+  // Buckets are matched on the start of the viewer's LOCAL hour. They used
+  // to be matched on a UTC "YYYY-MM-DDTHH" string, which only lines up
+  // with local hours in whole-hour timezones. India is UTC+5:30, so every
+  // alert raised in the second half of an IST hour landed in the next
+  // hour's bar, and anything from the second half of the current hour
+  // matched no bar at all and was dropped.
   const now = new Date();
 
   const buckets = Array.from({ length: 6 }, (_, index) => {
     const date = new Date(now);
     date.setHours(now.getHours() - 5 + index, 0, 0, 0);
     return {
-      key: date.toISOString().slice(0, 13),
+      key: date.getTime(),
       label: date.toLocaleTimeString([], { hour: "numeric" }),
       value: 0
     };
@@ -37,8 +41,8 @@ function hourlyAlertCounts(alerts) {
   for (const alert of alerts) {
     const created = new Date(alert.created_at);
     if (Number.isNaN(created.getTime())) continue;
-    const key = created.toISOString().slice(0, 13);
-    const bucket = buckets.find((item) => item.key === key);
+    created.setMinutes(0, 0, 0);
+    const bucket = buckets.find((item) => item.key === created.getTime());
     if (bucket) bucket.value += 1;
   }
 
@@ -48,10 +52,12 @@ function hourlyAlertCounts(alerts) {
 export default function Dashboard({
   health,
   stations,
+  alerts = [],
   openAlerts,
   networkTimeseries,
   loading,
-  error
+  error,
+  refresh
 }) {
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoStatus, setDemoStatus] = useState(null);
@@ -61,11 +67,15 @@ export default function Dashboard({
     setDemoStatus(null);
     try {
       const verdict = await injectDemoAnomaly();
+      // Printed the bare reason code ("Detected: step") before, and nothing
+      // on the page moved until a manual reload, so the alert count and
+      // cadence bars never showed the fault that had just been caught.
       setDemoStatus(
         verdict.flag
-          ? `Detected: ${verdict.reason} (severity ${percent(verdict.severity, 0)})`
+          ? `Detected: ${anomalyReasonText(verdict.reason)} Severity ${percent(verdict.severity, 0)}. See Anomaly Alerts.`
           : "No anomaly flagged this time — try again."
       );
+      refresh?.(true);
     } catch (err) {
       setDemoStatus(`Failed: ${err.message}`);
     } finally {
@@ -88,15 +98,17 @@ export default function Dashboard({
   // Healthy + Monitoring + Service summing to the real total rather than
   // just dropping silent-but-nominally-OK stations from the count
   // entirely.
-  const silentButNominallyOk = stations.filter(
-    (station) => station.status === "OK" && isSilent(station, referenceTime)
-  ).length;
-  const healthy = countStatus(stations, "OK") - silentButNominallyOk;
-  const monitoring =
-    countStatus(stations, "MONITOR") + countStatus(stations, "SCHEDULE") + silentButNominallyOk;
-  const serviceNow = countStatus(stations, "SERVICE NOW");
+  // Tallied from the same effectiveStatus() the Stations page uses, so the
+  // two pages agree. Counting the raw column here left a low-confidence
+  // station whose stored status is "OK" (Bangalore) under Healthy on this
+  // page while the Stations page -- correctly -- listed it under Requires
+  // Attention.
+  const shown = stations.map((station) => effectiveStatus(station, referenceTime));
+  const healthy = shown.filter((status) => status === "OK").length;
+  const monitoring = shown.filter((status) => status === "MONITOR" || status === "SCHEDULE").length;
+  const serviceNow = shown.filter((status) => status === "SERVICE NOW").length;
   const silent = countSilent(stations, referenceTime);
-  const scoredStations = stations.filter((station) => Number.isFinite(Number(station.health)));
+  const scoredStations = stations.filter((station) => healthOrNull(station.health) !== null);
   const networkHealth = scoredStations.length
     ? scoredStations.reduce((sum, station) => sum + Number(station.health), 0) / scoredStations.length
     : 0;
@@ -111,7 +123,18 @@ export default function Dashboard({
   const chartValues = (networkTimeseries || [])
     .map((row) => row.T)
     .filter((value) => value !== null && value !== undefined);
-  const hourlyAlerts = hourlyAlertCounts(openAlerts);
+  // Every alert RAISED in each hour, open or since resolved. Counting only
+  // still-open alerts undercounted the cadence: the live feed's faults
+  // clear within a few readings and their alerts resolve with them, so an
+  // hour with four detections could show one bar or none.
+  const hourlyAlerts = hourlyAlertCounts(alerts.length ? alerts : openAlerts);
+  const alertBands = {
+    critical: openAlerts.filter((alert) => severityLevel(alert.severity) === "critical").length,
+    elevated: openAlerts.filter((alert) => severityLevel(alert.severity) === "monitoring").length,
+    low: openAlerts.filter((alert) => severityLevel(alert.severity) === "nodata").length
+  };
+  const workOrderCount = health?.active_work_order_count ?? 0;
+  const workOrderStations = health?.stations_with_open_work_orders;
 
   // The dataset this demo replays is real archival IMD/NOAA-ISD station
   // history, not a live wall-clock feed -- individual readings can (and do)
@@ -177,6 +200,17 @@ export default function Dashboard({
               </span>
             ) : null}
           </p>
+          {/* Nothing on the site said this. The live feed replays each
+              station's real archived NOAA-ISD observations against the
+              current clock (keepalive_service.py) and periodically injects
+              step and frozen-sensor faults so the detector has something
+              to catch. Without this line, an alert like "pressure jumped
+              9.5 in a single reading" reads as a real fault at a real IMD
+              station. */}
+          <p className="dashboard-data-as-of">
+            Demo feed: real archived station observations replayed against the current clock, with
+            test faults injected periodically so detection can be watched live.
+          </p>
         </div>
         <div className="dashboard-badge-cluster">
           <div className={`telemetry-pill ${pipelineStatusClass}`}>
@@ -199,14 +233,20 @@ export default function Dashboard({
       <section className="kpi-grid">
         <div className="kpi-card hero-kpi">
           <div className="kpi-top-row">
-            <span className="kpi-label">Network Sensor Synchrony</span>
-            <span className="kpi-tag-good">{loading ? "--" : percent(networkHealth, 1)} Stability</span>
+            {/* Was "Network Sensor Synchrony ... Stability / Harmonic
+                diurnal variance removed". The number is the plain mean of
+                station health scores (health = 1 - recorded tidal
+                degradation) -- the Fleet Map shows the same figure as
+                "QC Health". Nothing about synchrony or variance removal
+                goes into it. */}
+            <span className="kpi-label">Mean Station Health</span>
+            <span className="kpi-tag-good">{scoredStations.length} scored</span>
           </div>
           <div className="kpi-big-value">
             {loading ? "--" : percent(networkHealth, 1)}
           </div>
           <div className="kpi-meta-text">
-            <span>Harmonic diurnal variance removed</span>
+            <span>Average across stations with a trusted health score</span>
           </div>
           <div className="kpi-progress-bar">
             <div
@@ -239,8 +279,11 @@ export default function Dashboard({
 
         <div className="kpi-card">
           <div className="kpi-top-row">
+            {/* Tagged "Calibrated" -- alert confidence is a heuristic
+                (max(severity, degradation, 0.6) in anomaly_detector.py),
+                not a calibrated probability. */}
             <span className="kpi-label">ML Anomaly Alerts</span>
-            <span className="kpi-tag-warning">Calibrated</span>
+            <span className="kpi-tag-warning">Open</span>
           </div>
           <div className="kpi-big-value text-amber">
             {openAlerts.length.toLocaleString()}
@@ -249,24 +292,40 @@ export default function Dashboard({
             <span>Across 4 physics & ML detection layers</span>
           </div>
           <div className="kpi-sub-breakdown">
-            <span>High Conf: <b>{openAlerts.filter(a => Number(a.severity) >= 0.7).length}</b></span>
-            <span>Early Drift: <b>{openAlerts.filter(a => Number(a.severity) < 0.7).length}</b></span>
+            {/* Was "High Conf" / "Early Drift", split at severity 0.7.
+                Neither label described the split -- it is severity, not
+                confidence, and step and frozen-sensor faults landed under
+                "drift". Same bands as the Alerts page tabs. */}
+            <span>Critical: <b>{alertBands.critical}</b></span>
+            <span>Elevated: <b>{alertBands.elevated}</b></span>
+            {alertBands.low > 0 ? <span>Low: <b>{alertBands.low}</b></span> : null}
           </div>
         </div>
 
         <div className="kpi-card">
           <div className="kpi-top-row">
             <span className="kpi-label">Field Work Orders</span>
-            <span className="kpi-tag-blue">{health?.active_work_order_count ?? 0} Scheduled</span>
+            <span className="kpi-tag-blue">
+              {workOrderStations !== undefined && workOrderStations !== null
+                ? `${workOrderStations} station${workOrderStations === 1 ? "" : "s"}`
+                : "Open"}
+            </span>
           </div>
           <div className="kpi-big-value text-indigo">
-            {health?.active_work_order_count ?? 0}
+            {workOrderCount}
           </div>
+          {/* One station can hold several open orders -- each high-severity
+              alert raises its own, and a chronically degraded station keeps
+              them open after the alert clears -- so the station count is
+              shown beside the order count rather than implied by it. */}
           <div className="kpi-meta-text">
-            <span>Automated technician calibration queue</span>
+            <span>Open work orders raised automatically by high-severity alerts</span>
           </div>
           <div className="kpi-sub-breakdown">
-            <a href="/stations" className="kpi-link">Review Field Queue →</a>
+            {/* Was "Review Field Queue" -- there is no work-order page; this
+                goes to the station list, filtered to the ones needing
+                attention. */}
+            <a href="/stations?filter=monitor" className="kpi-link">Stations needing attention →</a>
           </div>
         </div>
       </section>
@@ -293,32 +352,7 @@ export default function Dashboard({
             />
           </div>
 
-          {/* Station Status Points Meaning Legend */}
-          <div className="map-legend-bar">
-            <span className="legend-title">Station Points Status:</span>
-            <div className="legend-items">
-              <span className="legend-badge" title="Health ≥ 90%, all sensor channels nominal">
-                <span className="legend-dot ok" />
-                <span className="legend-name">Nominal (OK)</span>
-              </span>
-              <span className="legend-badge" title="Routine maintenance calibration scheduled">
-                <span className="legend-dot schedule" />
-                <span className="legend-name">Schedule</span>
-              </span>
-              <span className="legend-badge" title="Elevated sensor degradation or drift detected">
-                <span className="legend-dot monitor" />
-                <span className="legend-name">Monitor</span>
-              </span>
-              <span className="legend-badge" title="Critical anomaly threshold exceeded - field service needed">
-                <span className="legend-dot service-now" />
-                <span className="legend-name">Service Now</span>
-              </span>
-              <span className="legend-badge" title="Data confidence low / harmonic flagging">
-                <span className="legend-dot low-confidence" />
-                <span className="legend-name">Low Confidence</span>
-              </span>
-            </div>
-          </div>
+          <StatusLegend />
 
           <div className="dashboard-map-wrapper">
             <MapPanel

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import MapPanel from "../components/MapPanel.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
+import StatusLegend from "../components/StatusLegend.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
-import { number, percent, channelStatus, effectiveStatus, isSilent, networkReferenceTime, getStationTimeseries, getStationVerdicts } from "../services/api.js";
+import { anomalyReasonText, healthOrNull, number, percent, channelStatus, effectiveStatus, isSilent, networkReferenceTime, getStationTimeseries, getStationVerdicts } from "../services/api.js";
 import { useTheme } from "../services/theme.js";
 
 function markerStatusClass(status) {
@@ -16,7 +17,9 @@ export default function Network({ stations = [], selectedStation, selectedStatio
   // Real network-average health, computed the same way Dashboard does --
   // not a fixed "99.8%" that never moves regardless of what the network
   // is actually reporting.
-  const scoredStations = stations.filter((station) => Number.isFinite(Number(station.health)));
+  // healthOrNull, not Number.isFinite(Number(...)): the latter counted the
+  // three low-confidence stations' null health as 0% in this average.
+  const scoredStations = stations.filter((station) => healthOrNull(station.health) !== null);
   const networkHealth = scoredStations.length
     ? scoredStations.reduce((sum, station) => sum + Number(station.health), 0) / scoredStations.length
     : 0;
@@ -125,6 +128,27 @@ export default function Network({ stations = [], selectedStation, selectedStatio
   const activeVerdicts = focusedId ? (focusedVerdicts || []) : verdicts;
   const latest = activeTimeseries[activeTimeseries.length - 1] || {};
   const latestVerdict = activeVerdicts[activeVerdicts.length - 1];
+  // openAlerts was passed into this page and never read, so a station
+  // sitting at SERVICE NOW showed that badge above three "Normal" channel
+  // cards with nothing to say why. Same pattern the detail page had.
+  const selectedAlert = selected
+    ? openAlerts.find((alert) => alert.station_id === selected.station_id) || null
+    : null;
+  // Same rule as the detail page: a low-confidence station's readings are
+  // withheld everywhere else, so they are not shown here under "Normal".
+  const withheld = selected?.data_quality === "low_confidence";
+  function channelProps(channel) {
+    if (withheld) {
+      return { value: null, values: [], timestamps: [], status: "Withheld", emptyLabel: "Withheld: data not trusted" };
+    }
+    const value = latest[channel];
+    return {
+      value,
+      values: activeTimeseries.map((row) => row[channel]),
+      timestamps: activeTimeseries.map((row) => row.timestamp),
+      status: value === null || value === undefined ? "No data" : channelStatus(latestVerdict, channel, "Normal")
+    };
+  }
 
   if (loading) {
     return (
@@ -173,7 +197,8 @@ export default function Network({ stations = [], selectedStation, selectedStatio
           </div>
           <div className="net-metric-pill" title="Network-average station health score">
             <span className="net-metric-blip amber" />
-            <span><b>{percent(networkHealth, 1)}</b> QC Health</span>
+            {/* Same number the Dashboard shows as Mean Station Health. */}
+            <span><b>{percent(networkHealth, 1)}</b> Avg Health</span>
           </div>
           <div className="net-metric-pill" title="Live automatic weather station network feed">
             <span className={`net-metric-blip ${pipelineDown ? "red" : pipelineDegraded ? "amber" : "blue"}`} />
@@ -344,9 +369,12 @@ export default function Network({ stations = [], selectedStation, selectedStatio
               type="button"
               className={`deck-pill-btn ${basemap === "apple" ? "active" : ""}`}
               onClick={() => setBasemap("apple")}
-              title="Apple Pastel Relief Cartography"
+              title="Esri World Topographic basemap"
             >
-              🗺️ Apple Map
+              {/* Labelled "Apple Map" -- these are Esri World Topo tiles
+                  (see MapPanel and the map's own attribution line); nothing
+                  here comes from Apple. */}
+              🗺️ Map
             </button>
             <button
               type="button"
@@ -402,32 +430,7 @@ export default function Network({ stations = [], selectedStation, selectedStatio
 
       {error ? <p className="state error">{error}</p> : null}
 
-      {/* Station Status Points Meaning Legend */}
-      <div className="map-legend-bar network-legend-bar">
-        <span className="legend-title">Station Points Status:</span>
-        <div className="legend-items">
-          <span className="legend-badge" title="Health ≥ 90%, all sensor channels nominal">
-            <span className="legend-dot ok" />
-            <span className="legend-name">Nominal (OK)</span>
-          </span>
-          <span className="legend-badge" title="Routine maintenance calibration scheduled">
-            <span className="legend-dot schedule" />
-            <span className="legend-name">Schedule</span>
-          </span>
-          <span className="legend-badge" title="Elevated sensor degradation or drift detected">
-            <span className="legend-dot monitor" />
-            <span className="legend-name">Monitor</span>
-          </span>
-          <span className="legend-badge" title="Critical anomaly threshold exceeded - field service needed">
-            <span className="legend-dot service-now" />
-            <span className="legend-name">Service Now</span>
-          </span>
-          <span className="legend-badge" title="Data confidence low / harmonic flagging">
-            <span className="legend-dot low-confidence" />
-            <span className="legend-name">Low Confidence</span>
-          </span>
-        </div>
-      </div>
+      <StatusLegend className="network-legend-bar" />
 
       {/* 3. Split Map & Telemetry Inspector Layout */}
       <div className="network-split-layout">
@@ -463,6 +466,12 @@ export default function Network({ stations = [], selectedStation, selectedStatio
                 </StatusBadge>
               </div>
 
+              {selectedAlert ? (
+                <p className="state">
+                  Open alert: {selectedAlert.explanation || anomalyReasonText(selectedAlert.message)}
+                </p>
+              ) : null}
+
               <div className="focus-coords">
                 <span>📍 Lat: {number(selected.lat, 3)}°N</span>
                 <span>Lon: {number(selected.lon, 3)}°E</span>
@@ -470,22 +479,8 @@ export default function Network({ stations = [], selectedStation, selectedStatio
               </div>
 
               <div className="focus-telemetry-grid">
-                <TelemetryCard
-                  label="Temperature"
-                  value={latest.T}
-                  unit="°C"
-                  status={channelStatus(latestVerdict, "T", "Normal")}
-                  values={activeTimeseries.map((row) => row.T)}
-                  timestamps={activeTimeseries.map((row) => row.timestamp)}
-                />
-                <TelemetryCard
-                  label="Atmospheric Pressure"
-                  value={latest.P}
-                  unit="hPa"
-                  status={channelStatus(latestVerdict, "P", "Normal")}
-                  values={activeTimeseries.map((row) => row.P)}
-                  timestamps={activeTimeseries.map((row) => row.timestamp)}
-                />
+                <TelemetryCard label="Temperature" unit="°C" {...channelProps("T")} />
+                <TelemetryCard label="Atmospheric Pressure" unit="hPa" {...channelProps("P")} />
                 {/* Was `latest.U` / channelStatus(..., "U", ...) -- the API
                     serializes humidity as RH (TimeSeriesRow's real fields
                     are T/P/RH), never U. `U` is undefined for every
@@ -494,14 +489,7 @@ export default function Network({ stations = [], selectedStation, selectedStatio
                     stations with real, live humidity data one field over
                     on StationDetail. `U`/`F` are NOAA-ISD's raw archive
                     column codes, not this app's own API contract. */}
-                <TelemetryCard
-                  label="Relative Humidity"
-                  value={latest.RH}
-                  unit="%"
-                  status={channelStatus(latestVerdict, "RH", "Normal")}
-                  values={activeTimeseries.map((row) => row.RH)}
-                  timestamps={activeTimeseries.map((row) => row.timestamp)}
-                />
+                <TelemetryCard label="Relative Humidity" unit="%" {...channelProps("RH")} />
                 {/* "Wind Velocity" removed: no wind channel exists anywhere
                     in this pipeline. The DB has wind_speed_mps/
                     wind_direction_deg columns, but nothing ever ingests or

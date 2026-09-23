@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
 import FilterTabs from "../components/FilterTabs.jsx";
 import Sparkline from "../components/Sparkline.jsx";
-import { evidenceText, number, percent } from "../services/api.js";
+import {
+  DEGRADATION_SCHEDULE,
+  DEGRADATION_SERVICE,
+  evidenceLabel,
+  evidenceText,
+  number,
+  percent,
+  stationDegradation
+} from "../services/api.js";
 import { fitSolarTides, thin } from "../services/harmonics.js";
 
 // The pipeline's actual gross physical limits for surface pressure --
@@ -11,26 +19,24 @@ import { fitSolarTides, thin } from "../services/harmonics.js";
 const PRESSURE_GROSS_MIN = 500;
 const PRESSURE_GROSS_MAX = 1100;
 
-// The detector's own long-horizon tidal degradation, which is what the
-// headline percentage reports. Returns null rather than 0 when the feed
-// has told us nothing, so "no reading yet" can't render as "0% loss".
-function heartbeatLoss(verdicts, alerts) {
-  const candidates = [...alerts, ...verdicts];
-  for (const item of candidates) {
-    const pair = (item.evidence || []).find(([key]) => key === "tide_loss");
-    if (pair && Number.isFinite(Number(pair[1]))) return Number(pair[1]);
-  }
-  const degradation = candidates[0]?.degradation;
-  if (degradation === null || degradation === undefined) return null;
-  const value = Number(degradation);
-  return Number.isFinite(value) ? value : null;
-}
-
+// The headline used to come from heartbeatLoss(), which scanned open alerts
+// and then every verdict OLDEST first, and fell back to candidates[0] --
+// the station's very first verdict on record. Purnea, which the dashboard
+// ranks as 97% degraded and SERVICE NOW, has early verdicts at 0.0, so this
+// page opened on "0% loss -- barometric diaphragm functioning with high
+// fidelity" for the most degraded station in the network. The headline is
+// now the station's own recorded degradation: the same number its health
+// score (1 - degradation) and the dashboard watchlist are built from.
 export default function PressureHeartbeat({ selectedStation, timeseries, verdicts, openAlerts, loading, error }) {
   const [mode, setMode] = useState("heartbeat");
   const stationAlerts = selectedStation ? openAlerts.filter((alert) => alert.station_id === selectedStation.station_id) : [];
-  const loss = heartbeatLoss(verdicts, stationAlerts);
-  const pressureValues = timeseries.map((row) => row.P).filter((value) => value !== null);
+  const loss = stationDegradation(selectedStation);
+  // A low-confidence station's readings are withheld on every other page,
+  // so they are not fitted or plotted here either.
+  const withheld = selectedStation?.data_quality === "low_confidence";
+  const pressureValues = (withheld ? [] : timeseries)
+    .map((row) => row.P)
+    .filter((value) => value !== null && value !== undefined && Number.isFinite(Number(value)));
   const evidence = stationAlerts[0]?.evidence || verdicts[verdicts.length - 1]?.evidence || [];
 
   // The station's OWN solar tides, fitted to its real barometric record.
@@ -42,8 +48,8 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
   // station, reached that chart. Both traces below are now derived from
   // the same timeseries the rest of the page already plots.
   const tideFit = useMemo(
-    () => fitSolarTides(timeseries, selectedStation?.lon),
-    [timeseries, selectedStation?.lon]
+    () => (withheld ? null : fitSolarTides(timeseries, selectedStation?.lon)),
+    [withheld, timeseries, selectedStation?.lon]
   );
 
   const pressureInGrossLimits =
@@ -94,7 +100,7 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
           <h3>Why Atmospheric Heartbeat?</h3>
         </div>
         <p>
-          Every barometric sensor on Earth experiences a predictable 12-hour oscillation caused by solar thermal heating of the upper atmosphere (the <b>S₂ solar semi-diurnal tide</b>, around 1 hPa amplitude at these latitudes, strongest near the equator and weakening polewards). When a pressure transducer accumulates moisture or loses calibration, this harmonic signal dampens or de-phases <b>weeks before readings drift outside standard QC thresholds</b>.
+          Every barometric sensor on Earth experiences a predictable 12-hour oscillation caused by solar thermal heating of the upper atmosphere (the <b>S₂ solar semi-diurnal tide</b>, around 1 hPa amplitude at these latitudes, strongest near the equator and weakening polewards). When a pressure transducer accumulates moisture or loses calibration, this harmonic signal dampens or de-phases <b>days before readings drift outside standard QC thresholds</b>.
         </p>
       </div>
 
@@ -108,13 +114,26 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
           </div>
           <div className="loss-desc">
             <h3>Harmonic Tidal Strength Loss</h3>
+            {/* Thresholds are the backend's own (station_service.py):
+                SCHEDULE from 20%, SERVICE NOW from 45%. This used to call
+                anything above 15% "significant" and name a physical cause
+                -- port clogging, diaphragm fatigue -- that the detector
+                has no way to observe. */}
             <p>
               {loss === null
-                ? "No tidal degradation reported for this station yet."
-                : loss > 0.15
-                ? "Significant harmonic dampening detected: sensor port clogging or diaphragm calibration fatigue."
-                : "Nominal tidal resonance: barometric diaphragm functioning with high fidelity."}
+                ? "This station's data is not trusted, so no tidal degradation is reported for it."
+                : loss >= DEGRADATION_SERVICE
+                ? "Severe tidal dampening, past the detector's own service threshold: the calibration-drift pattern this layer exists to catch."
+                : loss >= DEGRADATION_SCHEDULE
+                ? "Tidal amplitude is decaying: an early sign of calibration drift worth a check."
+                : "Tidal signal intact: no meaningful loss recorded for this pressure sensor."}
             </p>
+            {loss !== null ? (
+              <p className="chart-footer-note">
+                The worst loss the detector has recorded for this sensor. It is held until the station
+                is serviced, so it is not a measurement of the chart window below alone.
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -159,7 +178,7 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
                   <Sparkline
                     values={thin(tideFit.observed)}
                     comparison={thin(tideFit.fitted)}
-                    tone={loss !== null && loss > 0.15 ? "amber" : "orange"}
+                    tone={loss !== null && loss >= DEGRADATION_SCHEDULE ? "amber" : "orange"}
                     height={130}
                     showLabels={true}
                   />
@@ -182,6 +201,13 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
                       disturbance in the record and any figure read off it would be meaningless.
                     </>
                   )}
+                  {tideFit.reliable && loss !== null && loss >= DEGRADATION_SCHEDULE && (
+                    <>
+                      {" "}This window still resolves an S₂ of {number(tideFit.s2Amplitude, 2)} hPa, so the{" "}
+                      {percent(loss, 0)} above is the detector's held record for this sensor rather than
+                      what these few days alone show.
+                    </>
+                  )}
                   {tideFit.outlierFraction > 0.02 && (
                     <>
                       {" "}
@@ -197,14 +223,16 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
                 <div className="chart-svg-container">
                   <div className="sparkline-empty" style={{ height: 130 }}>
                     <span className="empty-spark-label">
-                      Not enough of this station's record to fit a 12-hour harmonic yet.
+                      {withheld
+                        ? "Withheld: this station's data is not trusted."
+                        : "Not enough of this station's record to fit a 12-hour harmonic yet."}
                     </span>
                   </div>
                 </div>
                 <p className="chart-footer-note">
-                  A stable S₂ fit needs at least 24 hours of pressure readings. This page draws the
-                  station's own measured tide, so with too little record it shows nothing rather
-                  than a stand-in curve.
+                  {withheld
+                    ? "This station's archived record was flagged as unreliable, so its readings are withheld and no tide is fitted to them."
+                    : "A stable S₂ fit needs at least 24 hours of pressure readings. This page draws the station's own measured tide, so with too little record it shows nothing rather than a stand-in curve."}
                 </p>
               </>
             )}
@@ -230,9 +258,15 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
             </div>
             <div className="chart-svg-container">
               {pressureValues.length ? (
-                <Sparkline values={pressureValues.slice(-28)} tone="orange" height={130} showLabels={true} />
+                // Plotted only the last 28 readings while the note below
+                // quoted the min/max of the whole window, so the two could
+                // disagree -- a step fault earlier in the window appeared in
+                // the text but not on the chart. Same data for both now.
+                <Sparkline values={thin(pressureValues)} tone="orange" height={130} showLabels={true} />
               ) : (
-                <p className="state">No pressure telemetry available in current buffer.</p>
+                <p className="state">
+                  {withheld ? "Withheld: this station's data is not trusted." : "No pressure telemetry available in current buffer."}
+                </p>
               )}
             </div>
             {/* The old note asserted readings "remain within standard
@@ -252,6 +286,8 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
                   values). A flat threshold like that passes a sensor whose tidal signature is
                   already decaying, which is what the harmonic check above is for.
                 </>
+              ) : withheld ? (
+                "Readings withheld: this station's archived record was flagged as unreliable."
               ) : (
                 "No pressure readings in the current buffer to range-check."
               )}
@@ -275,17 +311,14 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
             </div>
           </div>
           <div className="evidence-chip-list">
+            {/* Each chip printed the raw key uppercased ("SPATIAL Z T"),
+                the raw value to three places, and then the same value
+                again in words. One label, one sentence. */}
             {evidence.map((pair) => {
               const [rawKey, rawVal] = pair;
-              const formattedKey = rawKey.replace(/_/g, " ").toUpperCase();
-              const hasVal = rawVal !== null && rawVal !== undefined && rawVal !== "";
-              const valDisplay = hasVal
-                ? (typeof rawVal === "number" ? rawVal.toFixed(3) : String(rawVal))
-                : "Threshold Exceeded";
               return (
                 <div key={`${rawKey}-${rawVal}`} className="evidence-chip-card">
-                  <span className="chip-key">{formattedKey}</span>
-                  <strong className="chip-val">{valDisplay}</strong>
+                  <span className="chip-key">{evidenceLabel(rawKey)}</span>
                   <small className="chip-expl">{evidenceText(pair)}</small>
                 </div>
               );

@@ -8,9 +8,35 @@ import { anomalyReasonText, evidenceText, percent, severityLevel, timeAgo } from
 // heartbeat figure is read from there instead; there is no equivalent
 // field for CUSUM, so the tile that could never be filled is gone rather
 // than sitting there permanently blank.
+// The channel the fault is actually on, from the gate evidence that fired
+// (step_P, runlen_T, range_RH, cusum_P). Null for a purely z-driven flag.
+function faultChannel(alert) {
+  for (const pair of alert.evidence || []) {
+    const key = String(pair?.[0] || "");
+    const match = key.match(/^(?:step|runlen|range|cusum)_(T|P|RH)$/);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+// The neighbour cross-check for the channel that faulted. This used to take
+// whichever spatial_z_* came first in the list, and the detector appends
+// them T, P, RH -- so a pressure step at Tiruchirappalli showed the
+// temperature neighbour comparison, labelled "T vs neighbours", on a card
+// about pressure.
 function spatialEvidence(alert) {
-  const pair = (alert.evidence || []).find(([key]) => String(key).startsWith("spatial_z_"));
-  if (!pair) return null;
+  const spatial = (alert.evidence || []).filter(([key]) => String(key).startsWith("spatial_z_"));
+  if (!spatial.length) return null;
+  const channel = faultChannel(alert);
+  if (channel) {
+    // No neighbour reading for the faulted channel: say so for that
+    // channel rather than substituting a different channel's comparison.
+    const own = spatial.find(([key]) => key === `spatial_z_${channel}`);
+    return { channel, value: own ? Number(own[1]) : null };
+  }
+  const pair = spatial.reduce((best, item) =>
+    Math.abs(Number(item[1])) > Math.abs(Number(best[1])) ? item : best
+  );
   return { channel: String(pair[0]).replace("spatial_z_", ""), value: Number(pair[1]) };
 }
 

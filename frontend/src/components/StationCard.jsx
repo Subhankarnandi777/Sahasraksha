@@ -67,7 +67,14 @@ export default function StationCard({ station, alert, onOpen, referenceTime }) {
 
           {/* Health Score & Anomaly Status */}
           <div className="station-health-row">
-            <div className="health-score-pill">
+            {/* Health is 1 - recorded tidal degradation: slow calibration
+                wear. An acute fault (a step, a frozen sensor) drives the
+                status badge without touching it, which is how a SERVICE NOW
+                station can read 100% here. */}
+            <div
+              className="health-score-pill"
+              title="Calibration health: 1 minus the tidal degradation the detector has recorded. Acute faults such as steps or frozen readings set the status badge instead."
+            >
               <span className="health-dot" />
               <span>Health: <b>{healthVal === null ? "--" : percent(healthVal, 1)}</b></span>
             </div>
@@ -85,7 +92,9 @@ export default function StationCard({ station, alert, onOpen, referenceTime }) {
                 threshold has already been crossed. Matches the wording the
                 detail page uses for the same case. */}
             <span className="service-text">
-              {days !== "-"
+              {lowConfidence
+                ? "No trusted data"
+                : days !== "-"
                 ? `~${days}d to service window`
                 : needsService
                 ? "Service required now"
@@ -99,7 +108,8 @@ export default function StationCard({ station, alert, onOpen, referenceTime }) {
         <div className="station-card-photo-pane">
           <img
             src={photo.url}
-            alt={photo.landmark}
+            alt=""
+            aria-hidden="true"
             className="station-photo-img"
             loading="lazy"
             onError={(e) => {
@@ -108,9 +118,17 @@ export default function StationCard({ station, alert, onOpen, referenceTime }) {
             }}
           />
           <div className="photo-overlay-scrim" />
+          <span className="photo-stock-tag">Stock photo</span>
           <div className="photo-caption-badge">
             <span className="photo-pin">📍</span>
-            <span className="photo-landmark-text">{photo.landmark}</span>
+            {/* Shared stock photos -- 62 captions use 21 images, and one
+                image was captioned as a desert, a riverfront, a beach and a
+                temple on five different cards. The caption now names what
+                is near the station, and a "Stock photo" tag on the image
+                says it is not a picture of that place. */}
+            <span className="photo-landmark-text" title="Illustrative stock photo, not an image of this station">
+              Near {photo.landmark}
+            </span>
           </div>
         </div>
       </div>

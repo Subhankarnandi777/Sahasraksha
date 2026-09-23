@@ -1,11 +1,20 @@
 import StatusBadge from "../components/StatusBadge.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
 
-// The detector's own threshold for treating tidal amplitude decay as
-// actionable -- StreamingSahasraksha(deg_cut=0.45) in stream.py, which is
-// also the only point at which it emits tide_loss evidence at all.
-const TIDE_DEGRADATION_CUT = 0.45;
-import { anomalyReasonText, channelStatus, daysToThreshold, effectiveStatus, evidenceText, networkReferenceTime, percent, timeAgo, number } from "../services/api.js";
+import {
+  DEGRADATION_SCHEDULE,
+  DEGRADATION_SERVICE,
+  anomalyReasonText,
+  channelStatus,
+  daysToThreshold,
+  effectiveStatus,
+  evidenceText,
+  networkReferenceTime,
+  percent,
+  stationDegradation,
+  timeAgo,
+  number
+} from "../services/api.js";
 
 export default function StationDetail({ selectedStation, stations = [], timeseries, verdicts, openAlerts, loading, error }) {
   const station = selectedStation;
@@ -39,6 +48,47 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
     (activeAlert ? activeAlert.message : latestVerdict?.reason) || ""
   ).trim().toLowerCase();
   const needsService = status === "SERVICE NOW" || status === "SCHEDULE";
+
+  // The station's recorded tidal degradation -- what its health score and
+  // the dashboard watchlist are built from. The backend holds it at its
+  // worst value until the station is serviced, while each new verdict only
+  // describes its own reading. Purnea, at 97% degradation and SERVICE NOW,
+  // has clean individual readings, so this page -- which only looked at
+  // the latest verdict -- told a judge who clicked the network's most
+  // degraded station that it was "operating within nominal bounds".
+  const recordedLoss = stationDegradation(station);
+  const tideLoss = Math.max(recordedLoss ?? 0, Number(latestVerdict?.degradation || 0));
+  const degradedWithoutAlert =
+    !activeAlert && !verdictIsAnomalous && recordedLoss !== null && recordedLoss >= DEGRADATION_SERVICE;
+  const anomalyShown = Boolean(activeAlert) || verdictIsAnomalous;
+  // Confidence is max(severity, degradation, 0.6) in the backend, so it
+  // usually repeats the severity figure exactly; only show it when it adds
+  // something.
+  const confidenceDiffers =
+    anomalyShown &&
+    Math.round(Number(diagnosticSource?.confidence || 0) * 100) !==
+      Math.round(Number(diagnosticSource?.severity || 0) * 100);
+  const acuteFaultAtFullHealth =
+    anomalyShown && status !== "OK" && Number(station?.health) >= 0.9;
+
+  // The backend withholds a low-confidence station's health and latest
+  // readings from every summary (station_service.py), and the station list
+  // shows "--" for them -- but this page read the raw timeseries and showed
+  // Shillong's replayed values under three "Normal" badges. Withheld here
+  // too. A station with no reading at all no longer reads "Normal" either.
+  const withheld = station?.data_quality === "low_confidence";
+  function channelProps(channel, verdictStatus) {
+    if (withheld) {
+      return { value: null, values: [], timestamps: [], status: "Withheld", emptyLabel: "Withheld: data not trusted" };
+    }
+    const value = latest[channel];
+    return {
+      value,
+      values: timeseries.map((row) => row[channel]),
+      timestamps: timeseries.map((row) => row.timestamp),
+      status: value === null || value === undefined ? "No data" : verdictStatus
+    };
+  }
 
   if (!station && !loading) {
     return (
@@ -90,6 +140,11 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
               <div className="health-score-cluster">
                 <span className="score-value">{percent(station.health, 1)}</span>
                 <span className="score-label">Station Health Score</span>
+                {acuteFaultAtFullHealth ? (
+                  <span className="score-label">
+                    Health tracks slow calibration wear; this status comes from an acute fault.
+                  </span>
+                ) : null}
               </div>
               {/* Rendered as a bare "- days" when there was no estimate.
                   StationCard already words this case properly. */}
@@ -99,6 +154,8 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                     <span>Estimated Service Window:</span>
                     <b>{daysToThreshold(station.days_to_threshold)} days</b>
                   </>
+                ) : withheld ? (
+                  <span>Cannot assess: no trusted data</span>
                 ) : needsService ? (
                   // "No maintenance currently projected" on a SERVICE NOW
                   // station read as reassurance. No projection exists because
@@ -118,18 +175,21 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
             <span>Live Automatic Weather Station Telemetry Channel</span>
           </div>
 
+          {withheld ? (
+            <p className="state">
+              This station's archived record was flagged as unreliable, so its readings are withheld
+              here as they are on every other page.
+            </p>
+          ) : null}
+
           <div className="telemetry-three-grid">
             <TelemetryCard
               label="Atmospheric Temperature"
-              value={latest.T}
               unit="°C"
-              status={channelStatus(latestVerdict, "T", "Normal")}
-              values={timeseries.map((row) => row.T)}
-              timestamps={timeseries.map((row) => row.timestamp)}
+              {...channelProps("T", channelStatus(latestVerdict, "T", "Normal"))}
             />
             <TelemetryCard
               label="Barometric Pressure"
-              value={latest.P}
               unit=" hPa"
               // Any non-zero degradation used to print "Harmonic Loss X%",
               // so a routine 7% reading on an unflagged station announced a
@@ -137,24 +197,20 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
               // actionable past its own deg_cut, and only emits tide_loss
               // evidence then; below that this falls through to the same
               // per-channel check the other two cards use.
-              status={
-                Number(latestVerdict?.degradation || 0) > TIDE_DEGRADATION_CUT
-                  ? `Harmonic Loss ${percent(latestVerdict.degradation, 0)}`
+              {...channelProps(
+                "P",
+                tideLoss >= DEGRADATION_SERVICE
+                  ? `Harmonic Loss ${percent(tideLoss, 0)}`
                   : channelStatus(latestVerdict, "P", "Normal")
-              }
-              values={timeseries.map((row) => row.P)}
-              timestamps={timeseries.map((row) => row.timestamp)}
+              )}
               tone="amber"
             />
+            {/* Was "Nominal" here and "Stable" on pressure while temperature
+                said "Normal" -- three words for one state, side by side. */}
             <TelemetryCard
               label="Relative Humidity"
-              value={latest.RH}
               unit="%"
-              // Was "Nominal" here and "Stable" on pressure while temperature
-              // said "Normal" -- three words for one state, side by side.
-              status={channelStatus(latestVerdict, "RH", "Normal")}
-              values={timeseries.map((row) => row.RH)}
-              timestamps={timeseries.map((row) => row.timestamp)}
+              {...channelProps("RH", channelStatus(latestVerdict, "RH", "Normal"))}
               tone="blue"
             />
           </div>
@@ -164,14 +220,24 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
             <div className="verdict-header">
               <div>
                 <span className="card-tag">EXPLAINABLE ML VERDICT</span>
-                <h2>Conformal Anomaly Diagnostics</h2>
+                {/* Was "Conformal Anomaly Diagnostics". No conformal
+                    inference runs in the live path -- the conformal module
+                    in ml/sahasraksha/gapfill.py is offline-only. */}
+                <h2>Anomaly Diagnostics</h2>
               </div>
               {/* Severity/confidence describe an anomaly, so they only
                   belong here when one was actually raised. */}
-              {showDiagnostics && (
+              {anomalyShown && (
                 <div className="verdict-metrics-pill">
-                  <span>Confidence: <b>{percent(diagnosticSource.confidence, 0)}</b></span>
+                  {confidenceDiffers ? (
+                    <span>Confidence: <b>{percent(diagnosticSource.confidence, 0)}</b></span>
+                  ) : null}
                   <span>Severity: <b>{percent(diagnosticSource.severity, 0)}</b></span>
+                </div>
+              )}
+              {degradedWithoutAlert && (
+                <div className="verdict-metrics-pill">
+                  <span>Recorded tidal loss: <b>{percent(recordedLoss, 0)}</b></span>
                 </div>
               )}
             </div>
@@ -205,7 +271,7 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                     different reading than the headline. */}
                 {diagnosticSource?.evidence?.length > 0 && (
                   <div className="verdict-evidence-strip">
-                    <span className="evidence-title">Physics Evidence Markers:</span>
+                    <span className="evidence-title">Evidence Markers:</span>
                     <div className="evidence-pills">
                       {/* Was printing raw keys and values ("z_RH: 2.28").
                           evidenceText already renders these in words, and
@@ -219,8 +285,26 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                   </div>
                 )}
               </div>
+            ) : degradedWithoutAlert ? (
+              <div className="verdict-body">
+                <p className="state">
+                  The latest reading raised no flag, but the detector has recorded a{" "}
+                  {percent(recordedLoss, 0)} loss of this pressure sensor's 12-hour tidal signal. That
+                  record is held until the station is serviced, so one normal-looking reading does not
+                  clear it.
+                </p>
+                <div className="verdict-status-banner">
+                  <span className="verdict-icon">⚠️</span>
+                  <p className="verdict-text">{anomalyReasonText("degrading")}</p>
+                </div>
+              </div>
             ) : (
-              <p className="state">Telemetry channels currently operating within nominal bounds.</p>
+              <p className="state">
+                Telemetry channels currently operating within nominal bounds.
+                {recordedLoss !== null && recordedLoss >= DEGRADATION_SCHEDULE
+                  ? ` Recorded tidal degradation: ${percent(recordedLoss, 0)}.`
+                  : ""}
+              </p>
             )}
 
             <div className="verdict-footer-actions">

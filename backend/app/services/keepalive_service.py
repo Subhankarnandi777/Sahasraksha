@@ -17,9 +17,11 @@ Where the values come from
 --------------------------
 Each tick's value for a station is read from that station's REAL archived
 hourly observations (app/tools/data/september_baseline_windows.json,
-genuine NOAA-ISD/IMD data -- the same file the reseed tool uses), indexed
-by the current hour of day so the diurnal cycle lines up with the actual
-clock. A small amount of noise is layered on so consecutive ticks within
+genuine NOAA-ISD/IMD data -- the same file the reseed tool uses), matched
+on the current UTC hour of day so the diurnal cycle lines up with the
+actual clock. Hours the archive has no reading for are interpolated
+between the nearest real hours (see _real_value_for_now). A small amount
+of noise is layered on so consecutive ticks within
 the same hour aren't byte-identical (an exact flatline would itself trip
 the frozen-sensor detector).
 
@@ -161,16 +163,71 @@ def _clamp(value, channel):
     return max(lo, min(hi, value))
 
 
-def _real_value_for_now(window):
-    """Pick the real observation matching the current hour of day.
+def _observation_hour(point):
+    """UTC hour of day of one archived observation, or None if unreadable."""
+    try:
+        return datetime.strptime(str(point["timestamp"])[:19], "%Y-%m-%d %H:%M:%S").hour
+    except (KeyError, TypeError, ValueError):
+        return None
 
-    Indexing by hour (rather than walking a cursor forward) keeps the
-    diurnal shape aligned with the actual clock and, more importantly,
-    makes each tick's value a pure function of real data and the current
-    time -- there is no carried-forward state that could accumulate drift.
+
+def _hourly_profile(window):
+    """{utc_hour: first real observation at that hour} for one station."""
+    profile = {}
+    for point in window:
+        hour = _observation_hour(point)
+        if hour is not None and hour not in profile:
+            profile[hour] = point
+    return profile
+
+
+def _real_value_for_now(window, now=None):
+    """The real observation for the current UTC hour of day.
+
+    This used to be ``window[hour % len(window)]``, which assumes the
+    window holds 24 consecutive hours starting at 00 UTC. 14 of the 57
+    windows have gaps in the archive, so from the first gap onward the
+    feed played observations at the wrong hour: Gaya's window holds only
+    06-12 UTC readings, so it played daytime temperatures all night;
+    Purnea played its 00-07 UTC readings again at 16-23 UTC. That also
+    put jumps of more than 6 C into the feed at the wrap-around points --
+    Dibrugarh 8.4 C, Nagappattinam 8.0 C, Madurai twice a day -- which the
+    detector then reported as sensor step faults: about seven false
+    "abrupt step" alerts a day that were artifacts of the replay, not
+    injected test faults and not the real data.
+
+    Now each hour plays that hour's real observation. Where the archive
+    has no reading for an hour, the value is interpolated in time between
+    the nearest real hours either side (wrapping around midnight), so the
+    diurnal cycle stays continuous instead of jumping.
+
+    For the 43 windows with no gaps this returns exactly what the old
+    indexing did.
     """
-    hour = datetime.now(timezone.utc).hour
-    return window[hour % len(window)]
+    hour = (now or datetime.now(timezone.utc)).hour
+    profile = _hourly_profile(window)
+    if not profile:
+        return window[hour % len(window)]
+    if hour in profile:
+        return profile[hour]
+
+    hours = sorted(profile)
+    before = max((h for h in hours if h < hour), default=hours[-1])
+    after = min((h for h in hours if h > hour), default=hours[0])
+    span = (after - before) % 24 or 24
+    fraction = ((hour - before) % 24) / span
+    low, high = profile[before], profile[after]
+
+    blended = {"timestamp": low.get("timestamp")}
+    for channel in CHANNELS:
+        a, b = low.get(channel), high.get(channel)
+        if a is None:
+            blended[channel] = b
+        elif b is None:
+            blended[channel] = a
+        else:
+            blended[channel] = a + fraction * (b - a)
+    return blended
 
 
 class LiveFeedState:

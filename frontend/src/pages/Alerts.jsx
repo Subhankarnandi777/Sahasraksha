@@ -39,6 +39,14 @@ export default function Alerts({ openAlerts, loading, error }) {
               ? "Scoring live station telemetry against fitted baselines..."
               : `${openAlerts.length} explainable anomalies detected via 4-layer physics & ML verification`}
           </p>
+          {/* Most faults on the live demo feed are injected on purpose
+              (keepalive_service.py) into replayed real station data. The
+              page never said so, so each card read as a real fault at a
+              real IMD station. */}
+          <p className="page-sub-heading">
+            Most faults on this demo feed are injected periodically into replayed real station data;
+            each card is the live detector's own verdict on one.
+          </p>
         </div>
       </div>
 

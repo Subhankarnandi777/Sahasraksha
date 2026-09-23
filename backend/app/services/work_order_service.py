@@ -20,6 +20,20 @@ def count_active_work_orders() -> int:
         ) or 0
 
 
+def count_stations_with_active_work_orders() -> int:
+    """Distinct stations with at least one open work order. One station can
+    hold several -- each high-severity alert raises its own, and a
+    chronically degraded station keeps them open after the alert clears
+    (live on 2026-09-23: 8 open orders across 4 stations, 4 of them at
+    Sagar) -- so the dashboard shows both numbers instead of letting the
+    order count read as a station count."""
+    with SessionLocal() as db:
+        return db.scalar(
+            select(func.count(func.distinct(WorkOrderModel.station_id)))
+            .where(WorkOrderModel.status != WorkOrderStatus.COMPLETED.value)
+        ) or 0
+
+
 class WorkOrderAlreadyExistsError(Exception):
     pass
 

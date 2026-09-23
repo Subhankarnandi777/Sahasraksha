@@ -12,7 +12,7 @@ Weather reading
 -> Work Order
 ```
 
-The real ML engine is external and is not included in this repository yet. The backend keeps `AnomalyDetector` as the adapter boundary so the real engine can later replace `MockAnomalyDetector` without rewriting the API layer.
+The real streaming detector is included and is what the API runs: `app/services/anomaly_detector.py` adapts `ml/sahasraksha/stream.py` (physics gates, harmonic-residual z-score, CUSUM, pressure tide heartbeat) and adds a spatial cross-check against up to six neighbouring stations. `AnomalyDetector` remains the adapter boundary, and `MockAnomalyDetector` is kept only for tests.
 
 ## Current Technology
 
@@ -138,7 +138,7 @@ OK
 
 ### POST /ingest
 
-Runs the current `AnomalyDetector` adapter for one observation and returns the contract verdict. This endpoint does not persist every observation, which keeps ingestion separate from database persistence and future in-memory streaming model state.
+Runs the streaming detector on one observation and returns the contract verdict. For a known station the reading, the verdict, an alert when the verdict is flagged, a work order for alerts at severity 0.7 or above, and the station's updated status are all persisted. An unknown station still gets a verdict but nothing is stored.
 
 Example request:
 
@@ -164,11 +164,14 @@ Example response:
   "confidence": 0.83,
   "degradation": 0.512,
   "evidence": [
-    ["temperature_demo_threshold", 46.2],
-    ["amp_ratio_P", 0.97]
+    ["range_T", 1.0],
+    ["z_T", 6.25],
+    ["spatial_z_T", 0.2]
   ]
 }
 ```
+
+`confidence` is a heuristic, `max(severity, degradation, 0.6)`, not a calibrated probability.
 
 Allowed reasons:
 
@@ -178,13 +181,14 @@ range
 step
 frozen
 missing
+impossible
 drift
 degrading
 anomaly
 unclassified
 ```
 
-The current response is produced by `MockAnomalyDetector` for local development only. It is not the real ML engine.
+Evidence keys the detector emits: `range_*`, `step_*`, `runlen_*` (a frozen, repeating sensor), `z_*` (the station's own standardised residual), `cusum_*`, `tide_loss`, `dewpoint_violation`, `spatial_z_*`, `spatial_agreement` and `insufficient_history_for_real_fit`.
 
 ### GET /stations/{id}/timeseries?from=&to=
 
@@ -220,7 +224,7 @@ Example alert:
   "status": "open",
   "confidence": 0.83,
   "degradation": 0.512,
-  "evidence": [["temperature_demo_threshold", 46.2]],
+  "evidence": [["range_T", 1.0], ["z_T", 6.25]],
   "created_at": "2026-09-04T10:00:00",
   "resolved_at": null
 }
@@ -249,6 +253,10 @@ Example alert:
 - `GET /work-orders/{work_order_id}`
 - `POST /alerts/{alert_id}/work-order`
 - `PATCH /work-orders/{work_order_id}/status`
+- `GET /readings/network/timeseries` (hourly network-wide median, for the dashboard chart)
+- `POST /demo/inject-anomaly` (the dashboard's test-fault button)
+- `POST /chat` (the site-guide chatbot)
+- `POST /alerts/resolve-all` (one-off maintenance: resolves every open alert; not called by the frontend)
 
 ## Tests
 

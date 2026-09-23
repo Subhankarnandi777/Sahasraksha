@@ -56,4 +56,5 @@ def read_health() -> dict[str, int | str]:
         "station_count": station_service.count_stations(),
         "open_alert_count": alert_service.count_open_alerts(),
         "active_work_order_count": work_order_service.count_active_work_orders(),
+        "stations_with_open_work_orders": work_order_service.count_stations_with_active_work_orders(),
     }

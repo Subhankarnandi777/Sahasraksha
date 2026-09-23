@@ -101,9 +101,17 @@ function markerLabel(station, mode) {
     return station.data_quality === "low_confidence" ? "Low" : "";
   }
   // health mode: properly converts 1.0 (or 0.98) to 100% (or 98%)
+  //
+  // The backend sends health: null for a station whose data it does not
+  // trust. Number(null) is 0, so those three stations were labelled "0%"
+  // on the map -- the worst health score possible -- while the station
+  // list correctly showed "--". A missing health also used to fall back to
+  // a fabricated "100%". Neither is a measurement.
   if (mode === "health") {
-    const healthVal = Number(station.health);
-    if (Number.isNaN(healthVal)) return "100%";
+    const raw = station.health;
+    if (raw === null || raw === undefined || raw === "") return "--";
+    const healthVal = Number(raw);
+    if (!Number.isFinite(healthVal)) return "--";
     const h = Math.round(healthVal <= 1 ? healthVal * 100 : healthVal);
     return `${h}%`;
   }
@@ -352,7 +360,7 @@ export default function MapPanel({
   const showDetailCard = activeStation && !cardDismissed;
 
   return (
-    <div className="apple-map-container" aria-label="Sahasraksha Apple Map Canvas">
+    <div className="apple-map-container" aria-label="Station network map">
       {/* =========================================================================
           FLOATING APPLE DYNAMIC ISLANDS (Only rendered when not using external toolbar)
           ========================================================================= */}
@@ -460,7 +468,7 @@ export default function MapPanel({
                 type="button"
                 className={basemap === "apple" ? "active" : ""}
                 onClick={() => setBasemap("apple")}
-                title="Apple Pastel Relief Cartography"
+                title="Esri World Topographic basemap"
               >
                 🗺️ Map
               </button>
@@ -703,7 +711,8 @@ export default function MapPanel({
               <div className="sheet-image-container">
                 <img
                   src={stationImage?.url}
-                  alt={activeStation.name}
+                  alt=""
+                  aria-hidden="true"
                   className="sheet-backdrop-img"
                   onError={(e) => {
                     e.currentTarget.src =
@@ -755,8 +764,13 @@ export default function MapPanel({
                     <span>{percent(activeStation.health, 0)}</span>
                   </div>
                   <h3 className="sheet-station-title">{activeStation.name}</h3>
+                  {/* The photos are shared stock images -- 62 captions use 21
+                      photos, one of them labelled as five different
+                      landmarks -- so the caption names what is near the
+                      station and says the picture is illustrative, rather
+                      than claiming the photo shows that place. */}
                   <p className="sheet-landmark-caption">
-                    {stationImage?.landmark || "Indian Meteorological AWS"}
+                    {stationImage?.landmark ? `Stock photo · Near ${stationImage.landmark}` : "Stock photo"}
                   </p>
                 </div>
               </div>
@@ -788,7 +802,7 @@ export default function MapPanel({
                         ? "🌡️ Warm Conditions"
                         : activeStation.latest_temperature < 15
                         ? "🥶 Cool Conditions"
-                        : "🌤️ Nominal Conditions"}
+                        : "🌤️ Mild Conditions"}
                     </div>
                     <div className="sheet-coords-text">
                       📍 {number(activeStation.lat, 2)}°N, {number(activeStation.lon, 2)}°E •{" "}
@@ -802,14 +816,18 @@ export default function MapPanel({
                   <div className="sheet-tile">
                     <span className="tile-label">PRESSURE</span>
                     <strong className="tile-value">
-                      {number(activeStation.latest_pressure, 0)} hPa
+                      {activeStation.latest_pressure !== null && activeStation.latest_pressure !== undefined
+                        ? `${number(activeStation.latest_pressure, 0)} hPa`
+                        : "--"}
                     </strong>
                     <span className="tile-sub">Surface Baro</span>
                   </div>
                   <div className="sheet-tile">
                     <span className="tile-label">HUMIDITY</span>
                     <strong className="tile-value">
-                      {number(activeStation.latest_humidity, 0)}%
+                      {activeStation.latest_humidity !== null && activeStation.latest_humidity !== undefined
+                        ? `${number(activeStation.latest_humidity, 0)}%`
+                        : "--"}
                     </strong>
                     {/* Was "Relative Dew" -- this channel IS relative
                         humidity, not dew point (a different, derived

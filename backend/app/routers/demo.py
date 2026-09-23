@@ -32,7 +32,13 @@ def inject_demo_anomaly(
         if target is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station '{station_id}' was not found.")
     else:
-        healthy = [s for s in stations if s.status == "OK"] or stations
+        # Low-confidence stations have their readings withheld, so the seed
+        # below fell back to generic 25 C / 1005 hPa / 60% defaults and the
+        # "fault" was measured against numbers that station never reported
+        # -- for Bangalore, a ~90 hPa jump from its real pressure. Swami
+        # Vivekananda has no archived data at all. Neither is a fair target.
+        trusted = [s for s in stations if s.data_quality != "low_confidence"]
+        healthy = [s for s in trusted if s.status == "OK"] or trusted or stations
         target = random.choice(healthy)
 
     seed = {

@@ -5661,3 +5661,29 @@ button {
     animation: none;
   }
 }
+
+/* The station photos are shared stock images (62 captions, 21 photos),
+   not pictures of the station or the named landmark, so each one says so. */
+.photo-stock-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.55);
+  pointer-events: none;
+}
+
+/* The health dot was green on every card, including Purnea at 2.9%. It
+   now follows the card's own status tone. */
+.station-card.monitor .health-dot {
+  background: #f59e0b;
+}
+.station-card.critical .health-dot {
+  background: #dc2626;
+}

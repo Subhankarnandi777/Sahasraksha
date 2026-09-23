@@ -243,9 +243,9 @@ export function effectiveStatus(station, referenceTime) {
 // "ok" under a warning icon on the detail page.
 export function anomalyReasonText(reason) {
   const r = String(reason || "").trim().toLowerCase();
-  if (r === "step") return "Abrupt step displacement detected across telemetry channels.";
+  if (r === "step") return "Abrupt step jump in a single reading, larger than the atmosphere can move between readings.";
   if (r === "drift" || r === "cusum") return "Continuous cumulative sum (CUSUM) calibration drift detected.";
-  if (r === "tide_loss" || r === "degrading") return "Significant S₂ harmonic tidal resonance loss: diaphragm fatigue or port obstruction.";
+  if (r === "tide_loss" || r === "degrading") return "Pressure sensor's 12-hour tidal signature is fading: the slow calibration-drift pattern this detector watches for.";
   if (r === "range") return "Reading outside gross physical limits for this channel.";
   if (r === "impossible") return "Physically impossible combination: dewpoint above air temperature.";
   if (r === "missing") return "Expected telemetry channel absent from this reading.";
@@ -336,6 +336,66 @@ export function channelStatus(verdict, channel, fallback) {
   return severity >= 0.5 ? `Attention ${percent(severity, 0)}` : `Watch ${percent(severity, 0)}`;
 }
 
+
+// A station's health score, or null when it has none. null and "" both
+// coerce to a perfectly finite 0, so they have to be rejected before
+// Number() ever sees them -- otherwise "no score" counts as the worst score
+// there is. The network-average health on the Dashboard and Fleet Map was
+// averaging the three low-confidence stations in as 0%, which pulled the
+// headline figure from about 95.6% down to 90.8%.
+export function healthOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+// Station status in order of how urgently it needs a person. The stations
+// list's "Risk Priority" sort ranks on this first: it used to sort on
+// health alone, so a SERVICE NOW station with an acute step fault and 100%
+// calibration health sat 51st of 60, below dozens of healthy stations.
+const STATUS_RANK = { "SERVICE NOW": 3, SCHEDULE: 2, MONITOR: 1, OK: 0 };
+
+export function statusRank(status) {
+  return STATUS_RANK[status] ?? 0;
+}
+
+// station_service._status_from_verdict's own degradation floors: at 0.2 a
+// station moves to SCHEDULE, at 0.45 to SERVICE NOW. The same 0.45 is the
+// detector's deg_cut in stream.py, the point where it emits tide_loss.
+export const DEGRADATION_SCHEDULE = 0.2;
+export const DEGRADATION_SERVICE = 0.45;
+
+// The station's recorded tidal degradation -- the same number its health
+// score is derived from (health = 1 - degradation) and the one the
+// dashboard watchlist ranks on. The backend holds it at its worst value
+// until the station is serviced. Null when the pipeline does not trust the
+// station's data at all, so "no data" cannot render as "0% loss".
+export function stationDegradation(station) {
+  if (!station || station.data_quality === "low_confidence") return null;
+  const raw = station.degradation;
+  if (raw === null || raw === undefined || raw === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+// Short category label for an evidence key, so evidence chips can say what
+// a marker is ("Own-baseline residual · RH") instead of printing the raw
+// key uppercased ("Z RH").
+export function evidenceLabel(key) {
+  const k = String(key || "");
+  const channel = (prefix) => k.slice(prefix.length);
+  if (k.startsWith("spatial_z_")) return `Neighbour residual · ${channel("spatial_z_")}`;
+  if (k.startsWith("z_")) return `Own-baseline residual · ${channel("z_")}`;
+  if (k.startsWith("step_")) return `Step jump · ${channel("step_")}`;
+  if (k.startsWith("runlen_")) return `Repeated readings · ${channel("runlen_")}`;
+  if (k.startsWith("cusum_")) return `CUSUM drift · ${channel("cusum_")}`;
+  if (k.startsWith("range_")) return `Gross limit · ${channel("range_")}`;
+  if (k === "tide_loss") return "Tidal loss";
+  if (k === "dewpoint_violation" || k === "gate_dewpoint") return "Dewpoint check";
+  if (k === "spatial_agreement") return "Neighbour agreement";
+  if (k === "insufficient_history_for_real_fit") return "Baseline fit";
+  return k.replace(/_/g, " ");
+}
 
 export function evidenceText(pair) {
   const [key, value] = pair;
