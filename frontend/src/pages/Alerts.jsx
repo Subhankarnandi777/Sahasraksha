@@ -3,7 +3,7 @@ import AlertCard from "../components/AlertCard.jsx";
 import FilterTabs from "../components/FilterTabs.jsx";
 import { severityLevel } from "../services/api.js";
 
-export default function Alerts({ openAlerts, loading, error }) {
+export default function Alerts({ openAlerts, stations = [], loading, error }) {
   const [filter, setFilter] = useState("all");
 
   const counts = useMemo(() => ({
@@ -11,6 +11,11 @@ export default function Alerts({ openAlerts, loading, error }) {
     monitoring: openAlerts.filter((alert) => severityLevel(alert.severity) === "monitoring").length,
     nodata: openAlerts.filter((alert) => severityLevel(alert.severity) === "nodata").length
   }), [openAlerts]);
+
+  const stationById = useMemo(
+    () => Object.fromEntries(stations.map((station) => [station.station_id, station])),
+    [stations]
+  );
 
   const filteredAlerts = useMemo(() => {
     if (filter === "all") return openAlerts;
@@ -123,6 +128,7 @@ export default function Alerts({ openAlerts, loading, error }) {
             <AlertCard
               key={alert.id || `${alert.station_id}-${alert.created_at}`}
               alert={alert}
+              station={stationById[alert.station_id]}
             />
           ))
         ) : (

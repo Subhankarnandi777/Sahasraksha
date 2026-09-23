@@ -130,8 +130,9 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
             </p>
             {loss !== null ? (
               <p className="chart-footer-note">
-                The worst loss the detector has recorded for this sensor. It is held until the station
-                is serviced, so it is not a measurement of the chart window below alone.
+                The worst loss the detector has recorded for this sensor. It is held at that value --
+                nothing in the system resets it yet -- so it is not a measurement of the chart window
+                below alone.
               </p>
             ) : null}
           </div>
@@ -261,8 +262,10 @@ export default function PressureHeartbeat({ selectedStation, timeseries, verdict
                 // Plotted only the last 28 readings while the note below
                 // quoted the min/max of the whole window, so the two could
                 // disagree -- a step fault earlier in the window appeared in
-                // the text but not on the chart. Same data for both now.
-                <Sparkline values={thin(pressureValues)} tone="orange" height={130} showLabels={true} />
+                // the text but not on the chart. Every reading is plotted
+                // now (not thinned: a 3-reading step would usually fall
+                // between the kept points), so both describe the same data.
+                <Sparkline values={pressureValues} tone="orange" height={130} showLabels={true} />
               ) : (
                 <p className="state">
                   {withheld ? "Withheld: this station's data is not trusted." : "No pressure telemetry available in current buffer."}

@@ -3,7 +3,7 @@ import MapPanel from "../components/MapPanel.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import StatusLegend from "../components/StatusLegend.jsx";
 import TelemetryCard from "../components/TelemetryCard.jsx";
-import { anomalyReasonText, healthOrNull, number, percent, channelStatus, effectiveStatus, isSilent, networkReferenceTime, getStationTimeseries, getStationVerdicts } from "../services/api.js";
+import { DEGRADATION_SERVICE, anomalyReasonText, healthOrNull, stationDegradation, number, percent, channelStatus, effectiveStatus, isSilent, networkReferenceTime, getStationTimeseries, getStationVerdicts } from "../services/api.js";
 import { useTheme } from "../services/theme.js";
 
 function markerStatusClass(status) {
@@ -137,6 +137,10 @@ export default function Network({ stations = [], selectedStation, selectedStatio
   // Same rule as the detail page: a low-confidence station's readings are
   // withheld everywhere else, so they are not shown here under "Normal".
   const withheld = selected?.data_quality === "low_confidence";
+  // Recorded tidal degradation, as on the detail page -- Purnea (97%, no
+  // open alert) otherwise showed SERVICE NOW above three "Normal" cards.
+  const recordedLoss = stationDegradation(selected);
+  const tideLoss = Math.max(recordedLoss ?? 0, Number(latestVerdict?.degradation || 0));
   function channelProps(channel) {
     if (withheld) {
       return { value: null, values: [], timestamps: [], status: "Withheld", emptyLabel: "Withheld: data not trusted" };
@@ -146,7 +150,12 @@ export default function Network({ stations = [], selectedStation, selectedStatio
       value,
       values: activeTimeseries.map((row) => row[channel]),
       timestamps: activeTimeseries.map((row) => row.timestamp),
-      status: value === null || value === undefined ? "No data" : channelStatus(latestVerdict, channel, "Normal")
+      status:
+        value === null || value === undefined
+          ? "No data"
+          : channel === "P" && tideLoss >= DEGRADATION_SERVICE
+          ? `Harmonic Loss ${percent(tideLoss, 0)}`
+          : channelStatus(latestVerdict, channel, "Normal")
     };
   }
 
@@ -469,6 +478,10 @@ export default function Network({ stations = [], selectedStation, selectedStatio
               {selectedAlert ? (
                 <p className="state">
                   Open alert: {selectedAlert.explanation || anomalyReasonText(selectedAlert.message)}
+                </p>
+              ) : recordedLoss !== null && recordedLoss >= DEGRADATION_SERVICE ? (
+                <p className="state">
+                  Recorded tidal loss of {percent(recordedLoss, 0)}: {anomalyReasonText("degrading")}
                 </p>
               ) : null}
 

@@ -367,8 +367,9 @@ export const DEGRADATION_SERVICE = 0.45;
 
 // The station's recorded tidal degradation -- the same number its health
 // score is derived from (health = 1 - degradation) and the one the
-// dashboard watchlist ranks on. The backend holds it at its worst value
-// until the station is serviced. Null when the pipeline does not trust the
+// dashboard watchlist ranks on. The backend holds it at its worst value --
+// station_service.py only ever ratchets it up, and nothing resets it yet.
+// Null when the pipeline does not trust the
 // station's data at all, so "no data" cannot render as "0% loss".
 export function stationDegradation(station) {
   if (!station || station.data_quality === "low_confidence") return null;

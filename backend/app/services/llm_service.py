@@ -246,7 +246,8 @@ without lowering its health, which is why a SERVICE NOW station can show 100% he
 temperature/pressure/humidity and health score; click one for full detail (real-time channels + \
 anomaly diagnostics + the Pressure Heartbeat view).
 - Pressure Heartbeat (inside a station's detail page): the S2 tidal-degradation view. The headline is \
-the station's recorded tidal loss (held until the station is serviced). The chart is a robust (IRLS) \
+the station's recorded tidal loss: the worst value the detector has seen, held there (nothing in \
+the system resets it yet, so do not say servicing clears it). The chart is a robust (IRLS) \
 least-squares fit of the S1 and S2 solar tides, in local solar time, to that station's own last ~72 \
 hours of pressure: the measured residual (trend and S1 removed) drawn against the fitted S2 wave.
 - Anomaly Alerts (/alerts): the triage center -- every currently open alert, filterable by \

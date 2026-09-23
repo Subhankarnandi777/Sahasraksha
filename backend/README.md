@@ -159,19 +159,19 @@ Example response:
 ```json
 {
   "flag": 1,
-  "reason": "range",
-  "severity": 0.734,
-  "confidence": 0.83,
-  "degradation": 0.512,
+  "reason": "step",
+  "severity": 1.0,
+  "confidence": 1.0,
+  "degradation": 0.0,
   "evidence": [
-    ["range_T", 1.0],
+    ["step_T", 11.55],
     ["z_T", 6.25],
     ["spatial_z_T", 0.2]
   ]
 }
 ```
 
-`confidence` is a heuristic, `max(severity, degradation, 0.6)`, not a calibrated probability.
+This is what a temperature reading 11.55 C away from the station's previous one returns: the step gate fires (the T limit is 6 C), the station's own residual is 6.25 sigma, and the nearest neighbours show nothing similar. `confidence` is a heuristic, `max(severity, degradation, 0.6)`, not a calibrated probability.
 
 Allowed reasons:
 
@@ -219,12 +219,13 @@ Example alert:
   "station_id": "STATION-001",
   "reading_id": 12,
   "anomaly_verdict_id": 7,
-  "severity": 0.734,
-  "message": "range",
+  "severity": 1.0,
+  "message": "step",
+  "explanation": "STATION-001's temperature jumped 11.6 in a single reading -- a severe step change outside normal sensor behaviour.",
   "status": "open",
-  "confidence": 0.83,
-  "degradation": 0.512,
-  "evidence": [["range_T", 1.0], ["z_T", 6.25]],
+  "confidence": 1.0,
+  "degradation": 0.0,
+  "evidence": [["step_T", 11.55], ["z_T", 6.25]],
   "created_at": "2026-09-04T10:00:00",
   "resolved_at": null
 }

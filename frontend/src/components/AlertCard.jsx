@@ -1,13 +1,13 @@
-import { anomalyReasonText, evidenceText, percent, severityLevel, timeAgo } from "../services/api.js";
+import { anomalyReasonText, evidenceText, percent, severityLevel, stationDegradation, timeAgo } from "../services/api.js";
 
 // The verdict's evidence list is the detector's top-3 items (truncated in
 // stream.py) plus the spatial cross-check. cusum_* and tide_loss almost
 // never survive that cut, so scraping evidence for them left the "Drift"
 // and "Heartbeat" tiles reading "-" on every alert the network has ever
-// raised. degradation is a real top-level field on the alert, so the
-// heartbeat figure is read from there instead; there is no equivalent
-// field for CUSUM, so the tile that could never be filled is gone rather
-// than sitting there permanently blank.
+// raised. The tidal-loss tile now reads the station's recorded degradation
+// (see below); there is no equivalent field for CUSUM, so the tile that
+// could never be filled is gone rather than sitting there permanently
+// blank.
 // The channel the fault is actually on, from the gate evidence that fired
 // (step_P, runlen_T, range_RH, cusum_P). Null for a purely z-driven flag.
 function faultChannel(alert) {
@@ -40,15 +40,25 @@ function spatialEvidence(alert) {
   return { channel: String(pair[0]).replace("spatial_z_", ""), value: Number(pair[1]) };
 }
 
-export default function AlertCard({ alert }) {
+export default function AlertCard({ alert, station }) {
   const severity = severityLevel(alert.severity);
   const spatial = spatialEvidence(alert);
 
-  const degradation =
+  // The station's recorded tidal degradation -- the figure its detail page,
+  // S2 page and the dashboard watchlist all show. alert.degradation is only
+  // the value on the one reading that raised the alert, so Sagar's card
+  // read 0% while every other page said 69%. Falls back to the alert's own
+  // value when the station summary isn't available; a low-confidence
+  // station has none (stationDegradation returns null) and shows "-".
+  const alertDegradation =
     alert.degradation === null || alert.degradation === undefined || alert.degradation === ""
       ? null
       : Number(alert.degradation);
-  const heartbeatLoss = Number.isFinite(degradation) ? degradation : null;
+  const heartbeatLoss = station
+    ? stationDegradation(station)
+    : Number.isFinite(alertDegradation)
+    ? alertDegradation
+    : null;
 
   // `alert.message` is the bare detector reason, so an alert that arrived
   // without narration text rendered the single word "step" as its headline
@@ -88,7 +98,7 @@ export default function AlertCard({ alert }) {
         </span>
         <span>
           <strong>{heartbeatLoss === null ? "-" : `${Math.round(heartbeatLoss * 100)}%`}</strong>
-          <small>Heartbeat loss</small>
+          <small>Tidal loss (recorded)</small>
         </span>
       </div>
       <ul>

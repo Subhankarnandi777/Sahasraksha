@@ -430,7 +430,11 @@ export default function Dashboard({
                       <span>{st.latest_humidity !== null && st.latest_humidity !== undefined ? `${number(st.latest_humidity, 0)}% RH` : "--"}</span>
                     </div>
                     <div className="st-deg-pill">
-                      <span className={`deg-badge ${degPct > 10 ? "warn" : "ok"}`}>
+                      {/* Amber from 20% -- the backend's SCHEDULE floor and
+                          the S2 page's own threshold. It was 10%, so
+                          Ganganagar at 12% was amber here and "intact" on
+                          its own tide page. */}
+                      <span className={`deg-badge ${degPct >= 20 ? "warn" : "ok"}`}>
                         {degPct}% Deg.
                       </span>
                     </div>

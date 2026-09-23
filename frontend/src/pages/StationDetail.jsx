@@ -51,7 +51,7 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
 
   // The station's recorded tidal degradation -- what its health score and
   // the dashboard watchlist are built from. The backend holds it at its
-  // worst value until the station is serviced, while each new verdict only
+  // worst value (nothing resets it yet), while each new verdict only
   // describes its own reading. Purnea, at 97% degradation and SERVICE NOW,
   // has clean individual readings, so this page -- which only looked at
   // the latest verdict -- told a judge who clicked the network's most
@@ -290,8 +290,7 @@ export default function StationDetail({ selectedStation, stations = [], timeseri
                 <p className="state">
                   The latest reading raised no flag, but the detector has recorded a{" "}
                   {percent(recordedLoss, 0)} loss of this pressure sensor's 12-hour tidal signal. That
-                  record is held until the station is serviced, so one normal-looking reading does not
-                  clear it.
+                  record is held at its worst value, so one normal-looking reading does not clear it.
                 </p>
                 <div className="verdict-status-banner">
                   <span className="verdict-icon">⚠️</span>
