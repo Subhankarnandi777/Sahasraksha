@@ -1,4 +1,6 @@
-import { anomalyReasonText, evidenceText, percent, severityLevel, stationDegradation, timeAgo } from "../services/api.js";
+import { anomalyActionText, anomalyReasonText, estimateFor, evidenceText, number, percent, severityLevel, stationDegradation, timeAgo } from "../services/api.js";
+
+const UNITS = { T: "°C", P: "hPa", RH: "%" };
 
 // The verdict's evidence list is the detector's top-3 items (truncated in
 // stream.py) plus the spatial cross-check. cusum_* and tide_loss almost
@@ -15,6 +17,7 @@ function faultChannel(alert) {
     const key = String(pair?.[0] || "");
     const match = key.match(/^(?:step|runlen|range|cusum)_(T|P|RH)$/);
     if (match) return match[1];
+    if (key === "t_record" || key === "dewpoint_ceiling") return "T";
   }
   return null;
 }
@@ -68,17 +71,16 @@ export default function AlertCard({ alert, station }) {
     (alert.message ? anomalyReasonText(alert.message) : null) ||
     "Anomaly detected";
 
-  // confidence is max(severity, degradation, 0.6) in anomaly_detector.py --
-  // the backend's own docstring calls it "a heuristic floor, not a
-  // calibrated probability", and the conformal machinery in
-  // ml/sahasraksha/gapfill.py is not wired into this path at all. Calling
-  // it "calibrated confidence" claimed a guarantee nothing here provides.
-  // It is also derived from severity, so it matched the risk pill exactly
-  // on all seven live alerts -- one number wearing two labels. Shown only
-  // when it actually carries something the risk figure does not.
+  // confidence now comes from stream.py: 1.0 when a deterministic physics or
+  // missing-data rule decided, otherwise how far the deciding statistic
+  // cleared its threshold (0.5 = on the line). It is NOT a calibrated
+  // probability, so it is not labelled as one. Shown only when it carries
+  // something the risk figure does not.
   const riskPct = Math.round(Number(alert.severity || 0) * 100);
   const confidencePct = Math.round(Number(alert.confidence || 0) * 100);
   const confidenceAddsInfo = confidencePct !== riskPct;
+  const estimate = estimateFor(alert.evidence, faultChannel(alert)) || estimateFor(alert.evidence);
+  const action = anomalyActionText(alert.message);
 
   return (
     <article className={`alert-card ${severity}`}>
@@ -93,14 +95,26 @@ export default function AlertCard({ alert, station }) {
       </p>
       <div className="diagnostic-grid">
         <span>
-          <strong>{spatial && Number.isFinite(spatial.value) ? spatial.value.toFixed(1) : "-"}</strong>
+          <strong>{spatial && Number.isFinite(spatial.value) ? (Math.abs(spatial.value) < 0.05 ? "0.0" : spatial.value.toFixed(1)) : "-"}</strong>
           <small>{spatial ? `${spatial.channel} vs neighbours` : "No neighbour data"}</small>
         </span>
         <span>
           <strong>{heartbeatLoss === null ? "-" : `${Math.round(heartbeatLoss * 100)}%`}</strong>
           <small>Tidal loss (recorded)</small>
         </span>
+        {estimate ? (
+          <span>
+            <strong>
+              {number(estimate.value, 1)}
+              {estimate.band !== null ? ` ± ${number(estimate.band, 1)}` : ""} {UNITS[estimate.channel]}
+            </strong>
+            <small title="Own baseline plus what the neighbours read at the same hour. Shown as a labelled estimate; the reported value is kept in the record.">
+              {estimate.channel} best estimate
+            </small>
+          </span>
+        ) : null}
       </div>
+      {action ? <p className="alert-action"><b>Action:</b> {action}</p> : null}
       <ul>
         {(alert.evidence || []).slice(0, 3).map((pair) => (
           <li key={`${pair[0]}-${pair[1]}`}>{evidenceText(pair)}</li>

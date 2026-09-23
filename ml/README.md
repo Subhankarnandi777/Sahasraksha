@@ -47,6 +47,39 @@ flag, *_ = fuse(F, scores["IsolationForest"],
 
 ---
 
+## Run it on your own data (one command)
+
+```bash
+cd ml
+pip install -r requirements.txt
+python -m sahasraksha run observations.csv --out flags.csv
+```
+
+**Input:** a CSV or parquet with `timestamp, station_id, T, RH, P` (°C, %, hPa station pressure).
+- `Td` works instead of `RH`, and `P_msl` instead of `P` (the latter needs `alt_m`).
+- Common column names such as `Temperature`, `DateTime` and `Station` are recognised.
+- `lat, lon, alt_m` can be columns, or you can pass a separate `--stations stations.csv`.
+- Hourly and 3-hourly (synoptic) stations can be mixed; the cadence is detected per station.
+- A single station works too. The spatial layer then has no neighbours; every other layer still runs.
+
+**Output:**
+- `flags.csv` has one row per station-hour with these columns:
+  - `flag`
+  - `root_cause`: impossible / corrupt / frozen / step / drift / noise / sluggish / spike / dropout / unclassified
+  - `decided_by`: physics / comms / cusum / tide / ml
+  - `grade`: CRITICAL / MAJOR / MINOR
+  - `confidence`
+  - `T/RH/P_estimate`: a labelled estimate, never written over the reported value
+  - `gates_fired`
+  - `action`: what the operator should do
+- `sahasraksha_workorders.csv` ranks the stations: SERVICE NOW / SCHEDULE / MONITOR / OK, with days to threshold.
+
+`sahasraksha/core.py` is extracted verbatim from the final validation notebook by `tools/extract_core.py`. The pipeline in this repo is therefore the one that produced the reported numbers. On the notebook's synthetic benchmark it reproduces precision 0.8244, recall 0.7727 and FAR 0.0145 exactly.
+
+Every quoted number and its source is in [`docs/FINAL_NUMBERS.md`](docs/FINAL_NUMBERS.md). Operational scenarios are in [`docs/USE_CASES.md`](docs/USE_CASES.md).
+
+---
+
 ## Architecture
 
 Four independent layers, OR-ed together. **The ordering is the argument.**

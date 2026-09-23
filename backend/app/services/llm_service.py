@@ -91,6 +91,10 @@ def _fallback_narration(station_name: str, reason: str, severity: float, evidenc
         if key.startswith("range_"):
             ch = _CHANNEL_NAMES.get(key.replace("range_", ""), key)
             return f"{station_name} reported a {ch} value outside physically possible bounds for a weather station."
+        if key == "t_record":
+            return f"{station_name} reported {val:.1f} °C, above India's all-time record -- physically impossible, so the reading is quarantined and replaced by the network estimate."
+        if key == "dewpoint_ceiling":
+            return f"{station_name}'s temperature and humidity imply a dew point of {val:.1f} °C, above the ~34 °C that no Indian station credibly reaches -- the probe or its humidity channel is wrong."
         if key == "dewpoint_violation":
             return f"{station_name} reported a temperature/humidity combination that is thermodynamically impossible (dew point above air temperature)."
 

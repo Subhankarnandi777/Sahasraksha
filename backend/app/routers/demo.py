@@ -21,8 +21,13 @@ def _clamp(value: float, channel: str) -> float:
 @router.post("/demo/inject-anomaly", response_model=AnomalyVerdict, status_code=status.HTTP_200_OK)
 def inject_demo_anomaly(
     station_id: str | None = None,
+    scenario: str | None = None,
     detector: AnomalyDetector = Depends(get_anomaly_detector),
 ) -> AnomalyVerdict:
+    """scenario=None: a random step fault on one channel.
+    scenario="ps55": the problem statement's own example -- the station
+    suddenly reports 55 °C with extremely high humidity and an abnormal
+    pressure jump while its neighbours stay normal."""
     stations = station_service.list_stations()
     if not stations:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No stations available.")
@@ -46,13 +51,18 @@ def inject_demo_anomaly(
         "P": target.latest_pressure if target.latest_pressure is not None else 1005.0,
         "RH": target.latest_humidity if target.latest_humidity is not None else 60.0,
     }
-    channel = random.choice(["T", "P", "RH"])
     vals = dict(seed)
-    lo, hi = _CHANNEL_BOUNDS[channel]
-    base = vals[channel]
-    direction = 1 if (hi - base) >= (base - lo) else -1
-    margin = STEP_LIMITS[channel] * random.uniform(1.6, 2.2)
-    vals[channel] = _clamp(base + direction * margin, channel)
+    if scenario == "ps55":
+        vals["T"], vals["RH"], vals["P"] = 55.0, 95.0, seed["P"] + 9.0
+    elif scenario is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown scenario '{scenario}'. Use 'ps55'.")
+    else:
+        channel = random.choice(["T", "P", "RH"])
+        lo, hi = _CHANNEL_BOUNDS[channel]
+        base = vals[channel]
+        direction = 1 if (hi - base) >= (base - lo) else -1
+        margin = STEP_LIMITS[channel] * random.uniform(1.6, 2.2)
+        vals[channel] = _clamp(base + direction * margin, channel)
 
     reading = WeatherReading(
         station_id=target.station_id,

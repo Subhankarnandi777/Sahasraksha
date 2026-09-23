@@ -102,7 +102,7 @@ class ContractEndpointTests(unittest.TestCase):
         )
         self.assertIn(
             response.json()["reason"],
-            ["ok", "range", "step", "frozen", "missing", "drift", "degrading", "anomaly", "unclassified"],
+            ["ok", "range", "step", "frozen", "missing", "impossible", "drift", "degrading", "anomaly", "unclassified"],
         )
 
     def test_timeseries_contract_shape(self) -> None:

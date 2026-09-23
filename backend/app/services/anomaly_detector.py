@@ -16,11 +16,11 @@ never actually ran the validated detector:
   - The dewpoint gate (WMO Magnus, "multivariate consistency" in the PS)
     was absent; stream.py itself never implemented it, only the batch
     detect.py did.
-  - "confidence" was max(severity, degradation, 0.6) -- a heuristic floor,
-    not a calibrated probability. This one is NOT fixed: _confidence() below
-    still computes exactly that, and the conformal calibration in
-    ml/sahasraksha/gapfill.py is not wired into this path. The site labels it
-    as a heuristic rather than as calibrated confidence.
+  - "confidence" was max(severity, degradation, 0.6) -- a heuristic floor.
+    It now comes from stream.py: 1.0 for deterministic physics/missing-data
+    rules, otherwise the margin by which the deciding statistic cleared its
+    threshold (0.5 = on the line). Still not a calibrated probability, and the
+    site says so; _confidence() below is only a fallback.
 
 Found by an independent audit, verified line-by-line against this repository
 before being trusted. The others are fixed below; the dewpoint gate fix lives in
@@ -68,6 +68,10 @@ MIN_READINGS_FOR_REAL_FIT = 24 * 14
 SPATIAL_RADIUS_KM = 700.0
 SPATIAL_TIME_WINDOW_MIN = 90
 SPATIAL_MAX_NEIGHBOURS = 6
+# 2-sigma error of "own harmonic + neighbours' median residual" on clean rows of
+# the 12-station synthetic benchmark (same method as the notebook's impute()).
+ESTIMATE_BAND = {"T": 2.1, "P": 1.5, "RH": 13.0}
+GROSS = {"T": (-40.0, 60.0), "P": (500.0, 1100.0), "RH": (0.0, 100.0)}
 
 
 class AnomalyDetector(Protocol):
@@ -121,6 +125,7 @@ class SahasrakshaAnomalyDetector:
         self._lock = Lock()
         self._coord_cache: dict[str, tuple[float, float]] = {}
         self._fit_attempted: set[str] = set()
+        self._last_nb_resid: dict[str, float] = {}
 
     def evaluate(self, reading: WeatherReading) -> AnomalyVerdict:
         with self._lock:
@@ -144,8 +149,38 @@ class SahasrakshaAnomalyDetector:
 
             spatial_evidence = self._spatial_consensus(reading)
             own_z = self._own_z_scores(reading)
+            estimates = self._estimates(reading, raw, insufficient_history)
 
-        return self._to_verdict(raw, spatial_evidence, insufficient_history, own_z)
+        verdict = self._to_verdict(raw, spatial_evidence, insufficient_history, own_z)
+        if verdict.flag:
+            verdict.evidence.extend(_estimate_pairs(raw, own_z, estimates))
+        return verdict
+
+    def _estimates(self, reading: WeatherReading, raw: dict, insufficient_history: bool) -> dict:
+        """Best estimate of what each channel should have read, with a band.
+        With neighbours: own harmonic prediction + the neighbours' median
+        residual at the same time (the batch pipeline's repair method).
+        Without: the stream's own harmonic + recent bias. Never substituted
+        into the stored reading -- it is shown as a labelled estimate."""
+        state = self._engine.states.get(reading.station_id)
+        out = {}
+        if state is None:
+            return out
+        lst = self._local_solar_time(reading, self._get_lon(reading.station_id, reading))
+        x = design_row(lst, float(reading.timestamp.timetuple().tm_yday))
+        for ch in ("T", "P", "RH"):
+            nb = self._last_nb_resid.get(ch)
+            if nb is not None and not insufficient_history:
+                est, band = float(np.dot(state.beta[ch], x)) + nb, ESTIMATE_BAND[ch]
+            else:
+                est = (raw.get("estimate") or {}).get(ch)
+                band = (raw.get("band") or {}).get(ch)
+            if est is None or band is None or not np.isfinite(est):
+                continue
+            lo, hi = GROSS[ch]
+            if lo <= est <= hi:
+                out[ch] = (round(float(est), 1), round(float(band), 1))
+        return out
 
     def _seed_coeffs(self, sid: str, reading: WeatherReading) -> tuple[dict, bool, dict]:
         """Fit real harmonic coefficients from this station's own history
@@ -268,6 +303,7 @@ class SahasrakshaAnomalyDetector:
         station honestly gets no spatial evidence rather than a
         fabricated one."""
         sid = reading.station_id
+        self._last_nb_resid = {}
         lat, lon = self._get_coords(sid)
         if lat is None:
             return {}
@@ -292,6 +328,7 @@ class SahasrakshaAnomalyDetector:
                 window_end = reading.timestamp + timedelta(minutes=SPATIAL_TIME_WINDOW_MIN)
 
                 neighbour_z = {"T": [], "P": [], "RH": []}
+                neighbour_resid = {"T": [], "P": [], "RH": []}
                 for nid, _dist in nearby_ids:
                     nearest = (
                         db.query(WeatherReadingRow)
@@ -332,6 +369,8 @@ class SahasrakshaAnomalyDetector:
                         s = (var ** 0.5) + 1e-6
                         z = (resid - mean) / s
                         neighbour_z[ch].append(z)
+                        if abs(z) < 4.0:   # a neighbour that is itself off-baseline doesn't vote on the estimate
+                            neighbour_resid[ch].append(resid)
         except Exception:
             return {}
 
@@ -339,6 +378,7 @@ class SahasrakshaAnomalyDetector:
         for ch, vals in neighbour_z.items():
             if vals:
                 evidence[f"spatial_z_{ch}"] = round(float(np.median(vals)), 3)
+        self._last_nb_resid = {ch: float(np.median(v)) for ch, v in neighbour_resid.items() if v}
         return evidence
 
     def _get_coords(self, sid: str):
@@ -387,7 +427,10 @@ class SahasrakshaAnomalyDetector:
             if agreements:
                 spatial_agreement = sum(agreements) / len(agreements)
                 if spatial_agreement >= 0.5 and reason not in (
-                    AnomalyReason.FROZEN, AnomalyReason.MISSING, AnomalyReason.STEP):
+                    AnomalyReason.FROZEN, AnomalyReason.MISSING, AnomalyReason.STEP,
+                    AnomalyReason.IMPOSSIBLE, AnomalyReason.RANGE):
+                    # IMPOSSIBLE/RANGE: a value no Indian station can report is
+                    # wrong however many neighbours are also wrong.
                     # Hard physics violations are never dampened by
                     # neighbour agreement -- those are true regardless.
                     # STEP joins FROZEN/MISSING here: a sudden jump is a
@@ -418,6 +461,36 @@ class SahasrakshaAnomalyDetector:
             degradation=degradation,
             evidence=evidence,
         )
+
+
+def _implicated_channels(raw: dict, own_z: dict) -> list:
+    """Channels the verdict is about: named by a gate in the evidence, missing,
+    or clearly off their own baseline; else the one furthest off."""
+    named = set()
+    for key, _ in raw.get("evidence", []) or []:
+        k = str(key)
+        for prefix in ("step_", "range_", "frozen_", "cusum_", "z_"):
+            if k.startswith(prefix) and k[len(prefix):] in ("T", "P", "RH"):
+                named.add(k[len(prefix):])
+        if k == "t_record":
+            named.add("T")
+        if k in ("dewpoint_ceiling", "dewpoint_violation"):
+            named.update(("T", "RH"))
+        if k == "tide_loss":
+            named.add("P")
+    named.update(ch for ch, z in own_z.items() if abs(z) >= 3.0)
+    if not named and own_z:
+        named.add(max(own_z, key=lambda c: abs(own_z[c])))
+    return [ch for ch in ("T", "P", "RH") if ch in named]
+
+
+def _estimate_pairs(raw: dict, own_z: dict, estimates: dict) -> list:
+    pairs = []
+    for ch in _implicated_channels(raw, own_z):
+        if ch in estimates:
+            est, band = estimates[ch]
+            pairs += [[f"estimate_{ch}", est], [f"estimate_band_{ch}", band]]
+    return pairs
 
 
 def _haversine_km(lat1, lon1, lat2, lon2) -> float:

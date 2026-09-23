@@ -23,6 +23,23 @@ DOMINANT_PERIOD = {"T": 24.0, "P": 12.0, "RH": 24.0}
 GROSS_LIMITS = {"T": (-40.0, 60.0), "P": (500.0, 1100.0), "RH": (0.0, 100.0)}
 STEP_LIMITS = {"T": 6.0, "P": 5.0, "RH": 45.0}
 FROZEN_MIN_RUN = {"T": 6, "P": 6, "RH": 10}
+NATIONAL_T_MAX = 52.0      # India's highest recorded air temperature is 51.0 °C (Phalodi, 2016)
+DEWPOINT_CEILING = 34.0    # no Indian surface station has a credible dewpoint above this
+
+# What the operator should do, per verdict reason (same wording as the batch
+# pipeline's ACTIONS in core.py, mapped onto the streaming reason codes).
+STREAM_ACTIONS = {
+    "impossible": "Quarantine this reading from forecast assimilation and use the estimate. "
+                  "If it recurs within 24 h, dispatch a technician to inspect the T/RH probe and radiation shield.",
+    "range":      "Reading outside physical limits. Quarantine it and use the estimate; check units and sensor wiring.",
+    "step":       "Sudden jump. If the new level persists, verify the installation (post-maintenance or resiting) and apply an offset.",
+    "frozen":     "Sensor or logger stuck. Power-cycle the logger remotely; dispatch if not cleared in 6 h.",
+    "missing":    "Channel missing. Check telemetry link and power; values shown are estimates until the link returns.",
+    "drift":      "Calibration drift. Schedule recalibration against a transfer standard; apply the offset meanwhile.",
+    "degrading":  "Pressure sensor losing its 12-hour tide. Clear the pressure port and schedule a service visit.",
+    "anomaly":    "Reading disagrees with this station's own signature. Hold for review; no dispatch unless it persists.",
+    "ok":         "",
+}
 
 
 class StationState:
@@ -80,8 +97,16 @@ class StreamingSahasraksha:
         x = design_row(lst, doy)
         st.n += 1
         gates, z, evidence = [], {}, {}
+        estimate, band = {}, {}
+        cs_peak = 0.0
 
         for ch in CHANNELS:
+            # expected value = own harmonic signature + current residual bias,
+            # band = 2 sigma of recent residuals; taken BEFORE this reading
+            # updates the statistics, so a bad reading cannot widen its own band
+            estimate[ch] = round(float(np.dot(st.beta[ch], x)) + st.ew_mean[ch], 2)
+            band[ch] = round(2.0 * float(np.sqrt(st.ew_var[ch])), 2)
+
             v = obs.get(ch, np.nan)
             if v is None or not np.isfinite(v):
                 gates.append(("missing", ch)); continue
@@ -113,6 +138,7 @@ class StreamingSahasraksha:
             st.cp[ch] = max(0.0, st.cp[ch] + z[ch] - self.k)
             st.cn[ch] = max(0.0, st.cn[ch] - z[ch] - self.k)
             cs = max(st.cp[ch], st.cn[ch])
+            cs_peak = max(cs_peak, cs)
             if cs > self.h:
                 gates.append(("drift", ch)); evidence[f"cusum_{ch}"] = cs
                 st.cp[ch] = st.cn[ch] = 0.0
@@ -139,6 +165,12 @@ class StreamingSahasraksha:
             if Td > Tv + 0.5 or RHv > 100.5:
                 gates.append(("impossible", "T_RH"))
                 evidence["dewpoint_violation"] = round(Td - Tv, 3)
+            if Td > DEWPOINT_CEILING:
+                gates.append(("impossible", "T_RH"))
+                evidence["dewpoint_ceiling"] = round(Td, 1)
+        if Tv is not None and np.isfinite(Tv) and Tv > NATIONAL_T_MAX:
+            gates.append(("impossible", "T"))
+            evidence["t_record"] = round(float(Tv), 1)
 
         # --- physics verdict ---------------------------------------------
         hard = [g for g in gates if g[0] in ("range", "frozen", "step", "impossible")]
@@ -164,7 +196,9 @@ class StreamingSahasraksha:
 
         flag = int(physics or missing or drift or ml_like or (deg > self.deg_cut))
         if hard:
-            reason = hard[0][0]
+            # an impossible value outranks the step it also causes
+            kinds = {g[0] for g in hard}
+            reason = next(k for k in ("impossible", "range", "frozen", "step") if k in kinds)
         elif missing:
             reason = "missing"
         elif deg > self.deg_cut:
@@ -179,8 +213,29 @@ class StreamingSahasraksha:
         sev = float(np.clip(max([abs(v) for v in z.values()] or [0])/8.0
                             + 0.5*physics + 0.5*missing + deg, 0, 1))
         top = sorted(evidence.items(), key=lambda kv: -kv[1])[:3]
+
+        # confidence = margin past the deciding threshold (not a calibrated
+        # probability). Physics and missing-data gates are deterministic rules.
+        zmax = max([abs(v) for v in z.values()] or [0.0])
+        if physics or missing:
+            conf = 1.0
+        elif flag:
+            margins = []
+            if deg > self.deg_cut:
+                margins.append((deg - self.deg_cut) / self.deg_cut)
+            if drift:
+                margins.append((cs_peak - self.h) / self.h)
+            if ml_like:
+                margins.append((zmax - self.z_cut) / self.z_cut)
+            conf = 0.5 + 0.5 * (1.0 - np.exp(-3.0 * max(margins + [0.0])))
+        else:
+            closeness = max(zmax / self.z_cut, cs_peak / self.h, deg / self.deg_cut)
+            conf = 0.5 + 0.5 * (1.0 - min(closeness, 1.0))
         return {"flag": flag, "reason": reason, "severity": round(sev, 3),
-                "evidence": top, "degradation": round(deg, 3)}
+                "evidence": top, "degradation": round(deg, 3),
+                "confidence": round(float(conf), 3),
+                "estimate": estimate, "band": band,
+                "action": STREAM_ACTIONS.get(reason, "")}
 
 
 def fit_coeffs(df, n_diurnal=3, n_irls=6):

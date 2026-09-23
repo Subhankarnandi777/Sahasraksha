@@ -96,8 +96,14 @@ export function getStationVerdicts(stationId) {
   return request(`/stations/${encodeURIComponent(stationId)}/verdicts`);
 }
 
-export function injectDemoAnomaly(stationId) {
-  return request(`/demo/inject-anomaly${stationId ? `?station_id=${encodeURIComponent(stationId)}` : ""}`, {
+// scenario "ps55" = the problem statement's own example (55 °C, 95% RH,
+// pressure +9 hPa at one station while its neighbours read normally).
+export function injectDemoAnomaly(stationId, scenario) {
+  const params = new URLSearchParams();
+  if (stationId) params.set("station_id", stationId);
+  if (scenario) params.set("scenario", scenario);
+  const qs = params.toString();
+  return request(`/demo/inject-anomaly${qs ? `?${qs}` : ""}`, {
     method: "POST",
   });
 }
@@ -247,11 +253,45 @@ export function anomalyReasonText(reason) {
   if (r === "drift" || r === "cusum") return "Continuous cumulative sum (CUSUM) calibration drift detected.";
   if (r === "tide_loss" || r === "degrading") return "Pressure sensor's 12-hour tidal signature is fading: the slow calibration-drift pattern this detector watches for.";
   if (r === "range") return "Reading outside gross physical limits for this channel.";
-  if (r === "impossible") return "Physically impossible combination: dewpoint above air temperature.";
+  if (r === "impossible") return "Physically impossible reading: above India's temperature record, a dew point no Indian station reaches, or dew point above air temperature.";
   if (r === "missing") return "Expected telemetry channel absent from this reading.";
   if (r === "flatline" || r === "frozen") return "Persistent static sensor reading (flatline) detected.";
   if (r === "spike" || r === "noise") return "High-frequency non-physical impulse spikes detected.";
   return "Autonomous QC anomaly flag active.";
+}
+
+// What the operator should do, per verdict reason. Same wording as
+// STREAM_ACTIONS in ml/sahasraksha/stream.py (and the batch pipeline's ACTIONS).
+const REASON_ACTIONS = {
+  impossible: "Quarantine this reading from forecast assimilation and use the estimate. If it recurs within 24 h, dispatch a technician to inspect the T/RH probe and radiation shield.",
+  range: "Reading outside physical limits. Quarantine it and use the estimate; check units and sensor wiring.",
+  step: "Sudden jump. If the new level persists, verify the installation (post-maintenance or resiting) and apply an offset.",
+  frozen: "Sensor or logger stuck. Power-cycle the logger remotely; dispatch if not cleared in 6 h.",
+  missing: "Channel missing. Check telemetry link and power; values shown are estimates until the link returns.",
+  drift: "Calibration drift. Schedule recalibration against a transfer standard; apply the offset meanwhile.",
+  degrading: "Pressure sensor losing its 12-hour tide. Clear the pressure port and schedule a service visit.",
+  anomaly: "Reading disagrees with this station's own signature. Hold for review; no dispatch unless it persists.",
+};
+
+export function anomalyActionText(reason) {
+  return REASON_ACTIONS[String(reason || "").trim().toLowerCase()] || "";
+}
+
+// The labelled estimate the backend attaches to a flagged verdict:
+// own harmonic baseline + neighbours' median residual, with a 2-sigma band.
+// Returns { channel, value, band } for the requested channel, or for the
+// first channel that has one.
+export function estimateFor(evidence, channel) {
+  const map = Object.fromEntries((evidence || []).map((p) => [String(p?.[0]), Number(p?.[1])]));
+  const chans = channel ? [channel] : ["T", "P", "RH"];
+  for (const ch of chans) {
+    const v = map[`estimate_${ch}`];
+    if (Number.isFinite(v)) {
+      const b = map[`estimate_band_${ch}`];
+      return { channel: ch, value: v, band: Number.isFinite(b) ? b : null };
+    }
+  }
+  return null;
 }
 
 // The detector's own cutoff for "this channel's standardised residual is
@@ -393,6 +433,10 @@ export function evidenceLabel(key) {
   if (k.startsWith("range_")) return `Gross limit · ${channel("range_")}`;
   if (k === "tide_loss") return "Tidal loss";
   if (k === "dewpoint_violation" || k === "gate_dewpoint") return "Dewpoint check";
+  if (k === "t_record") return "National record check";
+  if (k === "dewpoint_ceiling") return "Dewpoint ceiling";
+  if (k.startsWith("estimate_band_")) return `Estimate band · ${channel("estimate_band_")}`;
+  if (k.startsWith("estimate_")) return `Best estimate · ${channel("estimate_")}`;
   if (k === "spatial_agreement") return "Neighbour agreement";
   if (k === "insufficient_history_for_real_fit") return "Baseline fit";
   return k.replace(/_/g, " ");
@@ -431,6 +475,21 @@ export function evidenceText(pair) {
   // dewpoint violation fell through to the raw key/value fallback below.
   if (key === "dewpoint_violation" || key === "gate_dewpoint") {
     return "Dewpoint above air temperature";
+  }
+  if (key === "t_record") {
+    return `${number(value, 1)} °C is above India's all-time record (51 °C)`;
+  }
+  if (key === "dewpoint_ceiling") {
+    return `Dew point ${number(value, 1)} °C: above what any Indian station reaches (~34 °C)`;
+  }
+  const UNITS = { T: "°C", P: "hPa", RH: "%" };
+  if (key.startsWith("estimate_band_")) {
+    const ch = key.replace("estimate_band_", "");
+    return `${ch} estimate uncertainty: ±${number(value, 1)} ${UNITS[ch] || ""}`.trim();
+  }
+  if (key.startsWith("estimate_")) {
+    const ch = key.replace("estimate_", "");
+    return `${ch} best estimate: ${number(value, 1)} ${UNITS[ch] || ""}`.trim();
   }
   // anomaly_detector.py appends these two after the detector's own top-3,
   // and neither had a branch, so they rendered as raw snake_case keys with

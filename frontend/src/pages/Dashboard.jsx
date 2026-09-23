@@ -4,7 +4,7 @@ import MapPanel from "../components/MapPanel.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import Sparkline from "../components/Sparkline.jsx";
 import StatusLegend from "../components/StatusLegend.jsx";
-import { anomalyReasonText, effectiveStatus, healthOrNull, isSilent, networkReferenceTime, percent, number, severityLevel, timeAgo, injectDemoAnomaly } from "../services/api.js";
+import { anomalyReasonText, effectiveStatus, estimateFor, healthOrNull, isSilent, networkReferenceTime, percent, number, severityLevel, timeAgo, injectDemoAnomaly } from "../services/api.js";
 import { useTheme } from "../services/theme.js";
 
 function countSilent(stations, referenceTime) {
@@ -62,17 +62,21 @@ export default function Dashboard({
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoStatus, setDemoStatus] = useState(null);
 
-  async function handleInjectDemo() {
+  async function handleInjectDemo(scenario) {
     setDemoLoading(true);
     setDemoStatus(null);
     try {
-      const verdict = await injectDemoAnomaly();
+      const verdict = await injectDemoAnomaly(undefined, scenario);
       // Printed the bare reason code ("Detected: step") before, and nothing
       // on the page moved until a manual reload, so the alert count and
       // cadence bars never showed the fault that had just been caught.
+      const est = estimateFor(verdict.evidence, scenario === "ps55" ? "T" : undefined);
+      const units = { T: "°C", P: "hPa", RH: "%" };
       setDemoStatus(
         verdict.flag
-          ? `Detected: ${anomalyReasonText(verdict.reason)} Severity ${percent(verdict.severity, 0)}. See Anomaly Alerts.`
+          ? `Detected: ${anomalyReasonText(verdict.reason)} Severity ${percent(verdict.severity, 0)}.` +
+            (est ? ` Best estimate ${est.channel} ${number(est.value, 1)}${est.band !== null ? ` ± ${number(est.band, 1)}` : ""} ${units[est.channel]}.` : "") +
+            " See Anomaly Alerts."
           : "No anomaly flagged this time — try again."
       );
       refresh?.(true);
@@ -220,8 +224,14 @@ export default function Dashboard({
           <a href="/alerts" className="alert-count-pill">
             <b>{openAlerts.length.toLocaleString()}</b> Active ML Flags
           </a>
-          <button type="button" className="btn-reset-filters" onClick={handleInjectDemo} disabled={demoLoading}>
+          <button type="button" className="btn-reset-filters" onClick={() => handleInjectDemo()} disabled={demoLoading}>
             {demoLoading ? "Injecting..." : "⚡ Inject Test Anomaly"}
+          </button>
+          {/* The problem statement's own example: one station reports 55 °C,
+              95% RH and a +9 hPa jump while its neighbours read normally. */}
+          <button type="button" className="btn-reset-filters" onClick={() => handleInjectDemo("ps55")} disabled={demoLoading}
+                  title="PS example: a station suddenly reports 55 °C with very high humidity and a pressure jump">
+            {demoLoading ? "Injecting..." : "🌡 PS Example: 55 °C"}
           </button>
           {demoStatus && <span className="state">{demoStatus}</span>}
         </div>
