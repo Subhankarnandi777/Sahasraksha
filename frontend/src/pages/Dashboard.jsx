@@ -4,7 +4,7 @@ import MapPanel from "../components/MapPanel.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import Sparkline from "../components/Sparkline.jsx";
 import StatusLegend from "../components/StatusLegend.jsx";
-import { anomalyReasonText, effectiveStatus, estimateFor, healthOrNull, isSilent, networkReferenceTime, percent, number, severityLevel, timeAgo, injectDemoAnomaly } from "../services/api.js";
+import { anomalyActionText, anomalyReasonText, effectiveStatus, estimateFor, healthOrNull, isSilent, networkReferenceTime, percent, number, severityLevel, timeAgo, injectDemoAnomaly } from "../services/api.js";
 import { useTheme } from "../services/theme.js";
 
 function countSilent(stations, referenceTime) {
@@ -49,6 +49,45 @@ function hourlyAlertCounts(alerts) {
   return buckets;
 }
 
+// Turns the verdict's evidence keys (emitted by ml/sahasraksha/stream.py)
+// into short, plain sentences, so the demo result names the exact checks
+// that fired instead of one generic "impossible" sentence.
+const CHANNEL_NAMES = { T: "Temperature", P: "Pressure", RH: "Humidity" };
+const CHANNEL_UNITS = { T: "°C", P: "hPa", RH: "%" };
+
+function firedChecks(evidence) {
+  const map = Object.fromEntries((evidence || []).map((p) => [String(p?.[0]), Number(p?.[1])]));
+  const out = [];
+  const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : "");
+  if ("t_record" in map) out.push(`Temperature ${fmt(map.t_record)} °C is above India's all-time record (51 °C)`);
+  if ("dewpoint_ceiling" in map) out.push(`Dew point ${fmt(map.dewpoint_ceiling)} °C: no Indian station goes above 34 °C`);
+  if ("dewpoint_violation" in map) out.push("Dew point is above the air temperature, which cannot happen");
+  for (const ch of ["T", "P", "RH"]) {
+    if (`range_${ch}` in map) out.push(`${CHANNEL_NAMES[ch]} is outside physical limits`);
+    if (`step_${ch}` in map) out.push(`${CHANNEL_NAMES[ch]} jumped ${fmt(map[`step_${ch}`])} ${CHANNEL_UNITS[ch]} in one reading`);
+    if (`frozen_${ch}` in map) out.push(`${CHANNEL_NAMES[ch]} stuck at one value for ${fmt(map[`frozen_${ch}`], 0)} readings`);
+    if (`cusum_${ch}` in map) out.push(`Slow drift building up in ${CHANNEL_NAMES[ch].toLowerCase()}`);
+  }
+  if ("tide_loss" in map) out.push("Pressure's twice-daily rhythm (tide heartbeat) has faded");
+  return out;
+}
+
+function DemoIcon({ name }) {
+  const paths = {
+    thermo: <path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0zM12 9v7" />,
+    bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
+    info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
+    arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+    close: <path d="M6 6l12 12M18 6 6 18" />,
+  };
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
+         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[name]}
+    </svg>
+  );
+}
+
 export default function Dashboard({
   health,
   stations,
@@ -59,31 +98,37 @@ export default function Dashboard({
   error,
   refresh
 }) {
-  const [demoLoading, setDemoLoading] = useState(false);
-  const [demoStatus, setDemoStatus] = useState(null);
+  const [demoLoading, setDemoLoading] = useState(null); // null | "ps55" | "random"
+  const [demoResult, setDemoResult] = useState(null);
 
   async function handleInjectDemo(scenario) {
-    setDemoLoading(true);
-    setDemoStatus(null);
+    setDemoLoading(scenario || "random");
+    setDemoResult(null);
     try {
       const verdict = await injectDemoAnomaly(undefined, scenario);
-      // Printed the bare reason code ("Detected: step") before, and nothing
-      // on the page moved until a manual reload, so the alert count and
-      // cadence bars never showed the fault that had just been caught.
-      const est = estimateFor(verdict.evidence, scenario === "ps55" ? "T" : undefined);
-      const units = { T: "°C", P: "hPa", RH: "%" };
-      setDemoStatus(
-        verdict.flag
-          ? `Detected: ${anomalyReasonText(verdict.reason)} Severity ${percent(verdict.severity, 0)}.` +
-            (est ? ` Best estimate ${est.channel} ${number(est.value, 1)}${est.band !== null ? ` ± ${number(est.band, 1)}` : ""} ${units[est.channel]}.` : "") +
-            " See Anomaly Alerts."
-          : "No anomaly flagged this time — try again."
-      );
+      if (!verdict.flag) {
+        setDemoResult({ kind: "none" });
+      } else {
+        const reason = String(verdict.reason || "").toLowerCase();
+        setDemoResult({
+          kind: "caught",
+          scenario,
+          reason,
+          title: reason === "impossible" ? "Impossible reading" : reason === "step" ? "Sudden jump" : "Fault detected",
+          summary: anomalyReasonText(reason),
+          checks: firedChecks(verdict.evidence),
+          estimate: estimateFor(verdict.evidence, scenario === "ps55" ? "T" : undefined),
+          confidence: verdict.confidence,
+          critical: severityLevel(verdict.severity) === "critical",
+          action: anomalyActionText(reason),
+        });
+      }
+      // Refresh so the alert count and charts show the fault just caught.
       refresh?.(true);
     } catch (err) {
-      setDemoStatus(`Failed: ${err.message}`);
+      setDemoResult({ kind: "error", message: err.message });
     } finally {
-      setDemoLoading(false);
+      setDemoLoading(null);
     }
   }
   const [mapMode, setMapMode] = useState("health");
@@ -181,59 +226,133 @@ export default function Dashboard({
   const pipelineDegraded = !pipelineDown && total > 0 && silent >= Math.ceil(total / 2);
   const pipelineStatusClass = pipelineDown ? "is-down" : pipelineDegraded ? "is-degraded" : "";
   const pipelineLabel = pipelineDown
-    ? "Offline (Fetch Failed)"
+    ? "offline"
     : pipelineDegraded
-    ? `Degraded (${silent} station${silent === 1 ? "" : "s"} silent)`
-    : "Nominal (Real-Time Streaming)";
+    ? `degraded · ${silent} silent`
+    : "streaming";
 
   return (
     <main className="screen dashboard-screen">
-      {/* Top Header Row with Status */}
+      {/* Page header */}
       <div className="dashboard-top-bar">
-        <div>
-          <span className="section-eyebrow">NATIONAL ATMOSPHERIC OBSERVATORY</span>
-          <h1 className="dashboard-main-title">Network Command Overview</h1>
+        <div className="dashboard-heading">
+          <span className="section-eyebrow">Live demo · SIH26073</span>
+          <h1 className="dashboard-main-title">Network Overview</h1>
           <p className="dashboard-subtitle">
-            Autonomous anomaly surveillance across {total} synoptic weather stations
+            {total
+              ? `Watching ${total} Indian weather stations for sensor faults, in real time`
+              : "Connecting to the station network…"}
           </p>
-          <p className="dashboard-data-as-of" title="Timestamped to the network's own most recent reading, not assumed to be the browser's wall clock -- this stays accurate whether every station is currently live or the service just woke from an idle period.">
-            Data as of {timeAgo(dataAsOf)} · {new Date(dataAsOf).toLocaleString()}
+          <p className="dashboard-data-as-of" title="Timestamped to the network's own most recent reading, not the browser's clock.">
+            Updated {timeAgo(dataAsOf)} · {new Date(dataAsOf).toLocaleString()}
             {silent > 0 ? (
               <span className="dashboard-silent-flag">
-                {" "}· {silent} station{silent === 1 ? "" : "s"} silent 6h+
+                {" "}· {silent} station{silent === 1 ? "" : "s"} silent for 6 h+
               </span>
             ) : null}
           </p>
-          {/* Nothing on the site said this. The live feed replays each
-              station's real archived NOAA-ISD observations against the
-              current clock (keepalive_service.py) and periodically injects
-              step and frozen-sensor faults so the detector has something
-              to catch. Without this line, an alert like "pressure jumped
-              9.5 in a single reading" reads as a real fault at a real IMD
-              station. */}
-          <p className="dashboard-data-as-of">
-            Demo feed: real archived station observations replayed against the current clock, with
-            test faults injected periodically so detection can be watched live.
+          {/* The live feed replays each station's real archived NOAA-ISD
+              observations against the current clock (keepalive_service.py)
+              and periodically injects step and frozen-sensor faults, so the
+              detector has something to catch. Without this note, a demo
+              alert reads as a real fault at a real IMD station. */}
+          <p className="dashboard-demo-note">
+            <DemoIcon name="info" />
+            <span>
+              Demo feed: real archived NOAA station data replayed on today's clock, with test faults
+              added now and then so you can watch detection happen.
+            </span>
           </p>
         </div>
-        <div className="dashboard-badge-cluster">
-          <div className={`telemetry-pill ${pipelineStatusClass}`}>
-            <span className={`telemetry-live-dot ${pipelineStatusClass}`} />
-            <span>Telemetry Pipeline: <b>{pipelineLabel}</b></span>
+
+        <div className="dashboard-side">
+          <div className="dashboard-status-row">
+            <div className={`telemetry-pill ${pipelineStatusClass}`} title="State of the data pipeline behind this page">
+              <span className={`telemetry-live-dot ${pipelineStatusClass}`} />
+              <span>Pipeline <b>{pipelineLabel}</b></span>
+            </div>
+            <a href="/alerts" className="alert-count-pill" title="Open alerts from all six checks">
+              <b>{openAlerts.length.toLocaleString()}</b> open alert{openAlerts.length === 1 ? "" : "s"}
+              <DemoIcon name="arrow" />
+            </a>
           </div>
-          <a href="/alerts" className="alert-count-pill">
-            <b>{openAlerts.length.toLocaleString()}</b> Active ML Flags
-          </a>
-          <button type="button" className="btn-reset-filters" onClick={() => handleInjectDemo()} disabled={demoLoading}>
-            {demoLoading ? "Injecting..." : "⚡ Inject Test Anomaly"}
-          </button>
-          {/* The problem statement's own example: one station reports 55 °C,
-              95% RH and a +9 hPa jump while its neighbours read normally. */}
-          <button type="button" className="btn-reset-filters" onClick={() => handleInjectDemo("ps55")} disabled={demoLoading}
-                  title="PS example: a station suddenly reports 55 °C with very high humidity and a pressure jump">
-            {demoLoading ? "Injecting..." : "🌡 PS Example: 55 °C"}
-          </button>
-          {demoStatus && <span className="state">{demoStatus}</span>}
+
+          <section className="demo-panel" aria-labelledby="demo-panel-title">
+            <div className="demo-panel-head">
+              <h2 id="demo-panel-title">Try the detector</h2>
+              <p>Sends one test reading to a healthy station and shows what the system decides.</p>
+            </div>
+            <div className="demo-actions">
+              {/* The problem statement's own example: one station reports
+                  55 °C, 95% RH and a +9 hPa jump while its neighbours read
+                  normally. */}
+              <button
+                type="button"
+                className="demo-btn demo-btn-primary"
+                onClick={() => handleInjectDemo("ps55")}
+                disabled={Boolean(demoLoading)}
+                title="The problem statement's example: 55 °C, 95% humidity and a +9 hPa pressure jump"
+              >
+                <DemoIcon name="thermo" />
+                {demoLoading === "ps55" ? "Checking…" : "Run PS example (55 °C)"}
+              </button>
+              <button
+                type="button"
+                className="demo-btn demo-btn-secondary"
+                onClick={() => handleInjectDemo()}
+                disabled={Boolean(demoLoading)}
+                title="A sudden jump on one channel of a random healthy station"
+              >
+                <DemoIcon name="bolt" />
+                {demoLoading === "random" ? "Checking…" : "Inject random fault"}
+              </button>
+            </div>
+
+            {demoResult ? (
+              <div className={`demo-result is-${demoResult.kind}`} role="status" aria-live="polite">
+                <button type="button" className="demo-result-close" onClick={() => setDemoResult(null)} aria-label="Dismiss result">
+                  <DemoIcon name="close" />
+                </button>
+                {demoResult.kind === "caught" ? (
+                  <>
+                    <div className="demo-result-head">
+                      <span className={`demo-chip ${demoResult.critical ? "is-critical" : "is-major"}`}>
+                        {demoResult.critical ? "Critical" : "Flagged"}
+                      </span>
+                      <strong>Caught: {demoResult.title}</strong>
+                    </div>
+                    <p className="demo-confidence">
+                      {Number.isFinite(Number(demoResult.confidence)) ? `Confidence ${percent(demoResult.confidence, 0)}` : null}
+                      {["impossible", "range", "step", "frozen"].includes(demoResult.reason)
+                        ? " · decided by physics rules"
+                        : ""}
+                    </p>
+                    {demoResult.checks.length ? (
+                      <ul className="demo-checks">
+                        {demoResult.checks.map((c) => <li key={c}>{c}</li>)}
+                      </ul>
+                    ) : (
+                      <p className="demo-summary">{demoResult.summary}</p>
+                    )}
+                    <div className="demo-result-foot">
+                      {demoResult.estimate ? (
+                        <span className="demo-estimate">
+                          Best estimate: <b>{CHANNEL_NAMES[demoResult.estimate.channel]} {number(demoResult.estimate.value, 1)}
+                          {demoResult.estimate.band !== null ? ` ± ${number(demoResult.estimate.band, 1)}` : ""} {CHANNEL_UNITS[demoResult.estimate.channel]}</b>
+                        </span>
+                      ) : null}
+                      <a href="/alerts" className="demo-link">See it in Alerts <DemoIcon name="arrow" /></a>
+                    </div>
+                    {demoResult.action ? <p className="demo-action"><b>Action:</b> {demoResult.action}</p> : null}
+                  </>
+                ) : demoResult.kind === "none" ? (
+                  <p className="demo-summary">Nothing was flagged this time. The reading looked normal for that station, so try again.</p>
+                ) : (
+                  <p className="demo-summary">Could not reach the detector: {demoResult.message}. The server may be waking up, so try again in a few seconds.</p>
+                )}
+              </div>
+            ) : null}
+          </section>
         </div>
       </div>
 
