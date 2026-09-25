@@ -1911,6 +1911,62 @@ button {
   .demo-btn { width: 100%; }
 }
 
+/* Detector result as a full-width strip under the header (Sept 2026) */
+.demo-result-wide {
+  margin: -6px 0 22px;
+  padding: 16px 44px 16px 18px;
+  border-radius: var(--radius-lg);
+}
+
+.demo-result-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.35fr) minmax(240px, 1.2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.demo-result-col { min-width: 0; }
+
+.demo-result-col + .demo-result-col {
+  border-left: 1px dashed var(--status-danger-border);
+  padding-left: 20px;
+}
+
+.demo-col-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.demo-result-wide .demo-result-head strong { font-size: 15px; }
+.demo-result-wide .demo-confidence { margin-top: 4px; }
+.demo-result-wide .demo-estimate { margin: 10px 0 0; font-size: 13px; }
+.demo-result-wide .demo-checks { margin-top: 2px; font-size: 13px; }
+.demo-result-wide .demo-action { margin: 0 0 8px; font-size: 12.5px; color: var(--text-body); }
+
+[data-theme="dark"] .demo-result-col + .demo-result-col { border-left-color: rgba(220, 38, 38, 0.35); }
+
+@media (max-width: 1100px) {
+  .demo-result-grid { grid-template-columns: 1fr 1fr; }
+  .demo-result-col:last-child { grid-column: 1 / -1; border-left: none; padding-left: 0; }
+}
+
+@media (max-width: 640px) {
+  .demo-result-grid { grid-template-columns: 1fr; gap: 12px; }
+  .demo-result-col + .demo-result-col {
+    border-left: none; padding-left: 0;
+    border-top: 1px dashed var(--status-danger-border); padding-top: 10px;
+  }
+  .demo-result-wide { padding: 14px 40px 14px 14px; }
+}
+
+/* Header row: keep both sides vertically balanced */
+.dashboard-top-bar { align-items: flex-start; }
+
 /* 4-Card KPI Strip */
 .kpi-grid {
   display: grid;

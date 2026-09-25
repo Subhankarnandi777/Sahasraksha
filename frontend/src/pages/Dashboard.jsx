@@ -308,53 +308,63 @@ export default function Dashboard({
               </button>
             </div>
 
-            {demoResult ? (
-              <div className={`demo-result is-${demoResult.kind}`} role="status" aria-live="polite">
-                <button type="button" className="demo-result-close" onClick={() => setDemoResult(null)} aria-label="Dismiss result">
-                  <DemoIcon name="close" />
-                </button>
-                {demoResult.kind === "caught" ? (
-                  <>
-                    <div className="demo-result-head">
-                      <span className={`demo-chip ${demoResult.critical ? "is-critical" : "is-major"}`}>
-                        {demoResult.critical ? "Critical" : "Flagged"}
-                      </span>
-                      <strong>Caught: {demoResult.title}</strong>
-                    </div>
-                    <p className="demo-confidence">
-                      {Number.isFinite(Number(demoResult.confidence)) ? `Confidence ${percent(demoResult.confidence, 0)}` : null}
-                      {["impossible", "range", "step", "frozen"].includes(demoResult.reason)
-                        ? " · decided by physics rules"
-                        : ""}
-                    </p>
-                    {demoResult.checks.length ? (
-                      <ul className="demo-checks">
-                        {demoResult.checks.map((c) => <li key={c}>{c}</li>)}
-                      </ul>
-                    ) : (
-                      <p className="demo-summary">{demoResult.summary}</p>
-                    )}
-                    <div className="demo-result-foot">
-                      {demoResult.estimate ? (
-                        <span className="demo-estimate">
-                          Best estimate: <b>{CHANNEL_NAMES[demoResult.estimate.channel]} {number(demoResult.estimate.value, 1)}
-                          {demoResult.estimate.band !== null ? ` ± ${number(demoResult.estimate.band, 1)}` : ""} {CHANNEL_UNITS[demoResult.estimate.channel]}</b>
-                        </span>
-                      ) : null}
-                      <a href="/alerts" className="demo-link">See it in Alerts <DemoIcon name="arrow" /></a>
-                    </div>
-                    {demoResult.action ? <p className="demo-action"><b>Action:</b> {demoResult.action}</p> : null}
-                  </>
-                ) : demoResult.kind === "none" ? (
-                  <p className="demo-summary">Nothing was flagged this time. The reading looked normal for that station, so try again.</p>
-                ) : (
-                  <p className="demo-summary">Could not reach the detector: {demoResult.message}. The server may be waking up, so try again in a few seconds.</p>
-                )}
-              </div>
-            ) : null}
           </section>
         </div>
       </div>
+
+      {/* Detector result: full-width strip under the header. It used to open
+          inside the narrow right-hand panel, which made that column far taller
+          than the heading beside it and left a large empty gap on the left. */}
+      {demoResult ? (
+        <div className={`demo-result demo-result-wide is-${demoResult.kind}`} role="status" aria-live="polite">
+          <button type="button" className="demo-result-close" onClick={() => setDemoResult(null)} aria-label="Dismiss result">
+            <DemoIcon name="close" />
+          </button>
+          {demoResult.kind === "caught" ? (
+            <div className="demo-result-grid">
+              <div className="demo-result-col">
+                <div className="demo-result-head">
+                  <span className={`demo-chip ${demoResult.critical ? "is-critical" : "is-major"}`}>
+                    {demoResult.critical ? "Critical" : "Flagged"}
+                  </span>
+                  <strong>Caught: {demoResult.title}</strong>
+                </div>
+                <p className="demo-confidence">
+                  {Number.isFinite(Number(demoResult.confidence)) ? `Confidence ${percent(demoResult.confidence, 0)}` : null}
+                  {["impossible", "range", "step", "frozen"].includes(demoResult.reason)
+                    ? " · decided by physics rules"
+                    : ""}
+                </p>
+                {demoResult.estimate ? (
+                  <p className="demo-estimate">
+                    Best estimate: <b>{CHANNEL_NAMES[demoResult.estimate.channel]} {number(demoResult.estimate.value, 1)}
+                    {demoResult.estimate.band !== null ? ` ± ${number(demoResult.estimate.band, 1)}` : ""} {CHANNEL_UNITS[demoResult.estimate.channel]}</b>
+                  </p>
+                ) : null}
+              </div>
+              <div className="demo-result-col">
+                <span className="demo-col-label">Checks that fired</span>
+                {demoResult.checks.length ? (
+                  <ul className="demo-checks">
+                    {demoResult.checks.map((c) => <li key={c}>{c}</li>)}
+                  </ul>
+                ) : (
+                  <p className="demo-summary">{demoResult.summary}</p>
+                )}
+              </div>
+              <div className="demo-result-col">
+                <span className="demo-col-label">What the operator should do</span>
+                {demoResult.action ? <p className="demo-action">{demoResult.action}</p> : null}
+                <a href="/alerts" className="demo-link">See it in Alerts <DemoIcon name="arrow" /></a>
+              </div>
+            </div>
+          ) : demoResult.kind === "none" ? (
+            <p className="demo-summary">Nothing was flagged this time. The reading looked normal for that station, so try again.</p>
+          ) : (
+            <p className="demo-summary">Could not reach the detector: {demoResult.message}. The server may be waking up, so try again in a few seconds.</p>
+          )}
+        </div>
+      ) : null}
 
       {error ? <p className="state error">{error}</p> : null}
 
@@ -411,14 +421,14 @@ export default function Dashboard({
             {/* Tagged "Calibrated" -- alert confidence is a heuristic
                 (max(severity, degradation, 0.6) in anomaly_detector.py),
                 not a calibrated probability. */}
-            <span className="kpi-label">ML Anomaly Alerts</span>
+            <span className="kpi-label">Open Alerts</span>
             <span className="kpi-tag-warning">Open</span>
           </div>
           <div className="kpi-big-value text-amber">
             {openAlerts.length.toLocaleString()}
           </div>
           <div className="kpi-meta-text">
-            <span>Across 4 physics & ML detection layers</span>
+            <span>Raised by the 6 checks (physics, drift, tide, AI)</span>
           </div>
           <div className="kpi-sub-breakdown">
             {/* Was "High Conf" / "Early Drift", split at severity 0.7.
