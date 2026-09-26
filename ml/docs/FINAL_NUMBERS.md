@@ -83,8 +83,9 @@
 | Throughput, one CPU core | **12,462 obs/s**, 80 µs per observation. Across runs 10.9k–12.9k: quote "over 10,000 obs/s" | `throughput :` |
 | Headroom vs IMD network (2,395 sites, hourly) | ~18,700× | `Headroom` |
 | Streaming path (what the site runs) | P 0.835 / R 0.447 / flag rate 4.3% | `precision 0.835` |
-| Per-station state on device | **116 bytes** (0.022% of ESP32 SRAM) | `per-station state` |
-| Code size | 1,885 B `.text` **compiled for x86-64 host**. The ESP32 Xtensa build is pending (teammate) | `code size` |
+| Per-station state on device | **88 bytes** = `sizeof(sg_state_t)` (0.017% of the ESP32's 520 KB SRAM). The notebook's "116 bytes" came from a code comment's arithmetic and is wrong | `ml/edge/esp32` host test / board `s` command |
+| Code size (ESP32 target) | `sg_update` ≈ **2.0 KB** Xtensa code; detector + float libm **7.9 KB**; full Arduino firmware 404 KB flash / 23.5 KB RAM. Compiled for ESP32 with Espressif GCC, **not yet run on a board** (teammate) | `ml/edge/esp32/ESP32.md` §3.1 |
+| C port vs live Python detector | same flag and reason on **51,840 / 51,840** readings | `ml/edge/esp32/ESP32.md` §3.1 |
 | Arithmetic | ~102 flops per sample | `flops` |
 
 ---
@@ -95,9 +96,9 @@
 |---|---|
 | LOSO 0.849 / 0.862 / "~0.85–0.86, worst ~0.72" | 0.885 (56 stations) / 0.856 (ISD) |
 | 15,579 obs/s | >10,000 obs/s (12,462 this run) |
-| "ESP32 1,885 B / 0.385% SRAM" | 116 B state = 0.022% SRAM; the 1,885 B code size is from an x86 host build |
+| "ESP32 1,885 B / 0.385% SRAM" or "116 B state" | 88 B state (0.017% SRAM); ~2 KB `sg_update` compiled for Xtensa. 1,885 B was an x86 host build |
 | P 0.8217 / FAR 1.48% | 0.824 / 1.45% |
 | Real-weather baseline 3.56% | 1.18% (after the regional veto) |
 | "86% of alerts CRITICAL" | 20 / 30 / 50% split |
 | Conformal coverage 0.951 / 0.901 / 0.803 | not printed in the final run; don't cite |
-| "Energy efficient on ESP32" (as a measured claim) | "designed for MCU: 116 B state, ~102 flops/sample; hardware measurement in progress" until the teammate measures it |
+| "Energy efficient on ESP32" (as a measured claim) | "compiled for ESP32: 88 B state per station, ~2 KB detector code; on-board timing and energy measurement in progress" until the teammate measures it |

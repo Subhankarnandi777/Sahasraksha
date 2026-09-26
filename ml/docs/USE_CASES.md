@@ -82,11 +82,12 @@ All numbers come from the final validation run. `FINAL_NUMBERS.md` gives the log
 **Field:** a remote AWS with intermittent connectivity.
 **Sahasraksha:**
 - The physics gates, harmonic residual, CUSUM and tide amplitude all run on the station's microcontroller.
-- The whole on-device state is **116 bytes** (0.022% of ESP32 SRAM) and costs about 102 flops per sample.
+- The whole on-device state is **88 bytes** per station (0.017% of ESP32 SRAM), and the detector compiles to about 2 KB of ESP32 code.
+- The ESP32 port gives the same verdict as the live Python detector on 51,840 of 51,840 test readings.
 - The station can flag itself locally and send the verdict when the link returns.
 - The server adds the network-level layers: spatial consistency and IsolationForest.
 **Who acts:** the station itself, then the server on reconnect.
-**Status:** the C firmware compiles and runs on the host; the ESP32 hardware build and energy measurement are in progress.
+**Status:** the firmware compiles for the ESP32 and passes its self-test on a PC. On-board timing and energy measurement are in progress (`ml/edge/esp32/ESP32.md`).
 
 ---
 
