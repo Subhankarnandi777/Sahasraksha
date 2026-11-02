@@ -1,8 +1,9 @@
 fastapi
-SQLAlchemy
+SQLAlchemy>=2.0,<2.1
 uvicorn[standard]
-psycopg2-binary
 python-dotenv
 numpy>=1.26
 pandas>=2.0
 groq
+psycopg2-binary==2.9.13
+psycopg[binary]>=3.2
